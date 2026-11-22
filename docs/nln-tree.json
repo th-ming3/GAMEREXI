@@ -1,0 +1,651 @@
+{
+  "sha": "d188ebf93ceb3c4b95ba9bc6b1856cd1fd34915d",
+  "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/trees/d188ebf93ceb3c4b95ba9bc6b1856cd1fd34915d",
+  "tree": [
+    {
+      "path": ".claude",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "56e7be3a3c573f3f5414c2bb7d5f76da05130647",
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/trees/56e7be3a3c573f3f5414c2bb7d5f76da05130647"
+    },
+    {
+      "path": ".claude/launch.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2be682925db4b1bfd10b66242191b91ca971b711",
+      "size": 270,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/2be682925db4b1bfd10b66242191b91ca971b711"
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "73f961614e744632df21b13720e96bca622d1f74",
+      "size": 52,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/73f961614e744632df21b13720e96bca622d1f74"
+    },
+    {
+      "path": "Open Model Lab.cmd",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b603341d725fb21f0c10b97d04d56ea55c4ff6c4",
+      "size": 256,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/b603341d725fb21f0c10b97d04d56ea55c4ff6c4"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8035974ae94800ca869d9b7ad888975df18cff35",
+      "size": 4937,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/8035974ae94800ca869d9b7ad888975df18cff35"
+    },
+    {
+      "path": "character.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ac79b0912782e031106c7da460dc15efd922a1e2",
+      "size": 15942,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/ac79b0912782e031106c7da460dc15efd922a1e2"
+    },
+    {
+      "path": "docs",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "99a67874c5533a229bbf057b03139385609bc912",
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/trees/99a67874c5533a229bbf057b03139385609bc912"
+    },
+    {
+      "path": "docs/NEXT_SESSION.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "983e1e8f8edb988d227f23504c6e4143d611f3cd",
+      "size": 23104,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/983e1e8f8edb988d227f23504c6e4143d611f3cd"
+    },
+    {
+      "path": "index.html",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7b5f5866a80e13395b465e80381fb4e1c767217d",
+      "size": 5759,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/7b5f5866a80e13395b465e80381fb4e1c767217d"
+    },
+    {
+      "path": "library",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "b5803e4d942fab72b08a7f0290463bb9b1cc26c5",
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/trees/b5803e4d942fab72b08a7f0290463bb9b1cc26c5"
+    },
+    {
+      "path": "library/animations",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "62084cab58fc34ea9d1f380099268db065407176",
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/trees/62084cab58fc34ea9d1f380099268db065407176"
+    },
+    {
+      "path": "library/animations/Rig_Medium_CombatMelee.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b89f4194d51986510c57c5fd6d022974b81ae84f",
+      "size": 550132,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/b89f4194d51986510c57c5fd6d022974b81ae84f"
+    },
+    {
+      "path": "library/animations/Rig_Medium_CombatRanged.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "28be54fd0a058f91be701868832e677a280eb12f",
+      "size": 554624,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/28be54fd0a058f91be701868832e677a280eb12f"
+    },
+    {
+      "path": "library/animations/Rig_Medium_General.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d533ee025e2b87413994bb2bcccb781f4ca22532",
+      "size": 400960,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/d533ee025e2b87413994bb2bcccb781f4ca22532"
+    },
+    {
+      "path": "library/animations/Rig_Medium_MovementAdvanced.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7a5a7c8a40f912743d1456efc10e55ed4a201561",
+      "size": 287088,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/7a5a7c8a40f912743d1456efc10e55ed4a201561"
+    },
+    {
+      "path": "library/animations/Rig_Medium_MovementBasic.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "08b16c9239fd020b7f503238a7bccdf10a57ea30",
+      "size": 253320,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/08b16c9239fd020b7f503238a7bccdf10a57ea30"
+    },
+    {
+      "path": "library/animations/Rig_Medium_Ours.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2eafe16cb8a653e5d5ed60ec6c42a7935868dffe",
+      "size": 81732,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/2eafe16cb8a653e5d5ed60ec6c42a7935868dffe"
+    },
+    {
+      "path": "library/animations/Rig_Medium_Simulation.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5b1de5d40a0854cb17b1823bed3b6fee781e5629",
+      "size": 415024,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/5b1de5d40a0854cb17b1823bed3b6fee781e5629"
+    },
+    {
+      "path": "library/animations/Rig_Medium_Special.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f9c9c9ea32ee618cccd0e432e620ce7a6099e431",
+      "size": 486448,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/f9c9c9ea32ee618cccd0e432e620ce7a6099e431"
+    },
+    {
+      "path": "library/animations/Rig_Medium_Tools.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "280281d59daa0246da53dc805aa6907409c7b612",
+      "size": 901336,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/280281d59daa0246da53dc805aa6907409c7b612"
+    },
+    {
+      "path": "library/animations/roles.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f9cca3c4dcf5e178febcd468a7bab7e53d92f703",
+      "size": 1538,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/f9cca3c4dcf5e178febcd468a7bab7e53d92f703"
+    },
+    {
+      "path": "library/ours",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "313a66d6c04ea0b8151852fbc6ecf9a56ae8b30e",
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/trees/313a66d6c04ea0b8151852fbc6ecf9a56ae8b30e"
+    },
+    {
+      "path": "library/ours/body",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "299f9b82eb82a5a301b1093c8bcc665891911922",
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/trees/299f9b82eb82a5a301b1093c8bcc665891911922"
+    },
+    {
+      "path": "library/ours/body/Body.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "490548726a29dc43f7d451ab14f591bb68d63ff4",
+      "size": 206348,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/490548726a29dc43f7d451ab14f591bb68d63ff4"
+    },
+    {
+      "path": "library/ours/manifest.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "288d28d89c7fa9eb7877b6d6f1beb8a00208fb0e",
+      "size": 6231,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/288d28d89c7fa9eb7877b6d6f1beb8a00208fb0e"
+    },
+    {
+      "path": "library/ours/parts",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "fe1a5a9c12100318d9ff30e1c976362fe8cd548d",
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/trees/fe1a5a9c12100318d9ff30e1c976362fe8cd548d"
+    },
+    {
+      "path": "library/ours/parts/back_pack.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cf5280a7bd2db50c41f61fec7e0b1137d3a71cb0",
+      "size": 37404,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/cf5280a7bd2db50c41f61fec7e0b1137d3a71cb0"
+    },
+    {
+      "path": "library/ours/parts/beard_long.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7d25aa4d104f43af1be93423d9de76606898dbda",
+      "size": 32840,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/7d25aa4d104f43af1be93423d9de76606898dbda"
+    },
+    {
+      "path": "library/ours/parts/beard_short.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d1fbc104f26fdd925694ce2961a5957968155d7b",
+      "size": 22896,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/d1fbc104f26fdd925694ce2961a5957968155d7b"
+    },
+    {
+      "path": "library/ours/parts/boots_low.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4ea3f37f971edd8c60795dabe2a67f32ab16849b",
+      "size": 27436,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/4ea3f37f971edd8c60795dabe2a67f32ab16849b"
+    },
+    {
+      "path": "library/ours/parts/boots_tall.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4d97904b8808bd87b3686dcbdd16fde57716bb75",
+      "size": 32932,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/4d97904b8808bd87b3686dcbdd16fde57716bb75"
+    },
+    {
+      "path": "library/ours/parts/bottom_shorts.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "000ec5a58281e0d4393bfeaf64af255e070d9ccd",
+      "size": 39000,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/000ec5a58281e0d4393bfeaf64af255e070d9ccd"
+    },
+    {
+      "path": "library/ours/parts/bottom_trousers.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "42f5ed1f678b99f1859bb42f4cd8be2bb00fc336",
+      "size": 43368,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/42f5ed1f678b99f1859bb42f4cd8be2bb00fc336"
+    },
+    {
+      "path": "library/ours/parts/hair_balding.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "91d0e0860d98203ceb8172b75630b2fbe3f3e7c3",
+      "size": 43464,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/91d0e0860d98203ceb8172b75630b2fbe3f3e7c3"
+    },
+    {
+      "path": "library/ours/parts/hair_bun.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "131f93ebf163ec14a96416daa3f79bd7757edb8e",
+      "size": 61604,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/131f93ebf163ec14a96416daa3f79bd7757edb8e"
+    },
+    {
+      "path": "library/ours/parts/hair_long.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4c60029e543c457cb29e72673902b3572efe7393",
+      "size": 76008,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/4c60029e543c457cb29e72673902b3572efe7393"
+    },
+    {
+      "path": "library/ours/parts/hair_ponytail.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c8aab4dc834769ed456b120a07dbaf84cecf9f8e",
+      "size": 63260,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/c8aab4dc834769ed456b120a07dbaf84cecf9f8e"
+    },
+    {
+      "path": "library/ours/parts/hair_short.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7a691f17ba4d1919e64c7abb6039459e7965c572",
+      "size": 55244,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/7a691f17ba4d1919e64c7abb6039459e7965c572"
+    },
+    {
+      "path": "library/ours/parts/hair_tousled.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "733934a7c8cb9978d4aa5f9cf14f11587976cc81",
+      "size": 69688,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/733934a7c8cb9978d4aa5f9cf14f11587976cc81"
+    },
+    {
+      "path": "library/ours/parts/hat_beanie.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9d758def1fea8155b4dc8488a5f13513e0317aad",
+      "size": 32004,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/9d758def1fea8155b4dc8488a5f13513e0317aad"
+    },
+    {
+      "path": "library/ours/parts/hat_cap.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "987da6a9bc473eacb0f7d50615cb184a90356d94",
+      "size": 28128,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/987da6a9bc473eacb0f7d50615cb184a90356d94"
+    },
+    {
+      "path": "library/ours/parts/hat_straw.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9bffbe1440c1f296a5ecca96217e3a26eac0a2fb",
+      "size": 38428,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/9bffbe1440c1f296a5ecca96217e3a26eac0a2fb"
+    },
+    {
+      "path": "library/ours/parts/top_long.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7567a5edd39cc8112eeaeac3baa96741503422c8",
+      "size": 61572,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/7567a5edd39cc8112eeaeac3baa96741503422c8"
+    },
+    {
+      "path": "library/ours/parts/top_tee.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c0d4e55902a41b2cb1b72a8a2959b804a7f4ef6d",
+      "size": 56264,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/c0d4e55902a41b2cb1b72a8a2959b804a7f4ef6d"
+    },
+    {
+      "path": "library/ours/parts/top_tunic.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4683d3817d968b7b891f6a51c05a698e9a3cd525",
+      "size": 68852,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/4683d3817d968b7b891f6a51c05a698e9a3cd525"
+    },
+    {
+      "path": "library/ours/presets.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e39ac894d5b25236b16f249dab78ebf1492ab9d6",
+      "size": 2483,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/e39ac894d5b25236b16f249dab78ebf1492ab9d6"
+    },
+    {
+      "path": "library/ours/tools",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "029cc528e5648f34517a9e6d6f8027b8343568b8",
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/trees/029cc528e5648f34517a9e6d6f8027b8343568b8"
+    },
+    {
+      "path": "library/ours/tools/axe.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8831586f25f117fe1085cbef4b91337c6231b795",
+      "size": 10084,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/8831586f25f117fe1085cbef4b91337c6231b795"
+    },
+    {
+      "path": "library/ours/tools/hammer.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2302aca7dc4f1242e21d61a6655e1e4514a4ce98",
+      "size": 14844,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/2302aca7dc4f1242e21d61a6655e1e4514a4ce98"
+    },
+    {
+      "path": "library/ours/tools/net.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cc8ff4f065537d1b2e3c6d5275979a060f677f35",
+      "size": 26960,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/cc8ff4f065537d1b2e3c6d5275979a060f677f35"
+    },
+    {
+      "path": "library/ours/tools/pickaxe.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "66f00a6d82b3f42704adaa7901d349f325a45507",
+      "size": 12232,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/66f00a6d82b3f42704adaa7901d349f325a45507"
+    },
+    {
+      "path": "library/ours/tools/rod.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bab92c29c4da162c705919a500d8e532a90d916c",
+      "size": 11016,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/bab92c29c4da162c705919a500d8e532a90d916c"
+    },
+    {
+      "path": "library/ours/tools/spoon.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a6faafd8c38a41b1d46606f03dbd1ef8f0d091b0",
+      "size": 9444,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/a6faafd8c38a41b1d46606f03dbd1ef8f0d091b0"
+    },
+    {
+      "path": "licenses",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "05fe2377881c07f00581ffea82d6898b12ad07ad",
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/trees/05fe2377881c07f00581ffea82d6898b12ad07ad"
+    },
+    {
+      "path": "licenses/kaykit-character-animations.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2f547b40ee93f69fcac71943eff63020d7893281",
+      "size": 1485,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/2f547b40ee93f69fcac71943eff63020d7893281"
+    },
+    {
+      "path": "polyfork.html",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "33abb91800a4b756701bfd0cecf340c626a853b3",
+      "size": 10257,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/33abb91800a4b756701bfd0cecf340c626a853b3"
+    },
+    {
+      "path": "saltmeadow.html",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dc34f1c5e0d44e399d4ada73eb2521bebae06836",
+      "size": 380,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/dc34f1c5e0d44e399d4ada73eb2521bebae06836"
+    },
+    {
+      "path": "saltmeadow",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "51b833aa24297634c37961bc3e2c8aefb8179ebc",
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/trees/51b833aa24297634c37961bc3e2c8aefb8179ebc"
+    },
+    {
+      "path": "saltmeadow/core.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b3c34028d05d3ed5f8fa5775f1f235fd85e7272b",
+      "size": 12915,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/b3c34028d05d3ed5f8fa5775f1f235fd85e7272b"
+    },
+    {
+      "path": "saltmeadow/director.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9fc5dad9c9f70dfa7a5d8c6926dba61836b904e5",
+      "size": 7071,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/9fc5dad9c9f70dfa7a5d8c6926dba61836b904e5"
+    },
+    {
+      "path": "saltmeadow/events.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bd692a60ec88c311cc420a25e3fa68a6a5436ea7",
+      "size": 19126,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/bd692a60ec88c311cc420a25e3fa68a6a5436ea7"
+    },
+    {
+      "path": "saltmeadow/index.html",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cd14560037077787aa99972b0d1e006d13aba3ec",
+      "size": 3841,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/cd14560037077787aa99972b0d1e006d13aba3ec"
+    },
+    {
+      "path": "saltmeadow/life.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "76eddad46834f0dff0f83118927037c7dab4c273",
+      "size": 30933,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/76eddad46834f0dff0f83118927037c7dab4c273"
+    },
+    {
+      "path": "saltmeadow/main.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "22bd3867e2eecd797f3cded7ca92e26d1aaab05b",
+      "size": 3796,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/22bd3867e2eecd797f3cded7ca92e26d1aaab05b"
+    },
+    {
+      "path": "saltmeadow/show.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b8f6464a2e61ddb4c3e8383c249b2645f5d1a20a",
+      "size": 17841,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/b8f6464a2e61ddb4c3e8383c249b2645f5d1a20a"
+    },
+    {
+      "path": "saltmeadow/world.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b2ddc88dcc6c5f57bb4c879bbf202402707a9e30",
+      "size": 34705,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/b2ddc88dcc6c5f57bb4c879bbf202402707a9e30"
+    },
+    {
+      "path": "tools",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "b3cd5adee4db71fa4ae47262a665ec0ad59e90f8",
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/trees/b3cd5adee4db71fa4ae47262a665ec0ad59e90f8"
+    },
+    {
+      "path": "tools/bl_convert.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9659400ed0d70f4dde771ee85ef82f3fb3e2679c",
+      "size": 5514,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/9659400ed0d70f4dde771ee85ef82f3fb3e2679c"
+    },
+    {
+      "path": "tools/bl_inspect_rig.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9d7384bfdfa8cbf8b25e73f80aa3b2896a2a5521",
+      "size": 2433,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/9d7384bfdfa8cbf8b25e73f80aa3b2896a2a5521"
+    },
+    {
+      "path": "tools/bl_make_clips.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c0ca626332d4f87f11c6b8eaa4679da53610c627",
+      "size": 20370,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/c0ca626332d4f87f11c6b8eaa4679da53610c627"
+    },
+    {
+      "path": "tools/bl_make_kit.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "93b5145dd2e8a6713ea9023a9216cd83727ad5cc",
+      "size": 36312,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/93b5145dd2e8a6713ea9023a9216cd83727ad5cc"
+    },
+    {
+      "path": "tools/bl_make_rig.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2cb714d93f41c3c3b0e55dc5311974a5742592df",
+      "size": 1785,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/2cb714d93f41c3c3b0e55dc5311974a5742592df"
+    },
+    {
+      "path": "tools/build-library.ps1",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0beb2e15d74817c1a25da3429755e787dc4cfee8",
+      "size": 2848,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/0beb2e15d74817c1a25da3429755e787dc4cfee8"
+    },
+    {
+      "path": "tools/fetch-packs.ps1",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f69092a7dd2bbafdf252fdc0344e93f2fdcf9e20",
+      "size": 1558,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/f69092a7dd2bbafdf252fdc0344e93f2fdcf9e20"
+    },
+    {
+      "path": "tools/inspect-gltf.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e4c05a6afcdb08b1311de14bceaa964fe6ffab8f",
+      "size": 1547,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/e4c05a6afcdb08b1311de14bceaa964fe6ffab8f"
+    },
+    {
+      "path": "tools/itch-get.ps1",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ddd103e1fd686ecf154fe507c904852b512ca5fc",
+      "size": 1589,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/ddd103e1fd686ecf154fe507c904852b512ca5fc"
+    },
+    {
+      "path": "tools/reference",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "ab6e3d9c9fbfa38dbe9866a7e530475ca0f9c756",
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/trees/ab6e3d9c9fbfa38dbe9866a7e530475ca0f9c756"
+    },
+    {
+      "path": "tools/reference/Mannequin_Medium.glb",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c15d93a623acde4c08862290f4465bb994506fd8",
+      "size": 420044,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/c15d93a623acde4c08862290f4465bb994506fd8"
+    },
+    {
+      "path": "tools/run-blender.ps1",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bbc7381627e7fc08da4abeac0757fd9d26e36573",
+      "size": 657,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/bbc7381627e7fc08da4abeac0757fd9d26e36573"
+    },
+    {
+      "path": "tools/serve.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0c4877420ee575cba73f2511f0319bd26331934c",
+      "size": 2060,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/0c4877420ee575cba73f2511f0319bd26331934c"
+    },
+    {
+      "path": "tools/sync-to-wayfarer.ps1",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6f94d6b3212274f4ed221e76b14c2b117db24967",
+      "size": 1197,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/6f94d6b3212274f4ed221e76b14c2b117db24967"
+    },
+    {
+      "path": "viewer.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c16b3a3208f821565e9ba7fd87643c6aa31d8f44",
+      "size": 12758,
+      "url": "https://api.github.com/repos/NoLimitNexus/game-models/git/blobs/c16b3a3208f821565e9ba7fd87643c6aa31d8f44"
+    }
+  ],
+  "truncated": false
+}
