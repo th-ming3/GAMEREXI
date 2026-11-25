@@ -96,6 +96,7 @@ window.__initAdventure = function () {
 
   /* Vật nhặt phát sáng rải khắp map — đi tới gần và bấm E để nhặt */
   var collectibles = [];
+  var collected = 0;
   (function scatterCollectibles() {
     var mat = new THREE.MeshStandardMaterial({ color: 0xffd76a, emissive: 0xffb830, emissiveIntensity: 1.6, roughness: 0.25 });
     var geo = new THREE.OctahedronGeometry(0.22, 0);
@@ -121,10 +122,16 @@ window.__initAdventure = function () {
       if (Math.hypot(c.position.x - pl.x, c.position.z - pl.z) < 1.7) {
         c.visible = false;
         if (window.__addScore) window.__addScore(5);
-        if (window.__toast) window.__toast('✦ Nhặt được mảnh sáng (+5)');
+        collected++;
         if (window.__sfx) window.__sfx.chime();
         var w = garden.localToWorld(c.position.clone()); w.y += 0.6;
         if (window.__spawnBurstW) window.__spawnBurstW(w, 10);
+        if (collected % 5 === 0) {
+          window.__dmgBonus = (window.__dmgBonus || 0) + 1;
+          if (window.__healFull) window.__healFull();
+          if (window.__toast) window.__toast('✦✦ 5 mảnh sáng → Đòn tay +' + window.__dmgBonus + ', hồi đầy máu');
+          if (window.__COMBAT && window.__COMBAT.hud) window.__COMBAT.hud.innerHTML += '';
+        } else if (window.__toast) window.__toast('✦ Nhặt được mảnh sáng (' + collected + ')' + ' — đủ 5 mảnh để lên đòn tay');
         return true;
       }
     }

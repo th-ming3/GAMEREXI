@@ -14,6 +14,19 @@ window.__initCombat = function (gardenRoot) {
   hud.style.cssText = 'position:fixed;left:16px;top:170px;z-index:56;padding:8px 12px;border-radius:10px;background:rgba(255,252,246,.8);border:1px solid rgba(122,90,52,.22);color:#5f4626;font:600 12.5px/1.5 Georgia,serif;pointer-events:none';
   document.body.appendChild(hud);
 
+  var flashEl = document.createElement('div');
+  flashEl.style.cssText = 'position:fixed;inset:0;z-index:45;pointer-events:none;background:radial-gradient(ellipse at center, rgba(200,30,20,0) 40%, rgba(200,30,20,.55) 100%);opacity:0';
+  document.body.appendChild(flashEl);
+
+  function floatText(txt, color, big) {
+    var d = document.createElement('div');
+    d.textContent = txt;
+    d.style.cssText = 'position:fixed;z-index:70;pointer-events:none;font:700 ' + (big ? 22 : 15) + 'px Georgia,serif;color:' + color + ';text-shadow:0 1px 3px rgba(0,0,0,.6);left:' + (44 + Math.random() * 12) + '%;top:' + (42 + Math.random() * 8) + '%;transition:transform .8s ease-out,opacity .8s;';
+    document.body.appendChild(d);
+    requestAnimationFrame(function () { d.style.transform = 'translateY(-46px)'; d.style.opacity = '0'; });
+    setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 850);
+  }
+
   function refreshHud() {
     var alive = enemies.filter(function (e) { return e.hp > 0; }).length;
     var p = window.__playerPos ? gardenRoot.worldToLocal(window.__playerPos.clone()) : null;
@@ -21,7 +34,7 @@ window.__initCombat = function (gardenRoot) {
     if (p) enemies.forEach(function (e) { if (e.hp > 0 && Math.hypot(e.x - p.x, e.z - p.z) < 22) near = true; });
     hud.style.display = (near || playerHp < 100 || kills > 0) ? 'block' : 'none';
     if (hud.style.display === 'none') return;
-    hud.innerHTML = 'Sức khỏe <b>' + Math.max(0, Math.round(playerHp)) + '</b> / 100<br>Quái còn <b>' + alive + '</b> · Đã thắng <b>' + kills + '</b><br><span style="opacity:.72">J hoặc click trái để đánh</span>';
+    hud.innerHTML = 'Sức khỏe <b>' + Math.max(0, Math.round(playerHp)) + '</b> / 100' + (window.__dmgBonus ? ' · Đòn tay <b>+' + window.__dmgBonus + '</b>' : '') + '<br>Quái còn <b>' + alive + '</b> · Đã thắng <b>' + kills + '</b><br><span style="opacity:.72">J hoặc click trái để đánh</span>';
   }
 
   enemyData.forEach(function (info) {
@@ -29,8 +42,13 @@ window.__initCombat = function (gardenRoot) {
     var y = window.__hillY ? window.__hillY(info.x, info.z) : 0;
     group.position.set(info.x, y, info.z);
     gardenRoot.add(group);
+    var alert = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.68, 24), new THREE.MeshBasicMaterial({ color: 0xff4433, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
+    alert.rotation.x = -Math.PI / 2;
+    alert.position.set(info.x, y + 0.06, info.z);
+    alert.visible = false;
+    gardenRoot.add(alert);
     enemies.push({
-      info: info, group: group, hp: info.hp, state: 'IDLE', timer: 0,
+      info: info, group: group, alert: alert, hp: info.hp, state: 'IDLE', timer: 0,
       homeX: info.x, homeZ: info.z, flash: 0
     });
   });
@@ -46,13 +64,17 @@ window.__initCombat = function (gardenRoot) {
 
   function damagePlayer(amount) {
     playerHp -= amount;
-    hurtFlash = 0.35;
+    hurtFlash = 0.55;
+    window.__shakeT = performance.now(); window.__shakeAmt = 0.16;
+    floatText('-' + amount, '#ff5a4a', true);
+    if (window.__sfx) window.__sfx.whoosh();
     if (playerHp <= 0) {
       playerHp = 100;
       if (window.__goHome) window.__goHome();
     }
     refreshHud();
   }
+  window.__healFull = function () { playerHp = 100; refreshHud(); };
 
   function attack() {
     var now = performance.now();
@@ -68,12 +90,17 @@ window.__initCombat = function (gardenRoot) {
       if (d < bd) { bd = d; best = e; }
     }
     if (!best) return;
-    best.hp -= 1;
+    var dmg = 1 + (window.__dmgBonus || 0);
+    best.hp -= dmg;
     best.flash = 0.25;
+    window.__shakeT = now; window.__shakeAmt = 0.05;
+    floatText('-' + dmg, '#ffd76a', false);
+    if (window.__sfx) window.__sfx.chime();
     if (best.hp <= 0) {
       kills += 1;
       best.group.visible = false;
       best.state = 'DEAD';
+      if (best.alert) best.alert.visible = false;
       if (window.__addScore) window.__addScore(10);
     } else if (best.state === 'TELL') {
       best.state = 'RECOVER';
@@ -93,6 +120,7 @@ window.__initCombat = function (gardenRoot) {
   setInterval(function () {
     var dt = 0.08;
     if (hurtFlash > 0) hurtFlash = Math.max(0, hurtFlash - dt);
+    flashEl.style.opacity = hurtFlash.toFixed(2);
     var p = localPlayer();
     if (!p) return;
     for (var i = 0; i < enemies.length; i++) {
@@ -105,25 +133,29 @@ window.__initCombat = function (gardenRoot) {
       var d = dist2d(p, e.group.position);
       e.timer -= dt;
       if (e.state === 'IDLE' || e.state === 'CHASE') {
-        if (d > 9) { e.state = 'IDLE'; continue; }
+        if (d > 13) { e.state = 'IDLE'; if (e.alert) { e.alert.visible = false; } continue; }
+        if (e.state === 'IDLE' && e.alert) e.alert.visible = true;
         e.state = 'CHASE';
+        if (e.alert) { e.alert.position.x = e.group.position.x; e.alert.position.z = e.group.position.z; e.alert.position.y = (window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0) + 0.06; e.alert.rotation.z += dt * 3; }
         if (d > e.info.range) {
           var dx = (p.x - e.group.position.x) / d, dz = (p.z - e.group.position.z) / d;
-          e.group.position.x += dx * e.info.speed * dt;
-          e.group.position.z += dz * e.info.speed * dt;
+          var sp = e.info.speed * 1.35;
+          e.group.position.x += dx * sp * dt;
+          e.group.position.z += dz * sp * dt;
           var gy = window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0;
           e.group.position.y = gy;
         }
         e.group.rotation.y = Math.atan2(p.x - e.group.position.x, p.z - e.group.position.z);
-        if (d <= e.info.range) { e.state = 'TELL'; e.timer = e.info.tell; }
+        if (d <= e.info.range) { e.state = 'TELL'; e.timer = e.info.tell; if (e.alert) e.alert.material.color.setHex(0xff2211); }
       } else if (e.state === 'TELL') {
         e.group.scale.setScalar(1 + 0.08 * Math.sin(performance.now() * 0.03));
+        if (e.alert) { e.alert.position.x = e.group.position.x; e.alert.position.z = e.group.position.z; }
         if (e.timer <= 0) {
           if (dist2d(p, e.group.position) <= e.info.range + 0.35) damagePlayer(e.info.damage);
           e.state = 'ACTIVE'; e.timer = e.info.active;
         }
       } else if (e.state === 'ACTIVE') {
-        if (e.timer <= 0) { e.state = 'RECOVER'; e.timer = e.info.recover; }
+        if (e.timer <= 0) { e.state = 'RECOVER'; e.timer = e.info.recover; if (e.alert) { e.alert.visible = false; e.alert.material.color.setHex(0xff4433); } }
       } else if (e.state === 'RECOVER') {
         if (e.timer <= 0) e.state = 'CHASE';
       }

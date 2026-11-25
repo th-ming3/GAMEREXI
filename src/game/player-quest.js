@@ -653,6 +653,8 @@
     var camD = (indoorMode || caveMode) ? 3.4 : (flyMode ? 5.8 : (nearLakeCam ? 6.4 : 4.8)), camH = ((indoorMode || caveMode) ? 1.55 : (flyMode ? 2.1 : (nearLakeCam ? 1.9 : 1.55))) + orbitPitch * 2.4;
     if (diving && inLake) { camD = 3.2; camH = 0.22 + orbitPitch * 0.3; }
     var cx2 = pPos.x - fV.x * camD, cz2 = pPos.z - fV.z * camD;
+    var shake = (window.__shakeT && now - window.__shakeT < 220) ? (window.__shakeAmt || 0.1) * (1 - (now - window.__shakeT) / 220) : 0;
+    if (shake > 0) { cx2 += (Math.random() - 0.5) * shake; cz2 += (Math.random() - 0.5) * shake; }
     var cy2 = gy2 + pY + camH;
     if (indoorMode) {
       var camL = window.__garden.worldToLocal(new THREE.Vector3(cx2, 0, cz2));
