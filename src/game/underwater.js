@@ -13,7 +13,8 @@ window.__createUnderwaterWorld = function (context) {
   var floorY = hillY(LAKE.x, LAKE.z);
   if (window.__REAL_ASSETS) {
     var ruinModel = window.__REAL_ASSETS.makeModel('ruins', { x: 7.2, y: 4, z: 4.9 });
-    ruinModel.position.set(LAKE.x, floorY, LAKE.z);
+    ruinModel.scale.setScalar(0.8);
+    ruinModel.position.set(LAKE.x, floorY - 1.3, LAKE.z);
     underwaterRoot.add(ruinModel);
   }
 
@@ -42,8 +43,8 @@ window.__createUnderwaterWorld = function (context) {
     underwaterRoot.add(plant); underwaterPlants.push(plant);
   }
   for (var si = 0; si < 5; si++) {
-    var lightShaft = new THREE.Mesh(new THREE.PlaneGeometry(0.65, LAKE_DEPTH + 1.2), new THREE.MeshBasicMaterial({ color: 0x8be6d8, transparent: true, opacity: 0.055, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-    lightShaft.position.set(LAKE.x - 3 + si * 1.5, lakeBaseY - LAKE_DEPTH * 0.45, LAKE.z - 1.5 + (si % 2) * 2.4);
+    var lightShaft = new THREE.Mesh(new THREE.PlaneGeometry(0.42, LAKE_DEPTH * 0.72), new THREE.MeshBasicMaterial({ color: 0x8be6d8, transparent: true, opacity: 0.03, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    lightShaft.position.set(LAKE.x - 3 + si * 1.5, lakeBaseY - LAKE_DEPTH * 0.62, LAKE.z - 1.5 + (si % 2) * 2.4);
     lightShaft.rotation.z = -0.16; lightShaft.rotation.y = 0.35;
     underwaterRoot.add(lightShaft);
   }

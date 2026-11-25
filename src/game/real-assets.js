@@ -36,7 +36,9 @@ window.__createRealAssets = function () {
     runeStone: '__RA_PROP_RUNE_B64__',
     pillar: '__RA_PROP_PILLAR_B64__',
     campfire: '__RA_PROP_CAMPFIRE_B64__',
-    erratic: '__RA_PROP_ERRATIC_B64__'
+    erratic: '__RA_PROP_ERRATIC_B64__',
+    bridge: '__RA_PROP_BRIDGE_B64__',
+    garageHouse: '__RA_PROP_GARAGE_B64__'
   };
   var loader = new THREE.GLTFLoader();
   var templates = {};

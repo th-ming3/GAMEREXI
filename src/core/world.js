@@ -469,16 +469,26 @@ if (!window.__GAME && consented) {
     var c = document.createElement('canvas');
     c.width = c.height = 256;
     var g = c.getContext('2d');
-    g.fillStyle = '#ffffff';
+    g.fillStyle = '#eef0e2';
     g.fillRect(0, 0, 256, 256);
-    for (var i = 0; i < 1600; i++) {
-      var dark = Math.random() < 0.5;
-      g.fillStyle = dark ? 'rgba(96,120,72,' + (0.06 + Math.random() * 0.12) + ')' : 'rgba(235,244,214,' + (0.05 + Math.random() * 0.1) + ')';
-      g.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2.5, 1 + Math.random() * 2.5);
+    for (var b = 0; b < 26; b++) {
+      g.fillStyle = 'rgba(' + (120 + Math.random() * 60 | 0) + ',' + (140 + Math.random() * 50 | 0) + ',80,' + (0.05 + Math.random() * 0.08) + ')';
+      var bx = Math.random() * 256, by = Math.random() * 256, br = 14 + Math.random() * 30;
+      g.beginPath(); g.arc(bx, by, br, 0, 7); g.fill();
+    }
+    for (var i = 0; i < 9000; i++) {
+      var dark = Math.random() < 0.55;
+      g.fillStyle = dark ? 'rgba(70,105,48,' + (0.10 + Math.random() * 0.22) + ')' : 'rgba(214,232,170,' + (0.08 + Math.random() * 0.18) + ')';
+      var px = Math.random() * 256, py = Math.random() * 256;
+      g.fillRect(px, py, 1, 2 + Math.random() * 5);
+    }
+    for (var s = 0; s < 260; s++) {
+      g.fillStyle = 'rgba(110,90,60,' + (0.05 + Math.random() * 0.1) + ')';
+      g.beginPath(); g.arc(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2.2, 0, 7); g.fill();
     }
     var tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(5, 3); tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.anisotropy = 4;
+    tex.repeat.set(34, 34); tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.anisotropy = 4;
     return tex;
   }
   var groundNoise = makeGroundNoise();
@@ -3190,6 +3200,45 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
       var m = new THREE.Mesh(new THREE.ConeGeometry(11 + (i % 4) * 5, h, 7), i % 2 ? mat : mat2);
       m.position.set(Math.cos(a) * r, h / 2 - 2, Math.sin(a) * r);
       gardenRoot.add(m);
+    }
+  })();
+
+  /* Suối chảy từ rừng xuống hồ + cầu gỗ bắc qua + nhà phụ + lửa trại */
+  (function creekAndStructures() {
+    var pts = window.__creek || [[-16, -22], [-9, -10], [-2, 0], [0, 8], [-1, 14]];
+    var wY = window.__lakeWaterY ? window.__lakeWaterY() : 1.15;
+    var pos = [], idx = [];
+    for (var i = 0; i < pts.length; i++) {
+      var p = pts[i];
+      var q = i < pts.length - 1 ? pts[i + 1] : pts[i - 1];
+      var pv = i > 0 ? pts[i - 1] : pts[i + 1];
+      var dx = q[0] - pv[0], dz = q[1] - pv[1];
+      var l = Math.hypot(dx, dz) || 1;
+      var nx = -dz / l, nz = dx / l;
+      var y = hillY(p[0], p[1]) + 0.55;
+      pos.push(p[0] - nx * 1.35, y, p[1] - nz * 1.35, p[0] + nx * 1.35, y, p[1] + nz * 1.35);
+      if (i > 0) { var b = (i - 1) * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
+    }
+    var cg = new THREE.BufferGeometry();
+    cg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    cg.setIndex(idx);
+    cg.computeVertexNormals();
+    var creekW = new THREE.Mesh(cg, new THREE.MeshPhysicalMaterial({ color: 0x2b8fa6, roughness: 0.1, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide }));
+    gardenRoot.add(creekW);
+    window.__creekMesh = creekW;
+    if (window.__REAL_ASSETS) {
+      var br = window.__REAL_ASSETS.makeModel('bridge', 2.6);
+      var bp = pts[3];
+      br.position.set(bp[0], hillY(bp[0], bp[1]) + 0.9, bp[1]);
+      br.rotation.y = Math.atan2(pts[4][0] - pts[2][0], pts[4][1] - pts[2][1]);
+      gardenRoot.add(br);
+      var gar = window.__REAL_ASSETS.makeModel('garageHouse', 3.2);
+      gar.position.set(-22, hillY(-22, 3), 3);
+      gar.rotation.y = 0.6;
+      gardenRoot.add(gar);
+      var cf = window.__REAL_ASSETS.makeModel('campfire', 0.9);
+      cf.position.set(18, hillY(18, 18), 18);
+      gardenRoot.add(cf);
     }
   })();
 
