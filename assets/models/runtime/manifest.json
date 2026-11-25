@@ -1,0 +1,706 @@
+[
+  {
+    "name": "apple-tree.glb",
+    "bytes": 5812324,
+    "triangles": 42582,
+    "meshes": [
+      {
+        "name": "branches",
+        "triangles": 8444
+      },
+      {
+        "name": "apples",
+        "triangles": 29412
+      },
+      {
+        "name": "",
+        "triangles": 3766
+      },
+      {
+        "name": "trunk",
+        "triangles": 960
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "beech-tree-lod1.glb",
+    "bytes": 1786368,
+    "triangles": 17674,
+    "meshes": [
+      {
+        "name": "branches_lod1",
+        "triangles": 10828
+      },
+      {
+        "name": "leaves_lod1",
+        "triangles": 5694
+      },
+      {
+        "name": "trunk_lod1",
+        "triangles": 1152
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "cherry-tree-lod1.glb",
+    "bytes": 1044220,
+    "triangles": 6780,
+    "meshes": [
+      {
+        "name": "blossom_lod1",
+        "triangles": 2490
+      },
+      {
+        "name": "branches_lod1",
+        "triangles": 3650
+      },
+      {
+        "name": "trunk_lod1",
+        "triangles": 640
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "meadow-grass-lod2.glb",
+    "bytes": 111272,
+    "triangles": 304,
+    "meshes": [
+      {
+        "name": "meadow_grass_lod2",
+        "triangles": 304
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "wildflower-patch.glb",
+    "bytes": 792004,
+    "triangles": 3860,
+    "meshes": [
+      {
+        "name": "wildflower",
+        "triangles": 3860
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "wildflower-patch-lod2.glb",
+    "bytes": 111152,
+    "triangles": 500,
+    "meshes": [
+      {
+        "name": "wildflower_lod2",
+        "triangles": 500
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "dandelion-patch.glb",
+    "bytes": 773092,
+    "triangles": 1584,
+    "meshes": [
+      {
+        "name": "dandelion",
+        "triangles": 1584
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "cattail-lod1.glb",
+    "bytes": 339368,
+    "triangles": 3958,
+    "meshes": [
+      {
+        "name": "dense_clump_lod1",
+        "triangles": 3958
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "timber-frame-house.glb",
+    "bytes": 3131196,
+    "triangles": 20308,
+    "meshes": [
+      {
+        "name": "body_dark",
+        "triangles": 56
+      },
+      {
+        "name": "body_daub",
+        "triangles": 1120
+      },
+      {
+        "name": "body_dressed",
+        "triangles": 980
+      },
+      {
+        "name": "body_ember",
+        "triangles": 60
+      },
+      {
+        "name": "body_iron",
+        "triangles": 588
+      },
+      {
+        "name": "body_moss",
+        "triangles": 136
+      },
+      {
+        "name": "body_oak",
+        "triangles": 10748
+      },
+      {
+        "name": "body_plank",
+        "triangles": 1028
+      },
+      {
+        "name": "body_sack",
+        "triangles": 560
+      },
+      {
+        "name": "body_shingle",
+        "triangles": 56
+      },
+      {
+        "name": "body_stone",
+        "triangles": 324
+      },
+      {
+        "name": "body_straw",
+        "triangles": 20
+      },
+      {
+        "name": "body_thatch",
+        "triangles": 2176
+      },
+      {
+        "name": "body_wood",
+        "triangles": 2016
+      },
+      {
+        "name": "door_iron",
+        "triangles": 180
+      },
+      {
+        "name": "door_wood",
+        "triangles": 20
+      },
+      {
+        "name": "shutter_1_iron",
+        "triangles": 24
+      },
+      {
+        "name": "shutter_1_wood",
+        "triangles": 36
+      },
+      {
+        "name": "shutter_2_iron",
+        "triangles": 24
+      },
+      {
+        "name": "shutter_2_wood",
+        "triangles": 36
+      },
+      {
+        "name": "shutter_3_iron",
+        "triangles": 24
+      },
+      {
+        "name": "shutter_3_wood",
+        "triangles": 36
+      },
+      {
+        "name": "shutter_4_iron",
+        "triangles": 24
+      },
+      {
+        "name": "shutter_4_wood",
+        "triangles": 36
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "sunken-ruins.glb",
+    "bytes": 2653184,
+    "triangles": 12108,
+    "meshes": [
+      {
+        "name": "arch",
+        "triangles": 2816
+      },
+      {
+        "name": "column",
+        "triangles": 3572
+      },
+      {
+        "name": "column_broken",
+        "triangles": 1928
+      },
+      {
+        "name": "column_fallen",
+        "triangles": 3792
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "temple-interior.glb",
+    "bytes": 5975820,
+    "triangles": 24116,
+    "meshes": [
+      {
+        "name": "altar_carved",
+        "triangles": 7000
+      },
+      {
+        "name": "plate_carved",
+        "triangles": 44
+      },
+      {
+        "name": "plate_rosette",
+        "triangles": 1800
+      },
+      {
+        "name": "pressure_plate_carved",
+        "triangles": 192
+      },
+      {
+        "name": "pressure_plate_dark",
+        "triangles": 12
+      },
+      {
+        "name": "brazier_L_bronze",
+        "triangles": 218
+      },
+      {
+        "name": "brazier_L_carved",
+        "triangles": 150
+      },
+      {
+        "name": "brazier_L_ember",
+        "triangles": 320
+      },
+      {
+        "name": "brazier_R_bronze",
+        "triangles": 218
+      },
+      {
+        "name": "brazier_R_carved",
+        "triangles": 152
+      },
+      {
+        "name": "brazier_R_ember",
+        "triangles": 320
+      },
+      {
+        "name": "puzzle_wall_carved",
+        "triangles": 3096
+      },
+      {
+        "name": "puzzle_wall_dark",
+        "triangles": 188
+      },
+      {
+        "name": "ring_inner_carved",
+        "triangles": 548
+      },
+      {
+        "name": "ring_middle_carved",
+        "triangles": 1212
+      },
+      {
+        "name": "ring_outer_carved",
+        "triangles": 1492
+      },
+      {
+        "name": "sarcophagus_beast",
+        "triangles": 2880
+      },
+      {
+        "name": "sarcophagus_carved",
+        "triangles": 258
+      },
+      {
+        "name": "sarcophagus_dark",
+        "triangles": 12
+      },
+      {
+        "name": "sarcophagus_fret",
+        "triangles": 4
+      },
+      {
+        "name": "sarcophagus_lid_carved",
+        "triangles": 4000
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kelp-lod1.glb",
+    "bytes": 398740,
+    "triangles": 4344,
+    "meshes": [
+      {
+        "name": "kelp_lod1",
+        "triangles": 4344
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "seagrass-lod1.glb",
+    "bytes": 133092,
+    "triangles": 1188,
+    "meshes": [
+      {
+        "name": "seagrass_lod1",
+        "triangles": 1188
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "young-spruce-lod1.glb",
+    "bytes": 580736,
+    "triangles": 1650,
+    "meshes": [
+      {
+        "name": "branches_lod1",
+        "triangles": 210
+      },
+      {
+        "name": "needles_lod1",
+        "triangles": 1320
+      },
+      {
+        "name": "trunk_lod1",
+        "triangles": 120
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "npc-tam.glb",
+    "bytes": 984300,
+    "triangles": 8999,
+    "meshes": [
+      {
+        "name": "casual-walker",
+        "triangles": 8999
+      }
+    ],
+    "animations": [
+      "idle",
+      "look_around",
+      "walk",
+      "wave"
+    ]
+  },
+  {
+    "name": "npc-ba-man.glb",
+    "bytes": 918432,
+    "triangles": 8999,
+    "meshes": [
+      {
+        "name": "road-worker",
+        "triangles": 8999
+      }
+    ],
+    "animations": [
+      "idle",
+      "look_around",
+      "walk",
+      "wave"
+    ]
+  },
+  {
+    "name": "npc-hoa.glb",
+    "bytes": 903372,
+    "triangles": 8999,
+    "meshes": [
+      {
+        "name": "dog-walker",
+        "triangles": 8999
+      }
+    ],
+    "animations": [
+      "idle",
+      "look_around",
+      "walk",
+      "wave"
+    ]
+  },
+  {
+    "name": "npc-lam.glb",
+    "bytes": 890432,
+    "triangles": 8999,
+    "meshes": [
+      {
+        "name": "hiker",
+        "triangles": 8999
+      }
+    ],
+    "animations": [
+      "idle",
+      "look_around",
+      "walk",
+      "wave"
+    ]
+  },
+  {
+    "name": "wall-lever-lod1.glb",
+    "bytes": 730136,
+    "triangles": 3141,
+    "meshes": [
+      {
+        "name": "lever_mesh_lod1",
+        "triangles": 464
+      },
+      {
+        "name": "wall_lever_lod1",
+        "triangles": 2677
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "porcini-mushroom-lod1.glb",
+    "bytes": 1834012,
+    "triangles": 6499,
+    "meshes": [
+      {
+        "name": "porcini_mushroom_lod1",
+        "triangles": 6499
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "granite-boulder-lod1.glb",
+    "bytes": 936848,
+    "triangles": 2300,
+    "meshes": [
+      {
+        "name": "granite-boulder",
+        "triangles": 2300
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "combat-mech-lod1.glb",
+    "bytes": 1486384,
+    "triangles": 19156,
+    "meshes": [
+      {
+        "name": "body",
+        "triangles": 1906
+      },
+      {
+        "name": "hip_L_fittings",
+        "triangles": 88
+      },
+      {
+        "name": "hip_L_mesh",
+        "triangles": 1258
+      },
+      {
+        "name": "ankle_L_mesh",
+        "triangles": 1000
+      },
+      {
+        "name": "strut_ankle_L_rod_fittings",
+        "triangles": 80
+      },
+      {
+        "name": "strut_ankle_L_rod_mesh",
+        "triangles": 58
+      },
+      {
+        "name": "toe_in_L_mesh",
+        "triangles": 314
+      },
+      {
+        "name": "toe_mid_L_mesh",
+        "triangles": 318
+      },
+      {
+        "name": "toe_out_L_mesh",
+        "triangles": 316
+      },
+      {
+        "name": "knee_L_mesh",
+        "triangles": 754
+      },
+      {
+        "name": "strut_ankle_L_barrel_mesh",
+        "triangles": 258
+      },
+      {
+        "name": "strut_knee_L_rod_fittings",
+        "triangles": 80
+      },
+      {
+        "name": "strut_knee_L_rod_mesh",
+        "triangles": 52
+      },
+      {
+        "name": "strut_knee_L_barrel_mesh",
+        "triangles": 246
+      },
+      {
+        "name": "hip_R_fittings",
+        "triangles": 88
+      },
+      {
+        "name": "hip_R_mesh",
+        "triangles": 1252
+      },
+      {
+        "name": "ankle_R_mesh",
+        "triangles": 988
+      },
+      {
+        "name": "strut_ankle_R_rod_fittings",
+        "triangles": 80
+      },
+      {
+        "name": "strut_ankle_R_rod_mesh",
+        "triangles": 58
+      },
+      {
+        "name": "toe_in_R_mesh",
+        "triangles": 314
+      },
+      {
+        "name": "toe_mid_R_mesh",
+        "triangles": 314
+      },
+      {
+        "name": "toe_out_R_mesh",
+        "triangles": 312
+      },
+      {
+        "name": "knee_R_mesh",
+        "triangles": 760
+      },
+      {
+        "name": "strut_ankle_R_barrel_mesh",
+        "triangles": 254
+      },
+      {
+        "name": "strut_knee_R_rod_fittings",
+        "triangles": 80
+      },
+      {
+        "name": "strut_knee_R_rod_mesh",
+        "triangles": 52
+      },
+      {
+        "name": "strut_knee_R_barrel_mesh",
+        "triangles": 244
+      },
+      {
+        "name": "arm_L_mesh",
+        "triangles": 1004
+      },
+      {
+        "name": "arm_R_fittings",
+        "triangles": 12
+      },
+      {
+        "name": "arm_R_mesh",
+        "triangles": 1446
+      },
+      {
+        "name": "hatch_fittings",
+        "triangles": 4
+      },
+      {
+        "name": "hatch_mesh",
+        "triangles": 314
+      },
+      {
+        "name": "missile_pod_mesh",
+        "triangles": 1148
+      },
+      {
+        "name": "torso_fittings",
+        "triangles": 298
+      },
+      {
+        "name": "torso_mesh",
+        "triangles": 3406
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "stone-feline-guardian-lod1.glb",
+    "bytes": 657752,
+    "triangles": 3300,
+    "meshes": [
+      {
+        "name": "feline_guardian_carved",
+        "triangles": 3300
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "coral-lod1.glb",
+    "bytes": 1044820,
+    "triangles": 4535,
+    "meshes": [
+      {
+        "name": "brain_coral_lod1",
+        "triangles": 900
+      },
+      {
+        "name": "sea_fan_lod1",
+        "triangles": 36
+      },
+      {
+        "name": "staghorn_coral_lod1",
+        "triangles": 2799
+      },
+      {
+        "name": "table_coral_lod1",
+        "triangles": 800
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kohaku-koi.glb",
+    "bytes": 107376,
+    "triangles": 546,
+    "meshes": [
+      {
+        "name": "koi_1_body",
+        "triangles": 546
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "ogon-koi.glb",
+    "bytes": 93840,
+    "triangles": 546,
+    "meshes": [
+      {
+        "name": "koi_3_body",
+        "triangles": 546
+      }
+    ],
+    "animations": []
+  }
+]

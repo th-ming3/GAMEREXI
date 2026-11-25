@@ -1,50 +1,59 @@
 const puppeteer = require('puppeteer-core');
+const path = require('path');
+const ROOT = path.resolve(__dirname, '../..');
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 (async () => {
-  const browser = await puppeteer.launch({
-    executablePath: '/home/user/.local/share/choreographer/deps/chrome-linux64/chrome',
-    args: ['--headless=new', '--no-sandbox', '--disable-gpu', '--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--hide-scrollbars'],
-    defaultViewport: { width: 1280, height: 800 }
-  });
-  const page = await browser.newPage();
-  await page.evaluateOnNewDocument(() => {
-    try {
-      localStorage.setItem('consent', 'Vâng');
-      localStorage.setItem('freeDay', '2026-11-28');
-      localStorage.setItem('food', 'Bánh mì chả cá');
-      localStorage.setItem('drink', 'Cà phê muối');
-      localStorage.setItem('place', 'Phố cổ Hà Nội');
-    } catch (e) {}
-  });
-  await page.setViewport({ width: 1280, height: 800 });
-  await page.goto('file:///home/user/done.html', { waitUntil: 'domcontentloaded', timeout: 120000 });
-  await new Promise(r => setTimeout(r, 2600));
-  const t = Date.now();
-  while (Date.now() - t < 40000) {
-    const ok = await page.evaluate(() => window.__bootOK === true);
-    if (ok) break;
-    await new Promise(r => setTimeout(r, 500));
-  }
-  await new Promise(r => setTimeout(r, 1200));
-  const snap = () => page.evaluate(() => {
-    const out = [];
-    for (const bi of [0, 2]) {
-      const g = window.__birds[bi].geometry.attributes.position.array;
-      let mx = 0;
-      for (let i = 1; i < g.length; i += 3) if (Math.abs(g[i]) > mx) mx = Math.abs(g[i]);
-      out.push({ mx: +mx.toFixed(4), x: +window.__birds[bi].position.x.toFixed(3), z: +window.__birds[bi].position.z.toFixed(3) });
+  let browser;
+  const errors = [];
+  try {
+    browser = await puppeteer.launch({
+      executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe',
+      headless: true,
+      args: ['--headless=new', '--no-sandbox', '--disable-gpu', '--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--hide-scrollbars'],
+      defaultViewport: { width: 1100, height: 700 }
+    });
+    const page = await browser.newPage();
+    page.on('pageerror', error => errors.push(String(error)));
+    await page.goto('file:///' + path.join(ROOT, 'game.html').replace(/\\/g, '/'), { waitUntil: 'domcontentloaded', timeout: 120000 });
+    const started = Date.now();
+    while (Date.now() - started < 60000) {
+      if (await page.evaluate(() => window.__bootOK && window.__charLoaded && window.__physics)) break;
+      await sleep(400);
     }
-    return out;
-  });
-  const a = await snap();
-  await new Promise(r => setTimeout(r, 400));
-  const b = await snap();
-  await new Promise(r => setTimeout(r, 400));
-  const c = await snap();
-  console.log('A:', JSON.stringify(a));
-  console.log('B:', JSON.stringify(b));
-  console.log('C:', JSON.stringify(c));
-  console.log('WARP-CHANGED:', a[0].mx !== b[0].mx || b[0].mx !== c[0].mx,
-    ' MOVED:', a[0].x !== b[0].x && b[0].x !== c[0].x,
-    ' PHASE-DIFF:', a[0].mx.toFixed(3) !== a[1].mx.toFixed(3));
-  await browser.close();
-})().catch(e => { console.error('FATAL', e.message); process.exit(1); });
+    await page.evaluate(() => { window.__ff(6); window.__setSun(1.05); window.__setOrbit(0, 0.42); window.__goHome(); });
+    await sleep(500);
+    const start = await page.evaluate(() => window.__playerPos.toArray());
+    await page.keyboard.down('w');
+    const samples = [];
+    for (let i = 0; i < 16; i++) {
+      await sleep(500);
+      samples.push(await page.evaluate(() => ({
+        player: window.__playerPos.toArray(),
+        char: window.__char.position.toArray(),
+        cam: window.CAM.toArray(),
+        keyW: !!window.__keys.w,
+        velocity: window.__physics.player.velocity.toArray(),
+        contacts: window.__physics.contacts || 0,
+        statics: window.__physics.statics.length,
+        steps: window.__physics.steps
+      })));
+    }
+    await page.keyboard.up('w');
+    const end = await page.evaluate(() => window.__playerPos.toArray());
+    const distance = Math.hypot(end[0] - start[0], end[2] - start[2]);
+    const stalled = [];
+    for (let i = 1; i < samples.length; i++) {
+      const a = samples[i - 1].player, b = samples[i].player;
+      if (Math.hypot(b[0] - a[0], b[2] - a[2]) < 0.001) stalled.push(i);
+    }
+    const result = { start, end, distance, stalled, samples, errors };
+    console.log(JSON.stringify(result, null, 2));
+    if (distance < 0.2 || samples.some(sample => !sample.keyW) || errors.length) process.exitCode = 1;
+  } finally {
+    if (browser) await browser.close();
+  }
+})().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});

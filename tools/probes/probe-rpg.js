@@ -1,64 +1,116 @@
 const puppeteer = require('puppeteer-core');
-(async () => {
-  const browser = await puppeteer.launch({
-    executablePath: '/home/user/.local/share/choreographer/deps/chrome-linux64/chrome',
-    args: ['--headless=new', '--no-sandbox', '--disable-gpu', '--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--hide-scrollbars'],
-    defaultViewport: { width: 1280, height: 800 }
-  });
-  const page = await browser.newPage();
-  const errs = [];
-  page.on('pageerror', e => errs.push(String(e).slice(0, 160)));
-  await page.setViewport({ width: 1280, height: 800 });
-  await page.goto('file:///home/user/game.html', { waitUntil: 'domcontentloaded', timeout: 120000 });
-  await new Promise(r => setTimeout(r, 2600));
-  const t0 = Date.now();
-  while (Date.now() - t0 < 40000) { const ok = await page.evaluate(() => window.__bootOK === true); if (ok) break; await new Promise(r => setTimeout(r, 500)); }
-  await page.evaluate(() => { window.__ff && window.__ff(4); });
-  await new Promise(r => setTimeout(r, 900));
-  await page.mouse.click(500, 300);
+const path = require('path');
+const ROOT = path.resolve(__dirname, '../..');
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-  // 1) nhân vật tồn tại + camera third-person phía sau
-  const st1 = await page.evaluate(() => {
-    const p = window.__playerPos, c = window.__char;
-    return { char: !!c, p: { x: +p.x.toFixed(2), z: +p.z.toFixed(2) }, camDist: +window.__cam3d.position.distanceTo(new THREE.Vector3(p.x, 1.5, p.z)).toFixed(2) };
-  });
-  console.log('CHAR:', JSON.stringify(st1));
-  // 2) W đi tới — giữ 4.5s (throttle headless)
-  const p0 = await page.evaluate(() => ({ x: window.__playerPos.x, z: window.__playerPos.z }));
-  await page.keyboard.down('w');
-  await new Promise(r => setTimeout(r, 4500));
-  await page.keyboard.up('w');
-  const p1 = await page.evaluate(() => ({ x: +window.__playerPos.x.toFixed(2), z: +window.__playerPos.z.toFixed(2), y: +window.__char.position.y.toFixed(2), camDist: +window.__cam3d.position.distanceTo(new THREE.Vector3(window.__playerPos.x, 1.5, window.__playerPos.z)).toFixed(2) }));
-  const moved = Math.hypot(p1.x - p0.x, p1.z - p0.z);
-  console.log('WALK:', JSON.stringify({ from: [p0.x.toFixed(1), p0.z.toFixed(1)], to: [p1.x, p1.z], d: +moved.toFixed(2), camDist: p1.camDist, charY: p1.y }));
-  // 3) quest: teleport player vào chỗ 1 hoa dại
-  const picked = await page.evaluate(() => {
-    let target = null;
-    window.__garden.children.forEach(c => {
-      if (target || !c.visible || !c.userData || !c.userData.flowers) return;
-      c.userData.flowers.forEach(f => { if (!target && f.h.visible) target = { x: f.h.position.x, z: f.h.position.z }; });
+(async () => {
+  let browser;
+  const errors = [];
+  const evidence = {};
+  try {
+    browser = await puppeteer.launch({
+      executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe',
+      headless: true,
+      args: ['--headless=new', '--no-sandbox', '--disable-gpu', '--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--hide-scrollbars'],
+      defaultViewport: { width: 1280, height: 800 }
     });
-    if (!target) return { ok: false };
-    const wp = new THREE.Vector3(target.x, 0, target.z);
-    window.__garden.localToWorld(wp);
-    window.__playerPos.set(wp.x, 0, wp.z);
-    return { ok: true, lpos: target };
-  });
-  await new Promise(r => setTimeout(r, 700));
-  const hud1 = await page.evaluate(() => ({
-    hud: document.querySelectorAll('div')[document.querySelectorAll('div').length - 1] ? 'n/a' : 'n/a',
-    text: (Array.from(document.querySelectorAll('div')).map(d => d.textContent).find(t => t && t.includes('Nhiệm vụ')) || '').slice(0, 80),
-    trees: (() => { let n = 0; window.__garden.children.forEach(c => { if (c.userData && c.userData.hasTree) n++; }); return n; })()
-  }));
-  console.log('PICK:', JSON.stringify(picked), 'QUEST:', JSON.stringify(hud1));
-  // 4) home
-  await page.evaluate(() => window.__goHome());
-  await new Promise(r => setTimeout(r, 400));
-  const home = await page.evaluate(() => ({ x: +window.__playerPos.x.toFixed(2), z: +window.__playerPos.z.toFixed(2) }));
-  console.log('HOME:', JSON.stringify(home), Math.abs(home.x - 0.4) < 0.01 && Math.abs(home.z - 6.8) < 0.01 ? '✓' : '✗');
-  console.log('ERRORS=' + errs.length); errs.slice(0, 4).forEach(e => console.log('ERR:', e));
-  await page.evaluate(() => { window.__ff && window.__ff(0.5); });
-  await new Promise(r => setTimeout(r, 600));
-  await page.screenshot({ path: '/home/user/shots/rpg-third.png' });
-  await browser.close();
-})().catch(e => { console.error('FATAL', e.message); process.exit(1); });
+    const page = await browser.newPage();
+    page.on('pageerror', error => errors.push(String(error)));
+    await page.goto('file:///' + path.join(ROOT, 'game.html').replace(/\\/g, '/'), { waitUntil: 'domcontentloaded', timeout: 120000 });
+    const started = Date.now();
+    while (Date.now() - started < 60000) {
+      if (await page.evaluate(() => window.__bootOK && window.__charLoaded && window.__waypoints)) break;
+      await sleep(400);
+    }
+    await page.evaluate(() => { window.__ff(6); window.__setSun(1.05); window.__goHome(); });
+    await sleep(400);
+    evidence.initial = await page.evaluate(() => ({
+      waypoints: window.__waypoints.length,
+      map: !!document.getElementById('adventureMap'),
+      colliders: window.__physics.statics.length,
+      quest: window.__questState()
+    }));
+
+    const flowers = await page.evaluate(() => {
+      const result = [];
+      window.__garden.children.forEach(child => {
+        if (!child.userData || !child.userData.flowers) return;
+        child.userData.flowers.forEach(flower => {
+          if (flower.h.visible && result.length < 5) {
+            const world = flower.h.getWorldPosition(new THREE.Vector3());
+            result.push([world.x, world.z]);
+          }
+        });
+      });
+      return result;
+    });
+    for (const position of flowers) {
+      await page.evaluate(position => { window.__playerPos.set(position[0], 0, position[1]); }, position);
+      await sleep(400);
+    }
+    evidence.flowers = await page.evaluate(() => window.__questState());
+
+    const waypointList = await page.evaluate(() => window.__waypoints.map(wp => ({ x: wp.x, z: wp.z, id: wp.id })));
+    for (const waypoint of waypointList) {
+      await page.evaluate(waypoint => {
+        const world = window.__garden.localToWorld(new THREE.Vector3(waypoint.x, 0, waypoint.z));
+        window.__playerPos.set(world.x, 0, world.z);
+      }, waypoint);
+      await sleep(150);
+      await page.keyboard.press('e');
+      await sleep(400);
+    }
+    evidence.waypoints = await page.evaluate(() => ({ quest: window.__questState(), active: window.__waypoints.filter(wp => wp.active).length }));
+    await page.screenshot({ path: path.join(ROOT, 'shots', 'quest-waypoints-active.png') });
+
+    await page.evaluate(() => {
+      const cave = window.__cavePos, world = window.__garden.localToWorld(new THREE.Vector3(cave.x, 0, cave.z));
+      window.__playerPos.set(world.x, 0, world.z);
+    });
+    await page.keyboard.press('e');
+    await sleep(400);
+    evidence.caveEntered = await page.evaluate(() => ({ visible: window.__caveRoom && window.__caveRoom.visible, crystals: window.__caveCrystals.length }));
+    for (const crystal of await page.evaluate(() => window.__caveCrystals.map(c => c.getWorldPosition(new THREE.Vector3()).toArray()))) {
+      await page.evaluate(position => { window.__playerPos.set(position[0], 0, position[2]); }, crystal);
+      await sleep(400);
+    }
+    evidence.cave = await page.evaluate(() => window.__questState());
+    await page.screenshot({ path: path.join(ROOT, 'shots', 'quest-cave-crystals.png') });
+    await page.keyboard.press('e');
+    await sleep(250);
+
+    await page.evaluate(() => {
+      const lake = window.__lakeInfo, world = window.__garden.localToWorld(new THREE.Vector3(lake.x, 0, lake.z));
+      window.__playerPos.set(world.x, 0, world.z);
+    });
+    await page.keyboard.press('x');
+    for (const crystal of await page.evaluate(() => window.__underwaterCrystals.map(c => c.getWorldPosition(new THREE.Vector3()).toArray()))) {
+      await page.evaluate(position => { window.__playerPos.set(position[0], 0, position[2]); }, crystal);
+      await sleep(400);
+    }
+    evidence.underwater = await page.evaluate(() => window.__questState());
+    await page.screenshot({ path: path.join(ROOT, 'shots', 'quest-underwater-crystals.png') });
+
+    await page.keyboard.press('h');
+    await sleep(400);
+    evidence.complete = await page.evaluate(() => window.__questState());
+    evidence.cabinClearance = await page.evaluate(() => {
+      let nearest = Infinity;
+      window.__garden.children.forEach(chunk => {
+        if (!chunk.userData || !chunk.userData.trees) return;
+        chunk.userData.trees.forEach(tree => { nearest = Math.min(nearest, Math.hypot(tree.x - 26, tree.z - 9)); });
+      });
+      return nearest;
+    });
+    console.log(JSON.stringify({ evidence, errors }, null, 2));
+    const passed = evidence.flowers.stage === 1 && evidence.waypoints.quest.stage === 2 && evidence.waypoints.active === 3
+      && evidence.caveEntered.visible && evidence.cave.stage === 3 && evidence.underwater.stage === 4
+      && evidence.complete.stage === 5 && evidence.complete.score === 211 && evidence.cabinClearance >= 5.5 && errors.length === 0;
+    if (!passed) process.exitCode = 1;
+  } finally {
+    if (browser) await browser.close();
+  }
+})().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});

@@ -1,0 +1,16 @@
+{
+  "name": "Cánh Đồng — Hành trình năm vùng",
+  "short_name": "Cánh Đồng",
+  "description": "Khám phá đồng hoa, rừng cổ, hẻm đá, hồ sâu và thế giới dưới nước.",
+  "lang": "vi",
+  "start_url": "./game.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fbead8",
+  "theme_color": "#b0532f",
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cánh Đồng — Open World</title>
+<link rel="icon" type="image/x-icon" href="__FAVICON_DATA__">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#b0532f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cánh Đồng">
+    <title>Cánh Đồng — Open World</title>
 <meta name="description" content="Cánh Đồng — open world 3D: đi dạo nhân vật, hái hoa nhiệm vụ, rừng cây thật, bướm/ong/cò tương tác.">
 <meta property="og:title" content="Cánh Đồng — Open World">
 <!--__DATA__--><style>
@@ -289,9 +296,15 @@
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   }
 </style>
+
+    <style>
+    @media (max-width: 879px) {
+      #hudHelp { display: none !important; }
+    }
+    </style>
 </head>
 <body>
-  <div id="bootSplash" style="position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:linear-gradient(178deg,#fff7eb 0%,#fceada 46%,#f8dcc4 100%);font-family:Georgia,serif;color:#a05a3a;font-size:17px;letter-spacing:0.12em;">ĐANG NỞ HOA&hellip;</div>
+  <!--__BOOT_SPLASH__-->
 <canvas id="stage3d" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
 
@@ -304,8 +317,15 @@
 <script>window.__GAME = 1;</script>
 <div id="nightTint" aria-hidden="true" style="position:fixed;inset:0;z-index:3;pointer-events:none;background:#2c3554;mix-blend-mode:multiply;opacity:0"></div>
 <div id="hudFps" style="position:fixed;top:14px;left:16px;z-index:50;font:700 12px/1 ui-monospace,Menlo,monospace;color:#7a5c33;background:rgba(255,252,246,.7);border:1px solid rgba(122,90,52,.22);border-radius:8px;padding:5px 10px;backdrop-filter:blur(5px)">FPS —</div>
-<div id="hudHelp" style="position:fixed;right:16px;bottom:14px;z-index:50;font:600 11.5px/1.55 Georgia,serif;color:#7a5c33;text-align:right;opacity:.85"><b>W A S D</b> — đi · <b>Shift</b> — chạy nhanh · <b>Space</b> — nhảy · <b>C</b> — lướt dash · <b>B</b> — bật/tắt BAY (<b>E/Space</b> lên · <b>Q</b> xuống) · <b>E</b> — vào/ra nhà (đứng sát cửa), vuốt ve sinh vật · <b>Kéo</b> — xoay camera · <b>H</b>/⌂ — về spawn · <b>T</b> — thời gian · <b>F</b> — full màn hình<br>Thăm <b>hồ cá koi</b> (bơi được) · <b>nhà gỗ</b> · <b>hang thỏ</b> · <b>đài đá</b> · đêm có <b>đom đóm</b>, <b>cú</b>, <b>dơi</b>, <b>ếch</b>, <b>đá phát sáng</b>, <b>sao băng</b> ✿</div>
+<div id="hudHelp" style="position:fixed;right:16px;bottom:14px;z-index:50;font:600 11.5px/1.55 Georgia,serif;color:#7a5c33;text-align:right;opacity:.85"><b>W A S D</b> — đi · <b>Shift</b> — chạy nhanh · <b>Space</b> — nhảy · <b>C</b> — lướt dash · <b>B</b> — bật/tắt BAY (<b>E/Space</b> lên · <b>Q</b> xuống) · <b>E</b> — vào/ra nhà (đứng sát cửa), vuốt ve sinh vật · <b>Kéo</b> — xoay camera · <b>H</b>/⌂ — về spawn · <b>T</b> — thời gian · <b>F</b> — full màn hình · <b>X</b> — lặn/nổi khi ở hồ (<b>Space</b> lên · <b>Q</b> xuống)<br>Thăm <b>hồ cá koi</b> (bơi được) · <b>nhà gỗ</b> · <b>hang thỏ</b> · <b>đài đá</b> · đêm có <b>đom đóm</b>, <b>cú</b>, <b>dơi</b>, <b>ếch</b>, <b>đá phát sáng</b>, <b>sao băng</b> ✿</div>
 <div class="grain" aria-hidden="true"></div>
+<script>
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').catch(function (error) { console.warn('Offline cache unavailable', error); });
+    });
+  }
+</script>
 <!--__SCRIPTS__-->
 </body>
 </html>

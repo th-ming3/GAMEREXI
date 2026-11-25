@@ -126,6 +126,12 @@ if (!window.__GAME && consented) {
     }
     document.body.appendChild(g);
   }
+  function bootStage(title, detail, progress) {
+    var status = byId('bootStatus'), detailEl = byId('bootDetail'), bar = byId('bootProgress');
+    if (status) status.textContent = title;
+    if (detailEl) detailEl.textContent = detail;
+    if (bar) bar.style.width = progress + '%';
+  }
   function failBoot(msg) {
     var sp = document.getElementById('bootSplash');
     if (sp) sp.remove();
@@ -139,17 +145,18 @@ if (!window.__GAME && consented) {
   }
   setTimeout(function () {
     if (window.__bootOK) return;
-    var sp = document.getElementById('bootSplash');
-    if (sp) sp.innerHTML = 'Vườn hoa đang nở chậm hơn thường ngày&hellip;<br><span style="font-size:13px;opacity:.72">Vài giây nữa em chuyển sang bản xem nhẹ nếu máy chưa đáp ứng được.</span>';
+    bootStage('Vườn đang nở chậm hơn thường ngày', 'Thiết bị yếu nên cần thêm chút thởi gian; sắp chuyển sang bản nhẹ nếu cần', 68);
   }, 30000);
   setTimeout(function () {
     if (window.__bootOK) return;
     failBoot('Máy này chưa khởi động được khung 3D — đã chuyển sang <b>vườn hoa 2D dự phòng</b> để không bỏ lỡ lời mời.');
   }, 60000);
   var canvas = byId('stage3d');
+  var captureMode = /[?&]capture=1(?:&|$)/.test(window.location.search);
+  var liteDisabled = /[?&]nolite=1(?:&|$)/.test(window.location.search);
   var renderer;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance', preserveDrawingBuffer: captureMode });
   } catch (e) { failBoot(); return; }
   renderer.domElement.addEventListener('webglcontextlost', function (e) {
     e.preventDefault();
@@ -173,6 +180,7 @@ if (!window.__GAME && consented) {
 
   } catch (e3d) { failBoot(); return; }
 
+  bootStage('Đang dựng ánh sáng và địa hình', 'Khởi tạo WebGL và những vùng đầu tiên', 28);
   var scene = new THREE.Scene();
   window.__scene3d = scene;
   window.__renderer = renderer; /* debug */
@@ -470,7 +478,7 @@ if (!window.__GAME && consented) {
     }
     var tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(10, 5);
+    tex.repeat.set(5, 3); tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.anisotropy = 4;
     return tex;
   }
   var groundNoise = makeGroundNoise();
@@ -638,46 +646,14 @@ if (!window.__GAME && consented) {
   /* ---- vườn ---- */
   var gardenRoot = new THREE.Group();
   /* Shared garden-local lake layout, available to the base terrain mesh too. */
-  var LAKE = { x: 3.5, z: 16, rx: 5.6, rz: 5.0 };
+  var LAKE = { x: 4.5, z: 17, rx: 8.2, rz: 6.8 };
+  var LAKE_DEPTH = 3.4;
+  window.__lakeInfo = LAKE;
   scene.add(gardenRoot);
   for (var clix = 0; clix < clouds.length; clix++) gardenRoot.add(clouds[clix]);
 
-  /* LAKE is garden-local while terrain samples are world-space; convert before flattening. */
-  function lakeDepthWorld(x,z) {
-    var L=window.__lakeInfo; if(!L) return 0;
-    /* Terrain samples are world-space; the basin/water live under rotated gardenRoot.
-       Convert the sample back to garden-local before testing the ellipse, or the bank
-       and depression drift apart and chunks cover half the pond. */
-    var q=new THREE.Vector3(x,0,z); gardenRoot.worldToLocal(q);
-    var dx=(q.x-L.x)/L.rx, dz=(q.z-L.z)/L.rz, d2=dx*dx+dz*dz;
-    return d2<1?Math.min(1,(1-d2)*1.25):0;
-  }
-  /* mặt đất gò mềm + màu nhạt dần vào sương */
-  function hillY(x, z) {
-    var h = 0.13 * Math.sin(x * 0.45 + 1.3) * Math.cos(z * 0.5)
-         + 0.06 * Math.sin(x * 1.7 + z * 1.3)
-         + smooth(-z, 2.5, 9) * 0.75;
-    /* đồi gò hoang dã khi ra xa trung tâm — map có cao thấp để khám phá */
-    var rC = Math.sqrt(x * x + z * z);
-    var wild = smooth(rC, 13, 40);
-    if (wild > 0.002) {
-      var extra = 0.9 * Math.sin(x * 0.1 + 2.1) * Math.cos(z * 0.12 + 0.7)
-        + 0.5 * Math.sin(x * 0.21 + z * 0.17 + 1.3)
-        + 0.3 * Math.sin(x * 0.33 - z * 0.27 + 0.5) + 0.45;
-      /* true low basin beneath water; terrain cannot grow over the pond surface */
-      h -= lakeDepthWorld(x,z) * 0.85;
-      var fl = 1;
-      var SPOTS = hillY._fl || (hillY._fl = [[0.4, 6.8, 8], [26, 9, 7], [-27.5, -9.5, 5.5], [-18, 6, 5.5], [-30, -12, 6.5], [-10.5, -27, 6.5], [7, -20, 6.5], [3.5, 16, 5.8]]);
-      for (var fi = 0; fi < SPOTS.length; fi++) {
-        var dxS = x - SPOTS[fi][0], dzS = z - SPOTS[fi][1];
-        fl = Math.min(fl, smooth(Math.sqrt(dxS * dxS + dzS * dzS), SPOTS[fi][2] * 0.5, SPOTS[fi][2]));
-      }
-      fl = Math.min(fl, 1 - Math.min(1, lakeDepthWorld(x, z) * 2.2));
-      h += extra * wild * fl;
-    }
-    return h;
-  }
-  window.__hillY = hillY;
+  var terrain = window.__createTerrain({ gardenRoot: gardenRoot, LAKE: LAKE, LAKE_DEPTH: LAKE_DEPTH, smooth: smooth, lakeDepth: lakeDepth });
+  var hillY = terrain.hillY, hillYWorld = terrain.hillYWorld, terrainColor = terrain.terrainColor, groundGeo = terrain.groundGeo;
   /* pPos là WORLD-space; decor sinh vật sống trong garden-local (gardenRoot xoay) — convert chuẩn */
   var ppLv = new THREE.Vector3();
   function ppL() {
@@ -686,33 +662,12 @@ if (!window.__GAME && consented) {
     gardenRoot.worldToLocal(ppLv);
     return ppLv;
   }
-  /* Base lawn as a triangulated annulus with a real elliptical pond opening.
-     This avoids a flat lawn triangle fan z-fighting/covering half of the rotated water. */
-  var groundShape = new THREE.Shape();
-  groundShape.absarc(0,0,30,0,Math.PI*2,false);
-  var pondHole = new THREE.Path();
-  pondHole.absellipse(LAKE.x,-LAKE.z,LAKE.rx*1.02,LAKE.rz*1.02,0,Math.PI*2,true);
-  groundShape.holes.push(pondHole);
-  var groundGeo = new THREE.ShapeGeometry(groundShape, 72);
-  groundGeo.rotateX(-Math.PI / 2);
-  var gp = groundGeo.attributes.position;
-  var gc = new Float32Array(gp.count * 3);
-  var gGreen = new THREE.Color(0x8c925c), gFar = new THREE.Color(0x8c925c), gt = new THREE.Color();
-  for (var i = 0; i < gp.count; i++) {
-    var gx = gp.getX(i), gz = gp.getZ(i);
-    gp.setY(i, hillY(gx, gz));
-    var d = Math.sqrt(gx * gx + gz * gz);
-    gt.copy(gGreen).lerp(gFar, smooth(d, 12, 28));
-    var shade = 0.93 + 0.07 * Math.sin(gx * 2.1) * Math.cos(gz * 1.7);
-    gc[i * 3] = gt.r * shade; gc[i * 3 + 1] = gt.g * shade; gc[i * 3 + 2] = gt.b * shade;
-  }
-  groundGeo.setAttribute('color', new THREE.BufferAttribute(gc, 3));
-  groundGeo.computeVertexNormals();
-  var groundMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, color: 0xffffff, map: groundPhotoTex || groundNoise });
+  var groundMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, color: 0xffffff, map: groundNoise });
   var ground = new THREE.Mesh(groundGeo, groundMat);
   window.__baseGround = ground; /* probe: verify the base lawn really leaves the pond opening */
   ground.receiveShadow = true;
   gardenRoot.add(ground);
+  bootStage('Đang gieo hoa và dựng các khu vực', 'Đồng Bình Minh, Rừng Thì Thầm, Hẻm Đá và Hồ Gương', 56);
 
   /* đồi xa 2 lớp mờ dần theo khói + nhấp nhô tự nhiên */
   function makeHills(w, h, d, x, z, color, jitter) {
@@ -974,15 +929,15 @@ if (!window.__GAME && consented) {
     }
     if (allDone) waveMeshes = [];
   }
-  var GRASS_BASE = isMobile || LOW ? 180 : 520;
-  var GRASS_RING = LOW ? 120 : 340;
+  var GRASS_BASE = isMobile || LOW ? 140 : 320;
+  var GRASS_RING = LOW ? 90 : 200;
   var GRASS_N = GRASS_BASE + GRASS_RING;
   var grassMesh = new THREE.InstancedMesh(bladeGeo, bladeMat, GRASS_BASE + GRASS_RING);
   grassMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   grassMesh.frustumCulled = false;
   gardenRoot.add(grassMesh);
   liteMeshes.push([grassMesh, 0.6]);
-  var grassData = [];
+  var grassData = [], grassMatricesReady = false;
   var grassTints = [new THREE.Color('#ffffff'), new THREE.Color('#cfe0b8'), new THREE.Color('#eef3da'), new THREE.Color('#bdd1a6')];
   var grassAnchor = [];
   LAYOUT_D.forEach(function (c) { grassAnchor.push([c[0], c[1]]); });
@@ -1026,13 +981,15 @@ if (!window.__GAME && consented) {
     grassMesh.setColorAt(grassData.length-1,grassTints[(grassData.length-1)%grassTints.length]);
   }
   grassMesh.count = grassData.length;
+  if (window.__REAL_ASSETS) window.__REAL_ASSETS.replaceInstanced('grass', grassMesh, grassData.length);
   if (grassMesh.instanceColor) grassMesh.instanceColor.needsUpdate = true;
 
   /* cỏ tầm xa: nhỏ + nhạt dần vào khói, phủ cả sườn đồi gần */
-  var FAR_N = isMobile || LOW ? 200 : 700;
+  var FAR_N = isMobile || LOW ? 160 : 320;
   var farGrassMesh = new THREE.InstancedMesh(bladeGeo, bladeMat, FAR_N);
   farGrassMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   farGrassMesh.frustumCulled = false;
+  if (window.__REAL_ASSETS) window.__REAL_ASSETS.replaceInstanced('grass', farGrassMesh, FAR_N);
   gardenRoot.add(farGrassMesh);
   liteMeshes.push([farGrassMesh, 0.55]);
   var farGrassData = [];
@@ -1510,7 +1467,7 @@ if (!window.__GAME && consented) {
       var gy6 = hillY(px6, pz6);
       D.g.position.set(px6, gy6 + 0.75 + Math.sin(a6 * 3.1) * 0.16, pz6);
       var nx6 = u6.cx0 + Math.cos(a6 + 0.05) * u6.r, nz6 = u6.cz0 + Math.sin((a6 + 0.05) * 0.77) * u6.r * 0.7;
-      D.g.rotation.y = Math.atan2(nx6 - px6, nz6 - pz6);
+      D.g.rotation.y = Math.atan2(px6 - nx6, pz6 - nz6);
       var fl6 = Math.sin(elapsed * 26 + u6.ph) * 0.35;
       D.wings[0].rotation.z = fl6; D.wings[1].rotation.z = -fl6;
       D.wings[2].rotation.z = -fl6; D.wings[3].rotation.z = fl6;
@@ -1598,7 +1555,14 @@ if (!window.__GAME && consented) {
   var egretGeoBase = egretGeo.attributes.position.array.slice();
   for (var edi = 0; edi < egretN; edi++) {
     var egm = new THREE.MeshBasicMaterial({ map: egretGlideTex, transparent: true, side: THREE.DoubleSide, depthWrite: false, opacity: 1, fog: false, color: 0xf1e6d2, alphaTest: 0.05 });
-    var eg = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 24, 6), egm);
+    var eg = new THREE.Group();
+  var eb = new THREE.Mesh(new THREE.SphereGeometry(0.30, 16, 12), new THREE.MeshStandardMaterial({ color: 0xf3ead8, roughness: 0.9 })); eb.scale.set(1.0, 0.55, 0.62); eg.add(eb);
+  var en = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), new THREE.MeshStandardMaterial({ color: 0xf7f0e2, roughness: 0.9 })); en.position.set(0, 0.10, -0.25); eg.add(en);
+  var bk = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.34, 8), new THREE.MeshStandardMaterial({ color: 0xe0a83a, roughness: 0.7 })); bk.rotation.x = -Math.PI / 2; bk.position.set(0, 0.10, -0.47); eg.add(bk);
+  var wgeo = new THREE.SphereGeometry(1, 12, 10);
+  var wl = new THREE.Mesh(wgeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, side: THREE.DoubleSide })); wl.scale.set(0.52, 0.03, 0.20); wl.position.set(-0.45, 0.06, 0); eg.add(wl);
+  var wr = new THREE.Mesh(wgeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, side: THREE.DoubleSide })); wr.scale.set(0.52, 0.03, 0.20); wr.position.set(0.45, 0.06, 0); eg.add(wr);
+  eg.userData.wings = [wl, wr];
     var eW = rand(0.78, 1.06), eH = eW * (TXT.egretMidH || 322) / (TXT.egretMidW || 526);
     eg.scale.set(eW, eH, 1);
     var edr = egretDirs[edi % egretDirs.length];
@@ -1707,19 +1671,22 @@ if (!window.__GAME && consented) {
   function layout() {
     var w = window.innerWidth, h = window.innerHeight;
     isMobile = w < 880;
+    if (isMobile) LOW = true;
     renderer.setSize(w, h);
+    renderer.shadowMap.enabled = !LOW;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile || LOW ? 1.25 : 2));
     applyLayout();
     if (!isMobile) {
-      FOV = 38;
+      FOV = 50;
       CAM.set(0.4, 3.62, 7.0);
       TARGET.set(-1.0, 1.4, 0);
     } else {
-      FOV = 52;
+      FOV = 58;
       CAM.set(0, 3.4, 8.6);
       TARGET.set(-0.35, 1.4, 0);
     }
     camera.fov = FOV;
+    camera.aspect = w / Math.max(1, h);
     camera.updateProjectionMatrix();
   }
   layout();
@@ -1844,14 +1811,16 @@ if (!window.__GAME && consented) {
     var dtRaw = clock.getDelta();
     var dt = Math.min(dtRaw, 0.05);
     elapsed += dt;
+    if (window.__REAL_WIND_TIME) window.__REAL_WIND_TIME.value = elapsed;
     nowMs = elapsed * 1000;
     var t = elapsed;
     var motion = reduced ? 0.25 : 1;
+    if (isMobile && !liteApplied && !liteDisabled) applyLite();
     var intro = easeInOutSine(Math.min(1, elapsed / introDur));
     if (waveMeshes.length) updateWave(elapsed * 1000);
 
     /* tự hạ cấu hình nếu máy yếu: giữ chuyển động mượt, giảm mật độ */
-    if (elapsed > 5 && !liteApplied) {
+    if (elapsed > 5 && !liteApplied && !liteDisabled) {
       ftAcc += dt; ftN++;
       if (ftN >= 50) {
         if (ftAcc / ftN > 0.044) applyLite();
@@ -1918,38 +1887,42 @@ if (!window.__GAME && consented) {
     /* từng ngọn cỏ lay trong gió (gần + xa, nghiêng theo hướng riêng) */
     dummy.rotation.order = 'YXZ';
     var gust2 = Math.sin(t * 0.5) * 0.5 + mx * 0.6;
-    for (var gw = 0; gw < GRASS_N; gw++) {
-      var gd = grassData[gw];
-      var wave = Math.sin(t * 2.1 - gd.x * 0.7 - gd.z * 0.4);
-      var sw = Math.sin(t * 1.6 + gd.phase) * gd.amp + gust2 * gd.amp * 0.8 + wave * gd.amp * 0.9;
-      dummy.position.set(gd.x, gd.y, gd.z);
-      dummy.rotation.set(sw * 0.5, gd.yaw, sw * 1.4);
-      dummy.scale.set(gd.s * gd.sx, gd.s * gd.sy, 1);
-      dummy.updateMatrix();
-      grassMesh.setMatrixAt(gw, dummy.matrix);
+    var ppT = ppL();
+    if (!window.__REAL_ASSETS || !grassMatricesReady) {
+      var grassActiveN = Math.min(GRASS_N, grassMesh.count);
+      for (var gw = 0; gw < grassActiveN; gw++) {
+        var gd = grassData[gw];
+        if (!gd) continue;
+        var wave = Math.sin(t * 2.1 - gd.x * 0.7 - gd.z * 0.4);
+        var sw = Math.sin(t * 1.6 + gd.phase) * gd.amp + gust2 * gd.amp * 0.8 + wave * gd.amp * 0.9;
+        var tr = 1;
+        if (ppT) {
+          var dxT = gd.x - ppT.x, dzT = gd.z - ppT.z;
+          var dT = Math.sqrt(dxT * dxT + dzT * dzT);
+          if (dT < 0.95) tr = 0.16 + 0.84 * (dT / 0.95);
+        }
+        gd.tr = gd.tr === undefined ? 1 : gd.tr + (tr - gd.tr) * Math.min(1, dt * 7);
+        dummy.position.set(gd.x, gd.y - (1 - gd.tr) * 0.10, gd.z);
+        dummy.rotation.set(sw * 0.5, gd.yaw + (1 - gd.tr) * 0.9, sw * 1.4 + (1 - gd.tr) * 0.65);
+        dummy.scale.set(gd.s * gd.sx, gd.s * gd.sy * gd.tr, 1);
+        dummy.updateMatrix();
+        grassMesh.setMatrixAt(gw, dummy.matrix);
+      }
+      grassMesh.instanceMatrix.needsUpdate = true;
+      var farActiveN = Math.min(FAR_N, farGrassMesh.count);
+      for (var fw2 = 0; fw2 < farActiveN; fw2++) {
+        var fd = farGrassData[fw2];
+        var fwave = Math.sin(t * 1.9 - fd.x * 0.6 - fd.z * 0.35);
+        var fsw = Math.sin(t * 1.3 + fd.phase) * fd.amp + gust2 * fd.amp * 0.7 + fwave * fd.amp;
+        dummy.position.set(fd.x, fd.y, fd.z);
+        dummy.rotation.set(fsw * 0.5, fd.yaw, fsw * 1.35);
+        dummy.scale.set(fd.s * fd.sx, fd.s * fd.sy, 1);
+        dummy.updateMatrix();
+        farGrassMesh.setMatrixAt(fw2, dummy.matrix);
+      }
+      farGrassMesh.instanceMatrix.needsUpdate = true;
+      if (window.__REAL_ASSETS) grassMatricesReady = true;
     }
-    grassMesh.instanceMatrix.needsUpdate = true;
-    for (var sdw = 0; sdw < SEED_N; sdw++) {
-      var sd2 = seedData[sdw];
-      var sdw2 = Math.sin(t * 1.5 + sd2.phase) * sd2.amp + gust2 * sd2.amp * 0.7;
-      dummy.position.set(sd2.x, sd2.y, sd2.z);
-      dummy.rotation.set(sdw2 * 0.45, sd2.yaw, sdw2 * 1.5);
-      dummy.scale.set(sd2.s * sd2.sx, sd2.s * sd2.sy, 1);
-      dummy.updateMatrix();
-      seedMesh.setMatrixAt(sdw, dummy.matrix);
-    }
-    seedMesh.instanceMatrix.needsUpdate = true;
-    for (var fw2 = 0; fw2 < FAR_N; fw2++) {
-      var fd = farGrassData[fw2];
-      var fwave = Math.sin(t * 1.9 - fd.x * 0.6 - fd.z * 0.35);
-      var fsw = Math.sin(t * 1.3 + fd.phase) * fd.amp + gust2 * fd.amp * 0.7 + fwave * fd.amp;
-      dummy.position.set(fd.x, fd.y, fd.z);
-      dummy.rotation.set(fsw * 0.5, fd.yaw, fsw * 1.35);
-      dummy.scale.set(fd.s * fd.sx, fd.s * fd.sy, 1);
-      dummy.updateMatrix();
-      farGrassMesh.setMatrixAt(fw2, dummy.matrix);
-    }
-    farGrassMesh.instanceMatrix.needsUpdate = true;
 
     /* đàn cò: uốn lưới cánh theo nhịp sin — cánh gập lên/xuống liên tục (đêm cò nghỉ: ẩn + đứng yên) */
     var nightG = window.__isNight === true;
@@ -1975,7 +1948,8 @@ if (!window.__GAME && consented) {
         ampL = 0.4 * flL * gfL;
       }
       if (boostE > 0) { ampE *= 1 + 1.5 * boostE; ampL *= 1 + 1.1 * boostE; }
-      var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
+      if (!egb.geometry) { if (egb.userData.wings) { egb.userData.wings[0].rotation.z = -0.35 - ampE; egb.userData.wings[1].rotation.z = 0.35 + ampL; } continue; }
+var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
       for (var ev2 = 0; ev2 < posE.count; ev2++) {
         var ox2 = baseE[ev2 * 3], oy2 = baseE[ev2 * 3 + 1];
         var u2 = ox2 + 0.5;
@@ -2144,7 +2118,7 @@ if (!window.__GAME && consented) {
         }
       }
       var dx2 = px - B.g.position.x, dz2 = pz - B.g.position.z;
-      if (Math.abs(dx2) + Math.abs(dz2) > 0.0001) B.g.rotation.y = Math.atan2(-dx2, -dz2);
+      if (Math.abs(dx2) + Math.abs(dz2) > 0.0001) B.g.rotation.y = Math.atan2(dx2, dz2);
       B.g.rotation.z = Math.sin(a) * 0.3;
       B.g.position.set(px, py, pz);
       var flap = Math.sin(t * B.flap) * flapAmp;
@@ -2310,9 +2284,9 @@ if (!window.__GAME && consented) {
       tmpV.copy(egrets[edv].position);
       gardenRoot.localToWorld(tmpV);
       var dEk = tmpV.distanceTo(camera.position);
-      var mEk = dEk < 4.2 ? 0 : dEk > 6.6 ? 1 : (dEk - 4.2) / 2.4;
-      egrets[edv].material.opacity *= mEk;
-      egrets[edv].visible = !nightG && dEk > 3.4;
+      var mEk = dEk < 8 ? 0 : dEk > 12 ? 1 : (dEk - 8) / 4;
+      egrets[edv].traverse(function(o){ if (o.material) o.material.opacity *= mEk; });
+      egrets[edv].visible = !nightG && dEk > 9;
     }
     /* bướm đâm sệt ống kính cũng ẩn — hết vệt trắng/cánh chói toàn màn */
     for (var bfv = 0; bfv < butterflies.length; bfv++) {
@@ -2320,10 +2294,16 @@ if (!window.__GAME && consented) {
       butterflies[bfv].g.visible = !nightG && tmpV.distanceTo(camera.position) > 2.8;
     }
     /* hoa chính đâm sát lens (khi xoay garden cụm hoa quét qua camera) thì ẩn — nhìn xuyên chứ không bị cành chặn màn */
+    var lowPlantDetail = isMobile || LOW;
     for (var pv2 = 0; pv2 < plants.length; pv2++) {
       var plv = plants[pv2];
+      if (lowPlantDetail && !plv._liteDecor) {
+        plv._liteDecor = true;
+        for (var stl = 0; stl < plv.stamens.length; stl++) plv.stamens[stl].mesh.visible = false;
+      }
       plv.head.getWorldPosition(tmpV);
-      var hideP = tmpV.distanceTo(camera.position) < 0.95;
+      var plantDist = tmpV.distanceTo(camera.position);
+      var hideP = plantDist < 0.95 || plantDist > (lowPlantDetail ? 12 : 26);
       if (plv._hidden !== hideP) { plv.group.visible = !hideP; plv._hidden = hideP; }
     }
 
@@ -2348,6 +2328,7 @@ if (!window.__GAME && consented) {
     return [w.x, w.y, w.z];
   };
   window.__garden = gardenRoot;
+  if (window.__initNPCs) window.__initNPCs(gardenRoot);
 
   /* ---- âm ambient tổng hợp: gió + vo ve + chim xa — WebAudio thuần, không file ---- */
   (function buildAmbience() {
@@ -2500,25 +2481,23 @@ if (!window.__GAME && consented) {
     var d2 = dx * dx + dz * dz;
     return d2 < 1 ? Math.min(1, (1 - d2) * 1.25) : 0;
   }
-  window.__lakeInfo = LAKE;
   function lakeGroundLocalY(x,z) {
-    var pLake = new THREE.Vector3(x,0,z); gardenRoot.localToWorld(pLake);
-    pLake.y = hillY(pLake.x,pLake.z); gardenRoot.worldToLocal(pLake); return pLake.y;
+    return hillY(x, z);
   }
-  var lakeBaseY = 0; window.__lakeWaterY = function(){return lakeBaseY+1.15;};
+  var lakeBaseY = 0; window.__lakeWaterY = function(){return lakeBaseY+1.15+(window.__waterOffset||0);};
   (function () {
-    var ly = lakeBaseY = lakeGroundLocalY(LAKE.x, LAKE.z);
+    var ly = lakeBaseY = lakeGroundLocalY(LAKE.x, LAKE.z) + LAKE_DEPTH;
     var baseW = new THREE.Mesh(new THREE.CircleGeometry(1.28, 40), new THREE.MeshStandardMaterial({ color: 0x2e3a30, roughness: 1 }));
     baseW.rotation.x = -Math.PI / 2;
     baseW.scale.set(LAKE.rx, LAKE.rz, 1);
-    baseW.position.set(LAKE.x, ly - 0.34, LAKE.z);
+    baseW.position.set(LAKE.x, lakeGroundLocalY(LAKE.x, LAKE.z) - 0.05, LAKE.z);
     gardenRoot.add(baseW);
     /* A recessed basin, smaller waterline, and a broad earthy bank make the shoreline legible. */
     var bankW = new THREE.Mesh(new THREE.RingGeometry(0.90, 1.00, 80), new THREE.MeshStandardMaterial({ color: 0x88764e, roughness: 0.98, side: THREE.DoubleSide }));
     bankW.rotation.x = -Math.PI / 2; bankW.scale.set(LAKE.rx, LAKE.rz, 1);
     bankW.position.set(LAKE.x, ly + 1.10, LAKE.z); gardenRoot.add(bankW);
     var waterGeoW = new THREE.CircleGeometry(1, 80);
-    var surfW = new THREE.Mesh(waterGeoW, new THREE.MeshPhysicalMaterial({ color: 0x176678, roughness: 0.14, metalness: 0.12, clearcoat: 0.98, clearcoatRoughness: 0.08, emissive: 0x082a35, emissiveIntensity: 0.18, side: THREE.DoubleSide }));
+    var surfW = new THREE.Mesh(waterGeoW, new THREE.MeshPhysicalMaterial({ color: 0x1d7a8c, roughness: 0.07, metalness: 0.05, clearcoat: 0.45, clearcoatRoughness: 0.3, emissive: 0x06222e, emissiveIntensity: 0.25, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }));
     surfW.rotation.x = -Math.PI / 2;
     surfW.scale.set(LAKE.rx * 0.86, LAKE.rz * 0.86, 1);
     surfW.position.set(LAKE.x, ly + 1.15, LAKE.z);
@@ -2540,20 +2519,31 @@ if (!window.__GAME && consented) {
       ripples.push({ m: rm, ph: Math.random() * 6.283, sp: 0.4 + Math.random() * 0.7 });
     }
     window.__lakeRipples = ripples;
-    /* cá koi thật (koi.webp): 5 con lượn dưới mặt nước */
-    var koiTexW = new THREE.TextureLoader().load(TXT.koi);
-    koiTexW.encoding = THREE.sRGBEncoding;
-    var koiMatW = new THREE.MeshBasicMaterial({ map: koiTexW, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide, depthWrite: false, toneMapped: false });
+    /* cá koi GLB có rig thật: 5 con lượn dưới mặt nước */
     var kois = [];
-    for (var ki = 0; ki < 5; ki++) {
-      var km = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), koiMatW.clone());
-      var ks = 0.34 + Math.random() * 0.2;
-      km.scale.set(ks, ks * TXT.koiH / TXT.koiW, 1);
+    var koiLoader = new THREE.GLTFLoader();
+    function spawnRiggedKoi(index) {
+      var isGold = index % 2 === 1;
+      var b64 = isGold ? '__OGON_KOI_B64__' : '__KOHAKU_KOI_B64__';
+      var bytes = Uint8Array.from(atob(b64), function (c) { return c.charCodeAt(0); });
+      var holder = new THREE.Group();
+      gardenRoot.add(holder);
       var ka0 = Math.random() * 6.283;
-      km.position.set(LAKE.x + Math.cos(ka0) * LAKE.rx * 0.4, ly + 1.03, LAKE.z + Math.sin(ka0) * LAKE.rz * 0.4);
-      gardenRoot.add(km);
-      kois.push({ m: km, a: ka0, rx: LAKE.rx * (0.25 + Math.random() * 0.55), rz: LAKE.rz * (0.25 + Math.random() * 0.55), sp: 0.14 + Math.random() * 0.16, ph: Math.random() * 6.283, sway: 0 });
+      var item = { m: holder, a: ka0, rx: LAKE.rx * (0.25 + Math.random() * 0.55), rz: LAKE.rz * (0.25 + Math.random() * 0.55), sp: 0.14 + Math.random() * 0.16, ph: Math.random() * 6.283, sway: 0, mixer: null, depth: 0.6 + Math.random() * 1.8 };
+      kois.push(item);
+      koiLoader.parse(bytes.buffer, '', function (gltf) {
+        var model = gltf.scene;
+        model.scale.setScalar(1.15 + Math.random() * 0.35);
+        model.traverse(function (o) { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+        holder.add(model);
+        if (gltf.animations && gltf.animations.length) {
+          var mixer = new THREE.AnimationMixer(model);
+          mixer.clipAction(gltf.animations[0]).play();
+          item.mixer = mixer;
+        }
+      }, function (error) { console.warn('Koi GLB failed', error); });
     }
+    for (var ki = 0; ki < 5; ki++) spawnRiggedKoi(ki);
     /* súng: lá tròn nổi + 2 bông nhỏ */
     var lilies = [];
     var lilyGeoW = new THREE.CircleGeometry(0.3, 14);
@@ -2603,17 +2593,19 @@ if (!window.__GAME && consented) {
     })();
     var smallFishMatW = new THREE.MeshBasicMaterial({ map: smallFishTexW, transparent: true, depthWrite: false, side: THREE.DoubleSide });
     var smallFish = [];
-    for (var sf2 = 0; sf2 < 10; sf2++) {
+    for (var sf2 = 0; sf2 < 18; sf2++) {
       var sfm = new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.22), smallFishMatW);
       sfm.rotation.x = -Math.PI / 2;
       sfm.position.set(LAKE.x, ly + 0.99, LAKE.z);
       gardenRoot.add(sfm);
-      smallFish.push({ m: sfm, off: sf2 * 0.7, r2: 1.1 + (sf2 % 3) * 0.35, sp: 0.5 + sf2 * 0.05 });
+      smallFish.push({ m: sfm, off: sf2 * 0.7, r2: 1.1 + (sf2 % 3) * 0.35, sp: 0.5 + sf2 * 0.05, depth: (sf2 % 5) * 0.48 });
     }
     window.__lakeLilies = lilies;
     window.__lakeFishSmall = smallFish;
     window.__kois = kois;
   })();
+  var updateUnderwater = window.__createUnderwaterWorld({ gardenRoot: gardenRoot, LAKE: LAKE, LAKE_DEPTH: LAKE_DEPTH, hillY: hillY, LOW: LOW, lakeBaseY: lakeBaseY });
+
   var kois = window.__kois || [];
   var ripples = window.__lakeRipples || [];
   var lilies = window.__lakeLilies || [];
@@ -2631,6 +2623,7 @@ if (!window.__GAME && consented) {
       var fx2 = LAKE.x + Math.cos(a2) * F2.r2, fz2 = LAKE.z + Math.sin(a2) * F2.r2 * 0.8;
       var pxL = F2.m.position.x, pzL = F2.m.position.z;
       F2.m.position.x = fx2; F2.m.position.z = fz2;
+      F2.m.position.y = lakeBaseY + 0.95 - F2.depth + Math.sin(elapsed * 0.9 + F2.off) * 0.08;
       F2.m.rotation.z = Math.atan2(fx2 - pxL, fz2 - pzL);
     }
     for (var j2 = 0; j2 < bigFish.length; j2++) {
@@ -2667,10 +2660,10 @@ if (!window.__GAME && consented) {
       var pz = LAKE.z + Math.sin(k.a) * k.rz + Math.cos(elapsed * 0.5 + k.ph) * 0.25;
       var prevX = k.m.position.x, prevZ = k.m.position.z;
       k.sway += dt;
-      k.m.position.y = lakeBaseY + 1.03 + Math.sin(elapsed * 1.4 + k.ph) * 0.02;
-      k.m.position.set(px, k.m.position.y, pz);
-      k.m.rotation.x = -Math.PI / 2;
-      k.m.rotation.z = Math.atan2(px - prevX, pz - prevZ);
+      if (k.mixer) k.mixer.update(dt);
+      k.m.position.set(px, lakeBaseY - k.depth + Math.sin(elapsed * 1.4 + k.ph) * 0.06, pz);
+      var headX = px - prevX, headZ = pz - prevZ;
+      if (Math.abs(headX) + Math.abs(headZ) > 0.0001) k.m.rotation.y = -Math.atan2(headZ, headX);
     }
   }
   function updateLakeFx(dt) {
@@ -2682,7 +2675,7 @@ if (!window.__GAME && consented) {
     }
     var dF2 = window.__dayF === undefined ? 1 : window.__dayF;
     if (window.__cabinWin) window.__cabinWin.emissiveIntensity = 0.15 + (1 - dF2) * 1.35;
-    if (window.__lakeSurf) window.__lakeSurf.material.color.setHSL(0.53, 0.68, 0.11 + 0.07 * dF2);
+    if (window.__lakeSurf) window.__lakeSurf.material.color.setHSL(0.52, 0.62, 0.16 + 0.08 * dF2);
   }
 
   /* ---- BÔNG LAU (cottonweed): cụm bông trắng để gió thổi — chỉ spawn gần hang/xa sân ---- */
@@ -2842,13 +2835,13 @@ if (!window.__GAME && consented) {
       }
     }
     fireflyNightWas=nightNow;
+    var ppF = ppL();
     for (var i = 0; i < fireflies.length; i++) {
       var f = fireflies[i];
       f.m.visible = nightNow; if(f.glow)f.glow.visible=nightNow;
       if (!nightNow) continue;
       f.ph += dt * f.sp;
       /* cụm quanh NGƯỜI CHƠI: tâm cụm lerp chậm về player */
-      var ppF = ppL();
       if (ppF) {
         f.cx += (ppF.x + (f.ox||0) - f.cx) * Math.min(1, dt * 1.45);
         f.cz += (ppF.z + (f.oz||0) - f.cz) * Math.min(1, dt * 1.45);
@@ -2912,9 +2905,9 @@ if (!window.__GAME && consented) {
     texO.encoding = THREE.sRGBEncoding;
     var matO = new THREE.MeshBasicMaterial({ map: texO, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide, depthWrite: false, toneMapped: false });
     owlG = new THREE.Group();
-    var bodyO = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.78 * TXT.owlH / TXT.owlW), matO);
+    var bodyO = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 12), new THREE.MeshStandardMaterial({ color: 0x8a7462, roughness: 0.95 })); bodyO.scale.set(1, 1.2, 0.85);
     owlG.add(bodyO);
-    var wGeoO = new THREE.PlaneGeometry(0.34, 0.26);
+    var wGeoO = new THREE.SphereGeometry(1, 12, 10);
     var wMatO = new THREE.MeshBasicMaterial({ color: 0x8a7462, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false });
     owlWingL = new THREE.Mesh(wGeoO, wMatO);
     owlWingL.position.set(-0.42, 0.05, -0.02);
@@ -2927,12 +2920,12 @@ if (!window.__GAME && consented) {
   })();
 
   /* ---- sao băng thi thoảng rơi ban đêm ---- */
-  var shootT = 6;
+  var shootT = 2;
   function updateShootingStar(dt) {
     if (!window.__isNight) { shootT = 5 + Math.random() * 6; return; }
     shootT -= dt;
-    if (shootT <= 0 && Math.random() < dt * 0.4) {
-      shootT = 9 + Math.random() * 10;
+    if (shootT <= 0 && Math.random() < dt * 1.6) {
+      shootT = 3 + Math.random() * 4;
       var sx = (Math.random() - 0.5) * 40, sy = 10 + Math.random() * 8, sz = (Math.random() - 0.5) * 40;
       var tail = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.045), new THREE.MeshBasicMaterial({ color: 0xfff3d0, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
       tail.position.set(sx, sy, sz);
@@ -2992,7 +2985,7 @@ if (!window.__GAME && consented) {
   window.__spawnHomeFX = function () {
     /* pPos is world-space while these effect meshes belong to rotated gardenRoot. */
     var sx = 0.4, sz = 6.8;
-    var worldFX = new THREE.Vector3(sx, hillY(sx, sz), sz);
+    var worldFX = new THREE.Vector3(sx, hillYWorld(sx, sz), sz);
     gardenRoot.worldToLocal(worldFX);
     sx=worldFX.x; sz=worldFX.z;
     var sy = worldFX.y;
@@ -3027,7 +3020,8 @@ if (!window.__GAME && consented) {
   (function () {
     var CAB = { x: 26, z: 9 };
     var cy2 = hillY(CAB.x, CAB.z);
-    var cabinG = new THREE.Group();
+    var cabinG = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel('house', { x: 5.4, y: 5.4, z: 4 }) : new THREE.Group();
+    if (!window.__REAL_ASSETS) {
     /* texture ván tường + ngói */
     var plankTex2 = (function () {
       var c2 = document.createElement('canvas'); c2.width = c2.height = 128;
@@ -3152,6 +3146,7 @@ if (!window.__GAME && consented) {
       log2.position.set(-1.9, 0.08 + fi5 * 0.11, 0.3 + fi5 * 0.14);
       cabinG.add(log2);
     }
+    }
     cabinG.position.set(CAB.x, cy2, CAB.z);
     cabinG.rotation.y = -1.45;
     gardenRoot.add(cabinG);
@@ -3169,6 +3164,7 @@ if (!window.__GAME && consented) {
       rm2.position.set(RK.x + (Math.random() - 0.5) * 5.2, rkY + rs2 * 0.32, RK.z + (Math.random() - 0.5) * 4.4);
       rm2.rotation.set(Math.random(), Math.random() * 6.283, Math.random() * 0.4);
       gardenRoot.add(rm2);
+      if (window.__physicsAddStatic) window.__physicsAddStatic(rm2.position.x, rm2.position.z, rs2 * 0.72, 2.5);
     }
     /* mộ đá: 2 trụ + phiến đỉnh + lỗ tối bên trong */
     var TOMB = { x: -27.5, z: -9.5 };
@@ -3188,7 +3184,7 @@ if (!window.__GAME && consented) {
      huỷ (dispose) khi xa, cull ngoài frustum + tầm nhìn → bộ nhớ/draw-call không tăng dù map rộng cỡ nào */
   (function buildChunkSystem() {
     if (!window.__GAME) return;
-    var CHSZ = 10, GEN_R = 78, KILL_R = 88, VIEW_R = 66, CENTER_R = 13.5;
+    var CHSZ = 10, GEN_R = 48, KILL_R = 56, VIEW_R = 40, CENTER_R = 13.5;
     var chunkMap = {}, chunkList = [], genQueue = [], lastGenCX = NaN, lastGenCZ = NaN;
     /* ---- ĐƯỜNG ĐẤT: hàm world-space xác định — mọi chunk vẽ khớp liền mạch ---- */
     function pathZ(x) { return 15.5 + 5.2 * Math.sin(x * 0.085) + 3.1 * Math.sin(x * 0.041 + 2.0) - 12.5 * Math.exp(-(x*x)/70); }
@@ -3221,7 +3217,7 @@ if (!window.__GAME && consented) {
       for(var f=0;f<faces;f++){var ia=idx?idx.getX(f*3):f*3,ib=idx?idx.getX(f*3+1):f*3+1,ic=idx?idx.getX(f*3+2):f*3+2;a.fromBufferAttribute(pos,ia);b.fromBufferAttribute(pos,ib);c.fromBufferAttribute(pos,ic);b.sub(a).cross(c.sub(a));total+=areas[f]=b.length()*.5;}
       if(!total)return null;
       var accum=new Float64Array(faces),run=0;for(var q=0;q<faces;q++)accum[q]=run+=areas[q];
-      var P=new Float32Array(count*9),C=new Float32Array(count*9),BI=new Uint16Array(count*12),BW=new Float32Array(count*12),I=new Uint32Array(count*3),colors=['#b99b7c','#d1b99a','#e2d2b8','#a5896a'].map(function(x){return new THREE.Color(x);});
+      var P=new Float32Array(count*9),C=new Float32Array(count*9),BI=new Uint16Array(count*12),BW=new Float32Array(count*12),I=new Uint32Array(count*3),colors=['#e8e5df','#f4f1ea','#fffaf0','#d7d4cd'].map(function(x){return new THREE.Color(x);});
       var na=new THREE.Vector3(),nb=new THREE.Vector3(),nc=new THREE.Vector3(),tangent=new THREE.Vector3(),axis=new THREE.Vector3(),tip=new THREE.Vector3(),left=new THREE.Vector3(),right=new THREE.Vector3();
       function weightsAt(i0,i1,i2,w0,w1,w2){var m={};for(var k=0;k<4;k++){var j=si.getComponent(i0,k),v=sw.getComponent(i0,k)*w0;if(v>0)m[j]=(m[j]||0)+v;j=si.getComponent(i1,k);v=sw.getComponent(i1,k)*w1;if(v>0)m[j]=(m[j]||0)+v;j=si.getComponent(i2,k);v=sw.getComponent(i2,k)*w2;if(v>0)m[j]=(m[j]||0)+v;}return Object.keys(m).map(function(k){return [Number(k),m[k]];}).sort(function(x,y){return y[1]-x[1];}).slice(0,4);}
       for(var h=0;h<count;h++){
@@ -3243,9 +3239,25 @@ if (!window.__GAME && consented) {
       var cover=new THREE.SkinnedMesh(hair,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.96,metalness:0,side:THREE.DoubleSide,transparent:true,opacity:.7,depthWrite:false}));
       cover.position.copy(mesh.position);cover.quaternion.copy(mesh.quaternion);cover.scale.copy(mesh.scale);cover.frustumCulled=false;mesh.parent.add(cover);cover.bind(mesh.skeleton,mesh.bindMatrix.clone());cover.name='Rabbit fine fur strands';return cover;
     }
+    function whiteRabbitMap(source) {
+      var image = source.image, canvas = document.createElement('canvas');
+      canvas.width = image.width; canvas.height = image.height;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(image, 0, 0);
+      var data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      for (var i = 0; i < data.data.length; i += 4) {
+        var lum = data.data[i] * 0.24 + data.data[i + 1] * 0.62 + data.data[i + 2] * 0.14;
+        var white = Math.max(0, Math.min(255, Math.round(205 + lum * 0.20)));
+        data.data[i] = white; data.data[i + 1] = white; data.data[i + 2] = white;
+      }
+      ctx.putImageData(data, 0, 0);
+      var texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = source.colorSpace; texture.encoding = source.encoding; texture.flipY = source.flipY;
+      return texture;
+    }
     function markRabbitMapsReady(){
       if(Object.keys(rabbitMaps).length<3 || !rabbitModelReady || window.__rabbitAssetReady) return;
-      Object.keys(rabbitMaps).forEach(function(k){var t=rabbitMaps[k];if(THREE.SRGBColorSpace && k!=='rabbit-NORM.png')t.colorSpace=THREE.SRGBColorSpace;else if(k!=='rabbit-NORM.png')t.encoding=THREE.sRGBEncoding;});
+      Object.keys(rabbitMaps).forEach(function(k){var t=rabbitMaps[k];if(THREE.SRGBColorSpace && k!=='rabbit-NORM.png')t.colorSpace=THREE.SRGBColorSpace;else if(k!=='rabbit-NORM.png')t.encoding=THREE.sRGBEncoding;if(k!=='rabbit-NORM.png')rabbitMaps[k]=whiteRabbitMap(t);});
       var rabbitSkinTargets=[];
       rabbitTemplate.traverse(function(o){
         if(o.isSkinnedMesh)rabbitSkinTargets.push(o);
@@ -3307,7 +3319,7 @@ if (!window.__GAME && consented) {
       if (landSafeRabbit(x,z)) return {x:x,z:z};
       var L=window.__lakeInfo, dx=x-L.x, dz=z-L.z;
       if (Math.hypot(dx,dz)<0.001) {dx=1;dz=0;}
-      var q=Math.sqrt(dx*dx/(L.rx*L.rx)+dz*dz/(L.rz*L.rz))||0.01, k=1.10/q;
+      var q=Math.sqrt(dx*dx/(L.rx*L.rx)+dz*dz/(L.rz*L.rz))||0.01, k=1.24/q;
       return {x:L.x+dx*k,z:L.z+dz*k};
     }
     function rabbitMesh() { return rabbitRig(); }
@@ -3336,7 +3348,7 @@ if (!window.__GAME && consented) {
       m.position.set(sx, hillY(sx, sz), sz); gardenRoot.add(m); rig.shadow.position.set(sx,hillY(sx,sz)+.018,sz); gardenRoot.add(rig.shadow);
       rabbitPool.push({ m:m, mixer:rig.mixer, actions:rig.actions, current:'guard', shadow:rig.shadow, offset:0, ox:0, oz:0, sx:sx, sz:sz, ex:ex, ez:ez, t:0, pause:0, gaitT:.8+Math.random()*2, startle:0, fade:1, seed:Math.random()*6.28 });
     }
-    function rabbitActive(){ var d=window.__dayF; return typeof d==='number' && d>0.26 && d<0.66; }
+    function rabbitActive(){ var d=window.__dayF; return typeof d==='number' && d>0.26 && window.__isNight!==true; }
     function switchRabbit(rb,key){ if(rb.current===key || !rb.actions[key])return; var old=rb.actions[rb.current]; if(old)old.fadeOut(.22); rb.actions[key].reset().fadeIn(.22).play(); rb.current=key; }
     function updateRabbits(dt) {
       var night=window.__isNight===true, active=rabbitActive()&&!night;
@@ -3360,11 +3372,13 @@ if (!window.__GAME && consented) {
         }else{
           rb.pause=0;switchRabbit(rb,night?'guard':'sit');
         }
+        var previousX=rb.m.position.x, previousZ=rb.m.position.z;
         var k=Math.min(rb.t,1),x=rb.sx+dx*k,z=rb.sz+dz*k;
-        if(!landSafeRabbit(x,z)){rb.t=Math.max(0,rb.t-.025);x=rb.sx+dx*rb.t;z=rb.sz+dz*rb.t;}
+        if(!landSafeRabbit(x,z)){var safe=projectRabbitToLand(x,z);x=safe.x;z=safe.z;}
         rb.m.position.set(x,hillY(x,z),z);
         if(rb.shadow)rb.shadow.position.set(x,hillY(x,z)+.018,z);
-        rb.m.rotation.y=Math.atan2(dx,dz);
+        var moveX=x-previousX,moveZ=z-previousZ;
+        if(Math.abs(moveX)+Math.abs(moveZ)>0.0001)rb.m.rotation.y=Math.atan2(moveX,moveZ);
         rb.m.rotation.z=Math.sin(elapsed*1.7+rb.seed)*.008;
         var bob=(rb.current==='sit'||rb.current==='guard')?Math.sin(elapsed*2+rb.seed)*.006:0;
         rb.m.position.y+=bob;
@@ -3393,8 +3407,18 @@ if (!window.__GAME && consented) {
       g.computeVertexNormals();
       return g;
     })();
-    var stoneMatC = new THREE.MeshStandardMaterial({ color: 0x6f6a5e, roughness: 0.98, flatShading: true });
-    var stoneMatC2 = new THREE.MeshStandardMaterial({ color: 0x5d574b, roughness: 0.95, flatShading: true });
+    var stoneMatC = new THREE.MeshStandardMaterial({ color: 0x6f6a5e, roughness: 0.98, flatShading: false });
+    var stoneMatC2 = new THREE.MeshStandardMaterial({ color: 0x5d574b, roughness: 0.95, flatShading: false });
+    var canyonStoneA = new THREE.MeshStandardMaterial({ color: 0x835238, roughness: 0.96, flatShading: false });
+    var canyonStoneB = new THREE.MeshStandardMaterial({ color: 0x634131, roughness: 0.98, flatShading: false });
+    var forestStoneA = new THREE.MeshStandardMaterial({ color: 0x4c5b4c, roughness: 0.99, flatShading: false });
+    var borderStoneA = new THREE.MeshStandardMaterial({ color: 0x666963, roughness: 0.98, flatShading: false });
+    function regionStone(region, alternate) {
+      if (region === 'canyon') return alternate ? canyonStoneB : canyonStoneA;
+      if (region === 'forest') return alternate ? stoneMatC2 : forestStoneA;
+      if (region === 'border') return alternate ? stoneMatC2 : borderStoneA;
+      return alternate ? stoneMatC2 : stoneMatC;
+    }
     var barkTexC = (function () {
       var c = document.createElement('canvas'); c.width = 64; c.height = 128;
       var g = c.getContext('2d');
@@ -3490,12 +3514,7 @@ if (!window.__GAME && consented) {
     /* CÂY CỔ THỤ landmark (7, −20): to gấp rưỡi, đá quấn gốc — điểm nhìn xa nhận ra */
     (function () {
       var gx6 = 7, gz6 = -20, gy6 = hillY(gx6, gz6);
-      var gG = new THREE.Group();
-      var trkG = new THREE.Mesh(tree3DTrunkGeo, trunkMatC);
-      trkG.scale.setScalar(3.6);
-      var lfG = new THREE.Mesh(tree3DLeafGeo, leafMatC);
-      lfG.scale.setScalar(3.9);
-      gG.add(trkG, lfG);
+      var gG = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel('broadleaf', { height: 12 }) : new THREE.Group();
       gG.userData.isBigTree = true;
       gG.position.set(gx6, gy6 - 0.05, gz6);
       lmSync.push(gG);
@@ -3506,7 +3525,7 @@ if (!window.__GAME && consented) {
         var rsc6 = 0.22 + Math.random() * 0.14;
         rs6.scale.set(rsc6, rsc6 * 0.7, rsc6);
         var ra6 = ri6 / 6 * 6.283;
-        rs6.position.set(gx6 + Math.cos(ra6) * 1.35, gy6 + 0.06, gz6 + Math.sin(ra6) * 1.35);
+        rs6.position.set(gx6 + Math.cos(ra6) * 1.35, gy6 - 0.10, gz6 + Math.sin(ra6) * 1.35);
         rs6.rotation.y = Math.random() * 6.283;
         gardenRoot.add(rs6);
       }
@@ -3617,11 +3636,13 @@ if (!window.__GAME && consented) {
       var grp = new THREE.Group();
       var bx = cx * CHSZ, bz = cz * CHSZ; /* góc chunk */
       var midX = bx + CHSZ / 2, midZ = bz + CHSZ / 2;
+      var region = window.__REGION ? window.__REGION.at(midX, midZ) : 'meadow';
+      var chunkBodies = [];
       /* đất: tile 4×4 vertex uốn theo hillY — đúng địa hình trung tâm */
       var gg = new THREE.PlaneGeometry(CHSZ + 0.8, CHSZ + 0.8, 7, 7);
       gg.rotateX(-Math.PI / 2);
       var gp2 = gg.attributes.position, gc2 = new Float32Array(gp2.count * 3);
-      var gGreen2 = new THREE.Color(0x8c925c), gFar2 = new THREE.Color(0x8c925c), gt2 = new THREE.Color();
+      var gt2 = new THREE.Color();
       var uv2 = gg.attributes.uv;
       for (var vi = 0; vi < gp2.count; vi++) {
         var wx = bx + gp2.getX(vi) + CHSZ / 2, wz = bz + gp2.getZ(vi) + CHSZ / 2;
@@ -3630,8 +3651,7 @@ if (!window.__GAME && consented) {
         gp2.setZ(vi, wz);
         /* trừ 1.2cm trong vòng đè sân trung tâm: hết z-fight, sân gốc vẫn thắng ở giữa */
         gp2.setY(vi, hillY(wx, wz) - (Math.sqrt(wx * wx + wz * wz) < 31 ? 0.012 : 0));
-        var dC = Math.sqrt(wx * wx + wz * wz);
-        gt2.copy(gGreen2).lerp(gFar2, smooth(dC, 12, 28));
+        terrainColor(wx, wz, gt2);
         var sh2 = 0.93 + 0.07 * Math.sin(wx * 2.1) * Math.cos(wz * 1.7);
         gc2[vi * 3] = gt2.r * sh2; gc2[vi * 3 + 1] = gt2.g * sh2; gc2[vi * 3 + 2] = gt2.b * sh2;
       }
@@ -3645,8 +3665,9 @@ if (!window.__GAME && consented) {
       var tile = new THREE.Mesh(gg, groundMat);
       tile.receiveShadow = !LOW;
       grp.add(tile);
-      /* cỏ instanced: 110 ngọn + đám cao */
-      var nB2 = LOW ? 60 : 110;
+      /* cỏ instanced: mật độ theo hệ sinh thái, hẻm đá và núi biên thưa hơn */
+      var grassDensity = region === 'canyon' ? 0.34 : (region === 'border' ? 0.24 : (region === 'forest' ? 0.86 : (region === 'lake' ? 0.58 : 1)));
+      var nB2 = Math.max(14, Math.round((LOW ? 42 : 70) * grassDensity));
       var grassI = new THREE.InstancedMesh(bladeGeo, bladeMat, nB2);
       var blades = [];
       for (var bi = 0; bi < nB2; bi++) {
@@ -3657,90 +3678,68 @@ if (!window.__GAME && consented) {
         blades.push({ x: gx2, y: hillY(gx2, gz2) - 0.01, z: gz2, yaw: rng() * 6.283, s: tall ? 1.35 + rng() * 0.5 : 0.55 + rng() * 0.7, sx: 0.75 + rng() * 0.55, sy: 0.62 + rng() * 0.6, phase: rng() * 6.283, amp: 0.07 + rng() * 0.11 });
       }
       grassI.userData.blades = blades;
+      if (window.__REAL_ASSETS) window.__REAL_ASSETS.replaceInstanced('grass', grassI, blades.length);
       grp.add(grassI);
       /* hoa dại (đăng ký để nhiệm vụ hái hoa) + đá xác định theo seed */
       var arrF2 = [];
-      var nf2 = 2 + (rng() * 4 | 0);
+      var flowerBase = region === 'meadow' ? 2 : (region === 'lake' ? 1 : (region === 'forest' ? 1 : 0));
+      var flowerRange = region === 'meadow' ? 4 : (region === 'canyon' || region === 'border' ? 1 : 2);
+      var nf2 = flowerBase + (rng() * flowerRange | 0);
       for (var fi = 0; fi < nf2; fi++) {
         var fx = bx + rng() * CHSZ, fz = bz + rng() * CHSZ;
         for (var fr2 = 0; fr2 < 12 && (onPathW(fx, fz, 1.15) || nearDen(fx, fz, 3.2) || Math.hypot(fx-0.4,fz-6.8)<2.3 || lakeDepth(fx, fz) > 0.1); fr2++) { fx = bx + rng() * CHSZ; fz = bz + rng() * CHSZ; }
         if (lakeDepth(fx, fz) > 0.1) continue;
         var fy = hillY(fx, fz);
-        var st2 = new THREE.Mesh(stemGeoC, stemMatC);
-        st2.scale.set(1, 0.3 + rng() * 0.35, 1);
-        st2.position.set(fx, fy - 0.02, fz);
-        st2.rotation.z = (rng() - 0.5) * 0.24;
-        grp.add(st2);
-        var wfg = new THREE.Group();
-        var hs2 = 0.05 + rng() * 0.042;
-        var ptA = new THREE.Mesh(wfPetalGeoC, wfPetalMatsC[(rng() * wfPetalMatsC.length) | 0]);
-        ptA.scale.set(hs2, hs2 * 0.6, hs2);
-        var ptB = ptA.clone(); ptB.rotation.y = Math.PI / 2;
-        var ptC = ptA.clone(); ptC.rotation.y = Math.PI / 4; ptC.scale.multiplyScalar(0.62);
-        var ptD = ptA.clone(); ptD.rotation.y = -Math.PI / 4; ptD.scale.multiplyScalar(0.62);
-        var disc2 = new THREE.Mesh(wfDiscGeoC, wfDiscMatC);
-        disc2.scale.set(hs2 * 0.42, hs2 * 0.24, hs2 * 0.42);
-        wfg.add(ptA, ptB, ptC, ptD, disc2);
-        wfg.position.set(fx + st2.rotation.z * -0.12, fy + st2.scale.y, fz);
+        var wfg = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel('flower', 0.42) : new THREE.Group();
+        wfg.position.set(fx, fy - 0.01, fz);
         wfg.rotation.y = rng() * 6.283;
         grp.add(wfg);
-        arrF2.push({ h: wfg, s: st2 });
+        arrF2.push({ h: wfg, s: wfg });
       }
-      /* cây: cụm sinh học theo seed — gần 35% chunk có 1–2 cây tán tròn */
-      var nTr = rng() < 0.20 ? 1 : 0;
+      /* cây: rừng dày và cao, hẻm đá chỉ có cây chịu hạn thưa */
+      var treeChance = region === 'forest' ? 0.82 : (region === 'meadow' ? 0.18 : (region === 'lake' ? 0.14 : 0.045));
+      var nTr = rng() < treeChance ? (region === 'forest' && rng() < 0.35 ? 2 : 1) : 0;
       var treeAdded = 0, treesArr = [];
       for (var ti2 = 0; ti2 < nTr; ti2++) {
         var tx2 = bx + rng() * CHSZ, tz2 = bz + rng() * CHSZ;
         var ppTree=window.__playerPos?ppL():null;
-        if (onPathW(tx2, tz2, 2.0) || nearDen(tx2, tz2, 3.6) || lakeDepth(tx2, tz2) > 0.08 || Math.hypot(tx2-.4,tz2-6.8)<11 || (ppTree&&Math.hypot(tx2-ppTree.x,tz2-ppTree.z)<10)) continue;
+        if (onPathW(tx2, tz2, 2.0) || nearDen(tx2, tz2, 3.6) || lakeDepth(tx2, tz2) > 0.08
+          || Math.hypot(tx2 - 26, tz2 - 9) < 5.5 || Math.hypot(tx2 + 10.5, tz2 + 27) < 4.5 || Math.hypot(tx2 - 7, tz2 + 20) < 4.5
+          || Math.hypot(tx2-.4,tz2-6.8)<11 || (ppTree&&Math.hypot(tx2-ppTree.x,tz2-ppTree.z)<10)) continue;
         var ty2 = hillY(tx2, tz2);
-        var tsc = 1.55 + rng() * 1.05;
-        var treeG = new THREE.Group();
+        var tsc = region === 'forest' ? 2.15 + rng() * 1.15 : (region === 'canyon' ? 0.85 + rng() * 0.55 : 1.35 + rng() * 0.85);
+        var treeKind = region === 'forest' ? (rng() < 0.32 ? rng() * 0.22 : 0.68 + rng() * 0.32)
+          : (region === 'canyon' ? rng() * 0.18 : (region === 'lake' && rng() < 0.45 ? 0.25 + rng() * 0.12 : rng()));
+        var treeName = treeKind < 0.24 ? 'pine' : (treeKind < 0.39 ? 'blossom' : 'broadleaf');
+        var treeG = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel(treeName, { height: tsc * 4.4 }) : new THREE.Group();
         treeG.userData.isTree3D = true;
-        var trk3 = new THREE.Mesh(tree3DTrunkGeo, trunkMatC);
-        trk3.scale.setScalar(tsc);
-        var lf3 = new THREE.Group();
-        var treeKind = rng();
-        treeG.userData.species = treeKind < 0.24 ? 'pine' : (treeKind < 0.39 ? 'blossom' : (treeKind < 0.61 ? 'light-leaf' : 'broadleaf'));
-        if (treeKind < 0.24) {
-          /* evergreen: layered, genuinely 3D fir silhouette */
-          for (var layer = 0; layer < 3; layer++) {
-            var cone = new THREE.Mesh(pineGeoC, pineMatC);
-            var cs = tsc * (0.90 - layer * 0.16);
-            cone.scale.set(cs, cs, cs);
-            cone.position.y = tsc * (0.60 + layer * 0.19);
-            lf3.add(cone);
-          }
-        } else {
-          /* broad leafy / blush blossom crowns */
-          var crownMat = treeKind < 0.39 ? bloomMatC : (treeKind < 0.61 ? springMatC : leafMatC);
-          var crown = new THREE.Mesh(tree3DLeafGeo, crownMat);
-          crown.scale.setScalar(tsc * (0.9 + rng() * 0.3));
-          lf3.add(crown);
-        }
-        treeG.add(trk3, lf3);
+        treeG.userData.species = treeName;
+        var lf3 = treeG;
         treeG.position.set(tx2, ty2 - 0.04, tz2);
         treeG.rotation.y = rng() * 6.283;
         treeG.rotation.z = (rng() - 0.5) * 0.06;
         grp.add(treeG); treeAdded++; treesArr.push({ g: treeG, leaf: lf3, x: tx2, z: tz2 });
+        if (window.__physicsAddStatic) chunkBodies.push(window.__physicsAddStatic(tx2, tz2, Math.max(0.18, tsc * 0.12), tsc * 1.4));
         var shC = new THREE.Mesh(new THREE.CircleGeometry(1, 14), shadowMatC);
         shC.rotation.x = -Math.PI / 2;
         shC.scale.set(tsc * 0.42, tsc * 0.42, 1);
         shC.position.set(tx2, ty2 + 0.015, tz2);
         grp.add(shC);
       }
-      var ns2 = (rng() * 3) | 0;
+      var ns2 = region === 'canyon' ? 3 + (rng() * 4 | 0) : (region === 'border' ? 2 + (rng() * 3 | 0) : (rng() * 3 | 0));
       for (var si = 0; si < ns2; si++) {
         var sx2 = bx + rng() * CHSZ, sz2 = bz + rng() * CHSZ;
         for (var sr2 = 0; sr2 < 5 && (onPathW(sx2, sz2, 1.5) || nearDen(sx2, sz2, 3.2) || lakeDepth(sx2, sz2) > 0.12); sr2++) { sx2 = bx + rng() * CHSZ; sz2 = bz + rng() * CHSZ; }
-        if (Math.hypot(sx2 + 10.5, sz2 + 27) < 4.5 || Math.hypot(sx2 - 7, sz2 + 20) < 4.5) continue;
-        var bigRock = rng() < 0.12;
-        var rw2 = bigRock ? 0.42 + rng() * 0.5 : 0.18 + rng() * 0.22;
-        var st3 = new THREE.Mesh(stoneGeoC, rng() < 0.5 ? stoneMatC : stoneMatC2);
+        if (Math.hypot(sx2 + 10.5, sz2 + 27) < 4.5 || Math.hypot(sx2 - 7, sz2 + 20) < 4.5
+          || Math.hypot(sx2 - 26, sz2 - 9) < 4.8 || Math.hypot(sx2 - 0.4, sz2 - 6.8) < 2.5) continue;
+        var bigRock = rng() < (region === 'canyon' ? 0.48 : 0.12);
+        var rw2 = bigRock ? (region === 'canyon' ? 0.65 + rng() * 0.85 : 0.42 + rng() * 0.5) : 0.18 + rng() * 0.22;
+        var st3 = new THREE.Mesh(stoneGeoC, regionStone(region, rng() < 0.5));
         st3.scale.set(rw2, rw2 * (0.8 + rng() * 0.5), rw2 * (0.85 + rng() * 0.3));
         st3.position.set(sx2, hillY(sx2, sz2) + st3.scale.y * 0.38, sz2);
         st3.rotation.set((rng() - 0.5) * 0.24, rng() * 6.283, (rng() - 0.5) * 0.24);
         grp.add(st3);
+        if (window.__physicsAddStatic) chunkBodies.push(window.__physicsAddStatic(sx2, sz2, rw2 * 0.72, Math.max(0.6, st3.scale.y * 2)));
       }
       /* ---- ĐƯỜNG ĐẤT: các viên đất chồng dọc pathZ — liền mạch giữa các chunk ---- */
       for (var pxi = 0, sxp = bx - 0.5; sxp < bx + CHSZ + 0.5; pxi++, sxp += 0.82) {
@@ -3791,7 +3790,7 @@ if (!window.__GAME && consented) {
       var nBu = rng() < 0.32 ? 1 + (rng() * 2 | 0) : 0;
       for (var bi3 = 0; bi3 < nBu; bi3++) {
         var bxx = bx + rng() * CHSZ, bzz = bz + rng() * CHSZ;
-        if (onPathW(bxx, bzz, 1.9) || nearDen(bxx, bzz, 3.6) || lakeDepth(bxx, bzz) > 0.08) continue;
+        if (onPathW(bxx, bzz, 1.9) || nearDen(bxx, bzz, 3.6) || lakeDepth(bxx, bzz) > 0.08 || Math.hypot(bxx - 26, bzz - 9) < 4.5) continue;
         var bushG = new THREE.Group();
         var nb2 = 3 + (rng() * 3 | 0);
         for (var bi4 = 0; bi4 < nb2; bi4++) {
@@ -3846,7 +3845,7 @@ if (!window.__GAME && consented) {
           grp.add(cpM);
         }
       }
-      grp.userData = { cx: cx, cz: cz, midX: midX, midZ: midZ, grass: grassI, created: elapsed, hasTree: treeAdded > 0, den: isDen, trees: treesArr, flowers: arrF2 };
+      grp.userData = { cx: cx, cz: cz, midX: midX, midZ: midZ, grass: grassI, created: elapsed, hasTree: treeAdded > 0, den: isDen, trees: treesArr, flowers: arrF2, bodies: chunkBodies };
       gardenRoot.add(grp);
       chunkMap[cx + '|' + cz] = grp;
       chunkList.push(grp);
@@ -3927,15 +3926,12 @@ if (!window.__GAME && consented) {
       }
     }
     var camL = new THREE.Vector3(), ctrW = new THREE.Vector3(), fwdW = new THREE.Vector3();
-    var lmV3 = new THREE.Vector3();
     var frameN2 = 0;
     window.__chunkTick = function () {
       frameN2++;
       if (frameN2 % 12 === 0) {
         for (var li6 = 0; li6 < lmSync.length; li6++) {
-          lmSync[li6].updateWorldMatrix(true, false);
-          lmSync[li6].getWorldPosition(lmV3);
-          lmSync[li6].position.y = hillY(lmV3.x, lmV3.z) - 0.04;
+          lmSync[li6].position.y = hillY(lmSync[li6].position.x, lmSync[li6].position.z) - 0.04;
         }
       }
       var nowR = performance.now();
@@ -3951,6 +3947,7 @@ if (!window.__GAME && consented) {
       updateSlimes(dtR);
       updateDragonflies(dtR);
       updateLakeDress(dtR);
+      updateUnderwater(dtR, elapsed);
       if (frameN2 % 3 === 0) {
         for (var tb2 = 0; tb2 < chunkList.length; tb2++) {
           var udT = chunkList[tb2].userData;
@@ -3981,7 +3978,7 @@ if (!window.__GAME && consented) {
         genQueue.sort(function (a2, b2) { return a2.d - b2.d; });
       }
       var budget = LOW ? 2 : 4;
-      while (genQueue.length && budget > 0 && chunkList.length < 72) {
+      while (genQueue.length && budget > 0 && chunkList.length < 48) {
         var nextChunk = genQueue.shift();
         if (!chunkMap[nextChunk.cx + '|' + nextChunk.cz]) buildChunk(nextChunk.cx, nextChunk.cz);
         budget--;
@@ -3994,6 +3991,7 @@ if (!window.__GAME && consented) {
           var kcam = Math.hypot(ck.userData.midX - camL.x, ck.userData.midZ - camL.z);
           if (kcam > KILL_R) {
             gardenRoot.remove(ck);
+            if (window.__physicsRemoveStatic && ck.userData.bodies) ck.userData.bodies.forEach(window.__physicsRemoveStatic);
             ck.userData.grass.dispose();
             ck.children[0].geometry.dispose();
             delete chunkMap[ck.userData.cx + '|' + ck.userData.cz];
@@ -4017,26 +4015,33 @@ if (!window.__GAME && consented) {
         cc.visible = ok2;
         if (!ok2) continue;
         vis2++;
-        /* cỏ lắc chỉ cho chunk đang thấy */
+        /* cỏ lắc bằng shader; CPU chỉ set matrix một lần lúc chunk sinh ra */
         var bl2 = cc.userData.grass.userData.blades, im2 = cc.userData.grass;
-        for (var wi2 = 0; wi2 < bl2.length; wi2++) {
-          var bd = bl2[wi2];
-          var sw = Math.sin(elapsed * 1.4 + bd.phase) * bd.amp + Math.sin(elapsed * 0.5 - bd.x * 0.6 - bd.z * 0.35) * bd.amp * 0.7;
-          dummyC.position.set(bd.x, bd.y, bd.z);
-          dummyC.rotation.set(sw * 0.5, bd.yaw, sw * 1.2);
-          dummyC.scale.set(bd.s * bd.sx, bd.s * bd.sy, 1);
-          dummyC.updateMatrix();
-          im2.setMatrixAt(wi2, dummyC.matrix);
+        if (!im2.userData.realReady) {
+          for (var wi2 = 0; wi2 < bl2.length; wi2++) {
+            var bd = bl2[wi2];
+            dummyC.position.set(bd.x, bd.y, bd.z);
+            dummyC.rotation.set(0, bd.yaw, 0);
+            dummyC.scale.set(bd.s * bd.sx, bd.s * bd.sy, 1);
+            dummyC.updateMatrix();
+            im2.setMatrixAt(wi2, dummyC.matrix);
+          }
+          im2.instanceMatrix.needsUpdate = true;
+          im2.userData.realReady = true;
         }
-        im2.instanceMatrix.needsUpdate = true;
       }
       window.__chunkStats = { vis: vis2, total: chunkList.length };
     };
     window.__chunkStats = { vis: 0, total: 0 };
   })();
 
+  if (window.__initCombat) window.__initCombat(gardenRoot);
+  if (window.__initBoss) window.__initBoss(gardenRoot);
+  if (window.__initWaterState) window.__initWaterState(gardenRoot);
+  if (window.__initCampaign) window.__initCampaign(gardenRoot);
   window.__spawnBurstW = spawnBurst;
   window.__startleBird = function (i) { egrets[i].userData.startleE = elapsed; };
+  bootStage('Vườn đã sẵn sàng', 'Hoa, cá, thỏ trắng và những tia nắng đầu tiên', 100);
   window.__bootOK = true;
   var bootSplash = document.getElementById('bootSplash');
   if (LOW) removeSplashWhenDrawn = bootSplash;

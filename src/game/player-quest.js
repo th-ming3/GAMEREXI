@@ -11,6 +11,7 @@
 /* ============ GAME PACK v2: nhân vật chibi + third-person + nhiệm vụ hái hoa + về điểm xuất phát ============ */
 (function () {
   var SC = window.__scene3d;
+  if (window.__initAdventure) window.__initAdventure();
   function smoothG(x, a, b) { var t2 = Math.max(0, Math.min(1, (x - a) / (b - a))); return t2 * t2 * (3 - 2 * t2); }
   function hillY2(x, z) {
     if (window.__hillY) return window.__hillY(x, z);
@@ -36,6 +37,9 @@
     SC.add(starGroup);
   }
   var tint = document.getElementById('nightTint');
+  var diveTint = document.createElement('div');
+  diveTint.style.cssText = 'position:fixed;inset:0;z-index:4;pointer-events:none;background:#08718a;mix-blend-mode:multiply;opacity:0;transition:opacity .35s';
+  document.body.appendChild(diveTint);
   var fogDay = new THREE.Color(0xe2e3b2), fogDusk = new THREE.Color(0xe7b78f), fogNight = new THREE.Color(0x39415a);
   var keyLow = new THREE.Color(0xff9e5e), keyHigh = new THREE.Color(0xfff0dd), cTmpA = new THREE.Color(), cTmpB = new THREE.Color();
   var sunA = 1.05, paused = false, dayF = 1;
@@ -78,7 +82,7 @@
   if (window.THREE && THREE.GLTFLoader) {
     new THREE.GLTFLoader().load(soldierURI, function (gltf) {
       var model = gltf.scene;
-      model.scale.setScalar(0.78);
+      model.scale.setScalar(1.12);
       model.traverse(function (m) {
         if (m.isMesh) {
           m.castShadow = false;
@@ -184,9 +188,32 @@
   }
   /* ---- trạng thái người chơi + camera third-person ---- */
   var SPAWN = { x: 0.4, z: 6.8 };
-  var pPos = new THREE.Vector3(SPAWN.x, 0, SPAWN.z), pYaw = 0, orbitYaw = 0, orbitPitch = 0.52, walkT = 0;
+  var playerPhysics = window.__createPlayerPhysics({ garden: window.__garden, landmarks: window.__landmarks });
+  function resolvePhysics(pos, dt, vx, vz) {
+    playerPhysics.resolve(pos, dt, vx, vz, !indoorMode && !caveMode);
+  }
+
+  var pPos = new THREE.Vector3(SPAWN.x, 0, SPAWN.z), pYaw = 0, orbitYaw = 0, orbitPitch = 0.42, walkT = 0;
   var flyMode = false, pY = 0, jumpV = 0, onGround = true, dashT = 0, dashCd = 0, petCd = 0, flyPoseT = 0;
+  var diving = false, underwaterN = 0;
+  window.__isDiving = false;
+  window.__underwaterN = function () { return underwaterN; };
   var indoorMode = false, indoorReturn = null, indoorRoom = null, indoorYawReturn = 0, indoorPitchReturn = 0;
+  var caveMode = false, caveReturn = null, caveYawReturn = 0, cavePitchReturn = 0;
+  function inLakeNow() {
+    if (!window.__lakeInfo) return false;
+    var pl = playerLocal(), L = window.__lakeInfo;
+    var dx = pl.x - L.x, dz = pl.z - L.z;
+    return dx * dx / (L.rx * L.rx) + dz * dz / (L.rz * L.rz) < 0.98;
+  }
+  function toggleDive() {
+    if (!inLakeNow() || flyMode) { showToast('Xuống hồ rồi nhấn X để lặn'); return; }
+    diving = !diving; window.__isDiving = diving;
+    pY = diving ? -0.55 : 0.18;
+    jumpV = 0; onGround = true;
+    showToast(diving ? 'Lặn xuống — Space lên · Q xuống' : 'Nổi lên mặt nước');
+    if (window.__sfx) window.__sfx.whoosh();
+  }
   var keys = {}, lastTick = performance.now();
   window.addEventListener('keydown', function (e) {
     var kk = (e.key || '').toLowerCase();
@@ -195,12 +222,19 @@
     if (kk === 't') paused = !paused;
     if (kk === 'b' && !indoorMode) {
       flyMode = !flyMode;
+      diving = false; window.__isDiving = false;
       if (flyMode) { pY = Math.max(pY, 1.25); onGround = false; flyPoseT = 0.4; }
       showToast(flyMode ? '\u2020 Bay B\u1eacT — gi\u1eef E ho\u1eb7c Space \u0111\u1ec3 l\u00ean, Q xu\u1ed1ng' : '\u2022 T\u1eaft bay — tr\u1edf l\u1ea1i \u0111\u1ea5t');
       if (window.__sfx) window.__sfx.whoosh();
     }
     if (kk === 'c' && dashCd <= 0) { dashT = 0.22; dashCd = 1.15; if (window.__sfx) window.__sfx.whoosh(); }
-    if (kk === 'e' && !flyMode) { if (!toggleHouse()) petNear(); }
+    if (kk === 'x' && !flyMode) toggleDive();
+    if (kk === 'e' && !flyMode) {
+      if (window.__WATER_SYSTEM && window.__WATER_SYSTEM.tryToggle()) return;
+      if (window.__CAMPAIGN_TRY_E && window.__CAMPAIGN_TRY_E()) return;
+      if (window.__NPC_SYSTEM && window.__NPC_SYSTEM.tryTalk()) return;
+      if (!activateWaypoint() && !toggleHouse()) petNear();
+    }
     if (kk === 'h') goHome();
     if (kk === 'f') {
       if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
@@ -209,17 +243,68 @@
     if ('wasdqe'.indexOf(kk) >= 0) e.preventDefault();
   });
   window.addEventListener('keyup', function (e) { keys[(e.key || '').toLowerCase()] = false; });
+
+  /* touch controls: on-screen d-pad + actions for mobile */
+  (function addTouchControls() {
+    if (window.__GAME_TOUCH) return;
+    window.__GAME_TOUCH = true;
+    var pad = document.createElement('div');
+    pad.id = 'gameMovePad';
+    pad.style.cssText = 'position:fixed;left:calc(14px + env(safe-area-inset-left,0px));bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:60;display:none;width:132px;height:132px;touch-action:none;user-select:none;-webkit-user-select:none';
+    pad.innerHTML = '<button type="button" aria-label="Đi lên" data-k="w" style="position:absolute;left:44px;top:0;width:44px;height:44px">▲</button>' +
+      '<button type="button" aria-label="Đi trái" data-k="a" style="position:absolute;left:0;top:44px;width:44px;height:44px">◀</button>' +
+      '<button type="button" aria-label="Đi xuống" data-k="s" style="position:absolute;left:44px;top:88px;width:44px;height:44px">▼</button>' +
+      '<button type="button" aria-label="Đi phải" data-k="d" style="position:absolute;left:88px;top:44px;width:44px;height:44px">▶</button>';
+    var act = document.createElement('div');
+    act.id = 'gameActionPad';
+    act.style.cssText = 'position:fixed;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:60;display:none;gap:6px;touch-action:none;user-select:none;-webkit-user-select:none';
+    act.innerHTML = '<button type="button" aria-label="Nhảy" data-a="jump" style="width:52px;height:52px;border-radius:50%">Nhảy</button>' +
+      '<button type="button" aria-label="Bật hoặc tắt bay" data-a="fly" style="width:52px;height:52px;border-radius:50%">Bay</button>' +
+      '<button type="button" aria-label="Lặn hoặc nổi" data-a="dive" style="width:52px;height:52px;border-radius:50%">Lặn</button>' +
+      '<button type="button" aria-label="Về điểm xuất phát" data-a="home" style="width:52px;height:52px;border-radius:50%">⌂</button>';
+    function styleBtn(b) { b.style.font = '600 16px Georgia,serif'; b.style.background = 'rgba(255,250,235,.82)'; b.style.border = '1px solid rgba(122,90,52,.35)'; b.style.color = '#5f4626'; b.style.borderRadius = b.style.borderRadius || '10px'; }
+    [].forEach.call(pad.querySelectorAll('button'), function (b) { styleBtn(b); });
+    [].forEach.call(act.querySelectorAll('button'), function (b) { styleBtn(b); });
+    document.body.appendChild(pad); document.body.appendChild(act);
+    function bindMove(b, k) {
+      b.addEventListener('pointerdown', function (e) { e.preventDefault(); keys[k] = true; b.setPointerCapture(e.pointerId); });
+      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) { b.addEventListener(ev, function () { keys[k] = false; }); });
+    }
+    [].forEach.call(pad.querySelectorAll('button'), function (b) { bindMove(b, b.getAttribute('data-k')); });
+    [].forEach.call(act.querySelectorAll('button'), function (b) {
+      b.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        var a = b.getAttribute('data-a');
+        if (a === 'jump') { keys[' '] = true; setTimeout(function () { keys[' '] = false; }, 120); }
+        else if (a === 'fly') {
+          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b' }));
+          window.dispatchEvent(new KeyboardEvent('keyup', { key: 'b' }));
+        }
+        else if (a === 'dive') toggleDive();
+        else if (a === 'home') goHome();
+      });
+    });
+    function clearKeys() { Object.keys(keys).forEach(function (key) { keys[key] = false; }); }
+    window.addEventListener('blur', clearKeys);
+    document.addEventListener('visibilitychange', function () { if (document.hidden) clearKeys(); });
+    function update() { var m = window.innerWidth < 880; pad.style.display = m ? 'block' : 'none'; act.style.display = m ? 'flex' : 'none'; if (!m) clearKeys(); }
+    update(); window.addEventListener('resize', update);
+  })();
   window.__setOrbit = function (yaw, pitch) { orbitYaw = yaw; if (typeof pitch === 'number') orbitPitch = pitch; };
   window.__setFlyY = function (h) { pY = Math.max(0.2, Math.min(11, h)); }; /* debug/probe */
   window.__keys = keys; /* debug/probe */
   window.__orbitDrag = function (dx, dy) {
     orbitYaw -= dx * 0.005;
-    orbitPitch = Math.max(0.10, Math.min(0.88, orbitPitch + dy * 0.003));
+    orbitPitch = Math.max(0.12, Math.min(0.68, orbitPitch + dy * 0.003));
   };
   function goHome() {
-    pPos.set(SPAWN.x, 0, SPAWN.z); orbitYaw = 0; orbitPitch = 0.52;
+    if (indoorMode) { indoorMode = false; if (indoorRoom) indoorRoom.visible = false; if (window.__cabinGroup) window.__cabinGroup.visible = true; }
+    if (caveMode) { caveMode = false; if (window.__caveRoom) window.__caveRoom.visible = false; if (window.__caveGroup) window.__caveGroup.visible = true; }
+    pPos.set(SPAWN.x, 0, SPAWN.z); orbitYaw = 0; orbitPitch = 0.42;
     pY = 0; jumpV = 0; flyMode = false;
-    showToast('\u23cd V\u1ec1 \u0111i\u1ec3m xu\u1ea5t ph\u00e1t \u2728');
+    if (questIdx === 4) { questIdx = 5; score += 100; showToast('Hành trình hoàn thành — nhận 100 điểm'); }
+    else showToast('\u23cd V\u1ec1 \u0111i\u1ec3m xu\u1ea5t ph\u00e1t \u2728');
+    updHud();
     if (window.__sfx) window.__sfx.chime();
     if (window.__spawnHomeFX) window.__spawnHomeFX();
   }
@@ -248,21 +333,21 @@
     var plaster = new THREE.MeshStandardMaterial({ color: 0x876348, roughness: 0.92, side: THREE.DoubleSide });
     var warm = new THREE.MeshStandardMaterial({ color: 0xffc766, emissive: 0xffa52e, emissiveIntensity: 1.5, roughness: 0.25 });
     function box(w,h,d,mat,x,y,z) { var m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat); m.position.set(x,y,z); g.add(m); return m; }
-    box(13,0.22,14,floorMat,0,0,0);
+    box(22,0.22,20,floorMat,0,0,0);
     /* Sealed BackSide shell: unlike an outside-facing cabin wall, this is visible from inside. */
-    var insideShell=new THREE.Mesh(new THREE.BoxGeometry(13,9,14),new THREE.MeshStandardMaterial({color:0x76563c,roughness:0.96,side:THREE.BackSide}));
-    insideShell.position.y=3; g.add(insideShell);
+    var insideShell=new THREE.Mesh(new THREE.BoxGeometry(22,10,20),new THREE.MeshStandardMaterial({color:0x76563c,roughness:0.96,side:THREE.DoubleSide}));
+    insideShell.position.y=4; g.add(insideShell);
     /* visible inner timber backdrop panels (camera is always inside the room) */
     var wallCanvas=document.createElement('canvas'); wallCanvas.width=256; wallCanvas.height=128;
     var wg=wallCanvas.getContext('2d'); wg.fillStyle='#806044'; wg.fillRect(0,0,256,128);
     for(var wi=0;wi<8;wi++){wg.fillStyle=wi%2?'#88684a':'#765539';wg.fillRect(0,wi*16+1,256,14);wg.fillStyle='rgba(43,29,19,.35)';wg.fillRect(0,wi*16,256,2);for(var wj=0;wj<4;wj++){wg.fillStyle='rgba(190,150,100,.25)';wg.fillRect(wj*67+((wi%2)*12),wi*16+5,42,1);}}
     var wallMap=new THREE.CanvasTexture(wallCanvas);
     var innerWallMat=new THREE.MeshBasicMaterial({map:wallMap,side:THREE.DoubleSide});
-    var innerBack=new THREE.Mesh(new THREE.PlaneGeometry(12.8,9),innerWallMat);innerBack.position.set(0,1.5,-6.8);g.add(innerBack);
-    var innerSide1=new THREE.Mesh(new THREE.PlaneGeometry(14,9),innerWallMat);innerSide1.rotation.y=Math.PI/2;innerSide1.position.set(-6.3,1.5,0);g.add(innerSide1);
-    var innerSide2=innerSide1.clone();innerSide2.position.x=6.3;g.add(innerSide2);
+    var innerBack=new THREE.Mesh(new THREE.PlaneGeometry(21.8,10),innerWallMat);innerBack.position.set(0,2,-9.8);g.add(innerBack);
+    var innerSide1=new THREE.Mesh(new THREE.PlaneGeometry(20,10),innerWallMat);innerSide1.rotation.y=Math.PI/2;innerSide1.position.set(-10.8,2,0);g.add(innerSide1);
+    var innerSide2=innerSide1.clone();innerSide2.position.x=10.8;g.add(innerSide2);
     /* timber ribs + ceiling beams */
-    for (var i=0;i<4;i++) { var xx=-6+i*4; box(0.17,5.8,0.17,wood,xx,3,6.82); box(13,0.12,0.14,dark,0,5.78,-5+i*3.2); }
+    for (var i=0;i<6;i++) { var xx=-9+i*3.6; box(0.17,7.6,0.17,wood,xx,4,9.82); box(22,0.12,0.14,dark,0,7.58,-8+i*3.2); }
     /* sleeping nook, low table, rug, shelves and warm lantern */
     box(2.3,0.24,1.5,dark,-2.4,0.28,-2.55); box(2.1,0.24,1.35,new THREE.MeshStandardMaterial({color:0xd8c3a0,roughness:0.98}),-2.4,0.49,-2.55);
     box(1.4,0.14,0.95,wood,1.55,0.55,-0.5); box(0.12,0.52,0.12,dark,1.05,0.25,-0.9); box(0.12,0.52,0.12,dark,2.05,0.25,-0.9); box(0.12,0.52,0.12,dark,1.05,0.25,-0.1); box(0.12,0.52,0.12,dark,2.05,0.25,-0.1);
@@ -270,11 +355,36 @@
     var rug = new THREE.Mesh(new THREE.CircleGeometry(1.35,32),new THREE.MeshStandardMaterial({color:0x9a5c48,roughness:1})); rug.rotation.x=-Math.PI/2; rug.position.set(0,0.13,0.45); rug.scale.set(1.35,0.76,1); g.add(rug);
     box(0.55,0.82,0.12,dark,0,2.65,0.1); box(0.24,0.36,0.24,warm,0,2.65,0.16);
     var lamp = new THREE.PointLight(0xffb858,1.6,12,2); lamp.position.set(0,2.75,0.4); g.add(lamp);
-    var win = new THREE.Mesh(new THREE.PlaneGeometry(1.1,0.9),new THREE.MeshBasicMaterial({color:0xffd38c})); win.position.set(4.37,2.2,1.1); win.rotation.y=-Math.PI/2; g.add(win);
+    for (var wi2=0;wi2<3;wi2++) { var w2 = new THREE.Mesh(new THREE.PlaneGeometry(2.2,1.6),new THREE.MeshBasicMaterial({color:0xffd38c})); w2.position.set(10.75,2.6,-5+wi2*4); w2.rotation.y=-Math.PI/2; g.add(w2); }
+  box(3.2,0.9,1.5,wood,-6,0.55,4); box(2.9,0.16,1.3,new THREE.MeshStandardMaterial({color:0xcfb48e,roughness:0.95}),-6,1.08,4);
+  box(4.2,0.18,2.2,wood,4.5,0.5,4.5); box(0.18,1.2,0.18,dark,2.7,0.85,3.7); box(0.18,1.2,0.18,dark,6.3,0.85,3.7); box(0.18,1.2,0.18,dark,2.7,0.85,5.3); box(0.18,1.2,0.18,dark,6.3,0.85,5.3);
+  var hearth = box(2.4,1.6,0.5,dark,0,0.9,-9.3); var fire = new THREE.Mesh(new THREE.PlaneGeometry(1.2,0.9),new THREE.MeshBasicMaterial({color:0xff8b3d,transparent:true,opacity:0.85})); fire.position.set(0,0.85,-9.02); g.add(fire);
+  var lamp2 = new THREE.PointLight(0xffb858,1.4,18,2); lamp2.position.set(5,3,4); g.add(lamp2);
+  var lamp3 = new THREE.PointLight(0xffb858,1.4,18,2); lamp3.position.set(-5,3,-4); g.add(lamp3);
     g.traverse(function(o){if(o.isMesh)o.frustumCulled=false;});
     g.visible=false; window.__garden.add(g); indoorRoom=g; window.__insideRoom=g; return g;
   }
   function toggleHouse() {
+    if (caveMode) {
+      caveMode = false;
+      if (window.__caveRoom) window.__caveRoom.visible = false;
+      if (window.__caveGroup) window.__caveGroup.visible = true;
+      if (caveReturn) pPos.copy(caveReturn);
+      orbitYaw = caveYawReturn; orbitPitch = cavePitchReturn;
+      showToast('Ra khỏi Hang Pha Lê'); return true;
+    }
+    if (!indoorMode && window.__cavePos) {
+      var cp = window.__cavePos, caveLocal = playerLocal();
+      if (Math.hypot(caveLocal.x - cp.x, caveLocal.z - cp.z) < 4.3) {
+        var caveRoom = window.__buildCaveRoom(); caveRoom.visible = true; caveMode = true;
+        caveReturn = pPos.clone(); caveYawReturn = orbitYaw; cavePitchReturn = orbitPitch;
+        orbitYaw = Math.PI; orbitPitch = 0.34;
+        if (window.__caveGroup) window.__caveGroup.visible = false;
+        var caveEnter = new THREE.Vector3(cp.x, 0, cp.z + 1.8); window.__garden.localToWorld(caveEnter); pPos.set(caveEnter.x, caveEnter.y, caveEnter.z);
+        pY = 0; flyMode = false; onGround = true;
+        showToast('Vào Hang Pha Lê — E để trở ra'); return true;
+      }
+    }
     var cab=window.__cabinPos || {x:26,z:9};
     if (indoorMode) {
       indoorMode=false; indoorRoom.visible=false;
@@ -294,27 +404,52 @@
     showToast('Vào nhà — E để trở ra'); return true;
   }
 
-  /* ---- NHIỆM VỤ hái hoa dại ---- */
-  var score = 0, questIdx = 0, questN = 0;
+  /* ---- NHIỆM VỤ chuỗi khám phá năm vùng ---- */
+  var score = 0, questIdx = 0, questN = 0, waypointN = 0, caveN = 0;
   try {
     var sv = JSON.parse(localStorage.getItem('worldSave') || 'null');
     if (sv) {
-      score = sv.sc || 0; questIdx = sv.qi || 0;
+      score = sv.sc || 0; questIdx = Math.max(0, Math.min(5, sv.qi || 0));
       if (sv.p) pPos.set(sv.p[0], 0, sv.p[2]);
       if (typeof sv.yaw === 'number') orbitYaw = sv.yaw;
-      /* không restore bay: luôn bắt đầu trên đất cho an toàn (save fly chỉ để thống kê) */
     }
   } catch (eL) {}
   var qHud = document.createElement('div');
-  qHud.style.cssText = 'position:fixed;top:52px;left:16px;z-index:50;font:600 12.5px/1.6 Georgia,serif;color:#5f4626;background:rgba(255,252,246,.78);border:1px solid rgba(122,90,52,.22);border-radius:10px;padding:7px 12px;backdrop-filter:blur(5px);max-width:250px';
+  qHud.style.cssText = 'position:fixed;top:52px;left:16px;z-index:50;font:600 12.5px/1.6 Georgia,serif;color:#5f4626;background:rgba(255,252,246,.78);border:1px solid rgba(122,90,52,.22);border-radius:10px;padding:7px 12px;backdrop-filter:blur(5px);max-width:260px';
   document.body.appendChild(qHud);
   var doorHint=document.createElement('div');
-  doorHint.textContent='E — VÀO NHÀ';
+  doorHint.textContent='E — TƯƠNG TÁC';
   doorHint.style.cssText='position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:55;padding:7px 14px;border-radius:999px;background:rgba(255,248,224,.9);color:#644623;border:1px solid rgba(122,90,52,.34);font:700 13px Georgia,serif;opacity:0;transition:opacity .18s;pointer-events:none';
   document.body.appendChild(doorHint);
-  function questTarget() { return 5 + questIdx * 3; }
-  function updHud() {
-    qHud.innerHTML = '\u273f Nhi\u1ec7m v\u1ee5 ' + (questIdx + 1) + ': h\u00e1i <b>' + questTarget() + ' hoa d\u1ea1i</b> \u2014 <b>' + questN + '/' + questTarget() + '</b><br>\u0110i\u1ec3m: <b>' + score + '</b>';
+  function questText() {
+    if (questIdx === 0) return 'Hái hoa đồng — <b>' + questN + '/5</b>';
+    if (questIdx === 1) return 'Kích hoạt cột dịch chuyển — <b>' + waypointN + '/3</b>';
+    if (questIdx === 2) return 'Tinh thể Hang Pha Lê — <b>' + caveN + '/3</b>';
+    if (questIdx === 3) return 'Tinh thể dưới hồ — <b>' + underwaterN + '/5</b>';
+    if (questIdx === 4) return 'Về điểm xuất phát để nhận thưởng';
+    return 'Hành trình đã hoàn thành';
+  }
+  function updHud() { qHud.innerHTML = '✿ ' + questText() + '<br>Điểm: <b>' + score + '</b>'; }
+  window.__addScore = function (n) { score += n || 0; updHud(); };
+  window.__questScore = function () { return score; };
+  window.__questState = function () { return { stage: questIdx, flowers: questN, waypoints: waypointN, cave: caveN, underwater: underwaterN, score: score }; }
+  function activateWaypoint() {
+    if (!window.__waypoints) return false;
+    var pl = playerLocal();
+    for (var i = 0; i < window.__waypoints.length; i++) {
+      var wp = window.__waypoints[i];
+      if (Math.hypot(wp.x - pl.x, wp.z - pl.z) > 2.4) continue;
+      if (questIdx < 1) { showToast('Hái đủ 5 hoa trước, rồi quay lại cột'); return true; }
+      if (questIdx > 1 && !wp.active) return true;
+      if (wp.active) { showToast(wp.name + ' đã kích hoạt'); return true; }
+      wp.active = true; waypointN++; score += 10;
+      wp.core.material.emissiveIntensity = 1.6;
+      showToast('Đã kích hoạt ' + wp.name + ' — ' + waypointN + '/3');
+      if (window.__sfx) window.__sfx.chime();
+      if (waypointN >= 3 && questIdx === 1) { questIdx = 2; showToast('Mở Hang Pha Lê ở Hẻm Đá Hổ Phách'); }
+      updHud(); return true;
+    }
+    return false;
   }
   updHud();
 
@@ -327,7 +462,7 @@
   /* hái hoa: mỗi 130ms quét hoa dại gần người chơi */
   setInterval(function () {
     /* Harvest only while physically grounded; flight and ordinary jumps cannot collect. */
-    if (flyMode || !onGround || pY > 0.12 || indoorMode) return;
+    if (questIdx !== 0 || flyMode || diving || !onGround || pY > 0.12 || indoorMode) return;
     var pl = playerLocal();
     var picked = 0;
     window.__garden.children.forEach(function (c) {
@@ -347,13 +482,49 @@
       window.__garden.localToWorld(pv);
       if (window.__spawnBurstW) window.__spawnBurstW(pv, 6 + picked * 2);
       if (window.__sfx) window.__sfx.chime();
-      if (questN >= questTarget()) {
-        questIdx++; questN = 0;
-        showToast('\u273f Ho\u00e0n th\u00e0nh nhi\u1ec7m v\u1ee5! Ti\u1ebfp: h\u00e1i ' + questTarget() + ' hoa');
+      if (questN >= 5) {
+        questIdx = 1; questN = 0;
+        showToast('Mở 3 cột dịch chuyển tại Hồ Gương, Rừng Thì Thầm và Hẻm Đá');
         if (window.__sfx) setTimeout(function () { window.__sfx.chime(); }, 220);
       }
       updHud();
     }
+  }, 130);
+
+  /* Nhặt tinh thể trong Hang Pha Lê */
+  setInterval(function () {
+    if (!caveMode || !window.__caveCrystals) return;
+    window.__caveCrystals.forEach(function (crystal) {
+      if (!crystal.visible) return;
+      crystal.getWorldPosition(pv);
+      if (Math.hypot(pv.x - pPos.x, pv.z - pPos.z) < 1.25) {
+        crystal.visible = false; caveN++; score += 12;
+        showToast('◆ Tinh thể hang ' + caveN + '/3');
+        if (caveN >= 3 && questIdx === 2) {
+          questIdx = underwaterN >= 5 ? 4 : 3;
+          showToast(questIdx === 4 ? 'Đủ tinh thể — về điểm xuất phát' : 'Mở khu vực dưới Hồ Gương');
+        }
+        if (window.__sfx) window.__sfx.chime();
+        updHud();
+      }
+    });
+  }, 130);
+
+  /* Nhặt tinh thể dưới đáy hồ; mỗi vật chỉ tính một lần */
+  setInterval(function () {
+    if (!diving || !inLakeNow() || !window.__underwaterCrystals) return;
+    var pl = playerLocal();
+    window.__underwaterCrystals.forEach(function (crystal) {
+      if (!crystal.visible) return;
+      if (Math.hypot(crystal.position.x - pl.x, crystal.position.z - pl.z) < 1.15) {
+        crystal.visible = false;
+        underwaterN++; score += 8;
+        showToast('◆ Tinh thể dưới hồ ' + underwaterN + '/5');
+        if (underwaterN >= 5 && questIdx === 3) { questIdx = 4; showToast('Đủ tinh thể — về điểm xuất phát nhận thưởng'); }
+        if (window.__sfx) window.__sfx.chime();
+        updHud();
+      }
+    });
   }, 130);
 
   /* ---- vòng điều khiển 16ms: WASD + animation + camera ---- */
@@ -385,40 +556,63 @@
       lakeAimDist = Math.hypot(lakeAimX, lakeAimZ) || 1;
       lakeAimX /= lakeAimDist; lakeAimZ /= lakeAimDist;
     }
+    var moveVX = 0, moveVZ = 0;
     if (ml > 0.01) {
       mvx /= ml; mvz /= ml;
       dashCd -= dt; dashT -= dt;
       var spd = keys.shift ? (flyMode ? 7.5 : 5.6) : 2.3;
       if (dashT > 0) spd = flyMode ? 11 : 9.5;
       if (inLake && !flyMode) spd *= 0.55;
-      var nx = pPos.x + mvx * spd * dt, nz = pPos.z + mvz * spd * dt;
-      var rr = Math.sqrt(nx * nx + nz * nz);
-      if (rr > 46) { nx *= 46 / rr; nz *= 46 / rr; }
-      pPos.x = nx; pPos.z = nz;
-      pYaw = Math.atan2(mvx, mvz);
+      moveVX = mvx * spd; moveVZ = mvz * spd;
+      pYaw = Math.atan2(-mvx, -mvz);
     }
-    /* nhảy (Space) — nhảy cao hơn khi đang chạy nhanh */
-    if (keys[' '] && onGround && !flyMode) { jumpV = 3.3 + (keys.shift ? 0.9 : 0); onGround = false; if (window.__sfx) window.__sfx.whoosh(); }
-    /* bay: B bật/tắt; ↑↑/E lên, Q xuống khi bay */
+    resolvePhysics(pPos, dt, moveVX, moveVZ);
+    var rr = Math.sqrt(pPos.x * pPos.x + pPos.z * pPos.z);
+    if (rr > 46) { pPos.x *= 46 / rr; pPos.z *= 46 / rr; }
+    var pl = playerLocal();
+    /* Space nhảy trên đất; dưới hồ Space bơi lên và Q bơi xuống */
+    if (keys[' '] && onGround && !flyMode && !inLake) { jumpV = 3.3 + (keys.shift ? 0.9 : 0); onGround = false; if (window.__sfx) window.__sfx.whoosh(); }
     if (flyMode) {
       if (keys.e || keys[' ']) pY += 5.2 * flightDt;
       if (keys.q) pY -= 5.2 * flightDt;
       pY = Math.max(0.2, Math.min(12, pY));
       jumpV = 0;
-    } else if (!onGround) {
-      jumpV -= 9.2 * dt;
-      pY += jumpV * dt;
-      if (pY <= 0) { pY = 0; jumpV = 0; onGround = true; }
+    } else if (inLake) {
+      if (keys.q) { pY -= 3.0 * dt; diving = true; }
+      if (keys[' '] || keys.e) pY += 3.0 * dt;
+      var swimBase = window.__lakeWaterY ? window.__lakeWaterY() - 0.78 : 0;
+      var swimBottom = hillY2(pl.x, pl.z) + 0.45 - swimBase;
+      pY = Math.max(swimBottom, Math.min(0.18, pY));
+      if (pY >= 0.18) diving = false;
+      jumpV = 0; onGround = true; window.__isDiving = diving;
+    } else {
+      if (diving) { diving = false; window.__isDiving = false; pY = 0; onGround = true; }
+      if (!onGround) {
+        jumpV -= 9.2 * dt;
+        pY += jumpV * dt;
+        if (pY <= 0) { pY = 0; jumpV = 0; onGround = true; }
+      }
     }
-    if (inLake && !flyMode && pY < 0.18) { pY = 0.18; jumpV = 0; onGround = true; }
+    if (SC && SC.fog) {
+      if (diving && inLake) { SC.fog.near = 1.2; SC.fog.far = 19; SC.fog.color.setHex(0x07546a); }
+      else { SC.fog.near = 14; SC.fog.far = 33; }
+    }
+    diveTint.style.opacity = diving && inLake ? '0.20' : '0';
     walkT += dt * (ml > 0.01 ? (keys.shift ? 10.5 : 7.5) : 1.6);
-    var pl = playerLocal();
-    var cabinCheck=window.__cabinPos||{x:26,z:9};
-    doorHint.style.opacity=(indoorMode||Math.hypot(pl.x-cabinCheck.x,pl.z-cabinCheck.z)<4.1)?'1':'0';
-    doorHint.textContent=indoorMode?'E — RA VƯỜN':'E — VÀO NHÀ';
+    var cabinCheck=window.__cabinPos||{x:26,z:9}, caveCheck=window.__cavePos||{x:-30,z:-12};
+    var cabinNear=Math.hypot(pl.x-cabinCheck.x,pl.z-cabinCheck.z)<4.1, caveNear=Math.hypot(pl.x-caveCheck.x,pl.z-caveCheck.z)<4.3;
+    var waypointNear=false;
+    if(window.__waypoints) window.__waypoints.forEach(function(wp){if(Math.hypot(pl.x-wp.x,pl.z-wp.z)<2.4)waypointNear=true;});
+    doorHint.style.opacity=(indoorMode||caveMode||cabinNear||caveNear||waypointNear)?'1':'0';
+    doorHint.textContent=caveMode?'E — RA HANG':(indoorMode?'E — RA VƯỜN':(waypointNear?'E — KÍCH HOẠT CỘT':(caveNear?'E — VÀO HANG PHA LÊ':'E — VÀO NHÀ')));
     if (indoorMode) {
-      pl.x = Math.max((window.__cabinPos||{x:26}).x-5.3, Math.min((window.__cabinPos||{x:26}).x+5.3, pl.x));
-      pl.z = Math.max((window.__cabinPos||{z:9}).z-5.8, Math.min((window.__cabinPos||{z:9}).z+5.8, pl.z));
+      pl.x = Math.max((window.__cabinPos||{x:26}).x-8.8, Math.min((window.__cabinPos||{x:26}).x+8.8, pl.x));
+      pl.z = Math.max((window.__cabinPos||{z:9}).z-8.2, Math.min((window.__cabinPos||{z:9}).z+8.2, pl.z));
+      window.__garden.localToWorld(pl); pPos.set(pl.x, pl.y, pl.z); window.__garden.worldToLocal(pl);
+    }
+    if (caveMode) {
+      pl.x = Math.max(window.__cavePos.x-3.2, Math.min(window.__cavePos.x+3.2, pl.x));
+      pl.z = Math.max(window.__cavePos.z-6.2, Math.min(window.__cavePos.z+6.2, pl.z));
       window.__garden.localToWorld(pl); pPos.set(pl.x, pl.y, pl.z); window.__garden.worldToLocal(pl);
     }
     var gy2 = hillY2(pl.x, pl.z);
@@ -452,14 +646,24 @@
     }
     /* camera third-person: sau lưng nhân vật, chặn dưới terrain;
        BAY: camera bay theo độ cao pY (hết đứng dưới đất nhìn nhân vật bay) */
-    var camD = indoorMode ? 3.4 : (flyMode ? 5.4 : (nearLakeCam ? 7.6 : 5.0)), camH = (indoorMode ? 1.55 : (flyMode ? 2.35 : (nearLakeCam ? 2.85 : 1.85))) + orbitPitch * 3.4;
+    var camD = (indoorMode || caveMode) ? 3.4 : (flyMode ? 5.8 : (nearLakeCam ? 6.4 : 4.8)), camH = ((indoorMode || caveMode) ? 1.55 : (flyMode ? 2.1 : (nearLakeCam ? 1.9 : 1.55))) + orbitPitch * 2.4;
+    if (diving && inLake) { camD = 3.2; camH = 0.22 + orbitPitch * 0.3; }
     var cx2 = pPos.x - fV.x * camD, cz2 = pPos.z - fV.z * camD;
-    var cy2 = pPos.y + pY + camH;
-    var gY = hillY2(cx2, cz2) + 0.5;
+    var cy2 = gy2 + pY + camH;
+    if (indoorMode) {
+      var camL = window.__garden.worldToLocal(new THREE.Vector3(cx2, 0, cz2));
+      var cabL = window.__cabinPos || { x: 26, z: 9 };
+      camL.x = Math.max(cabL.x - 10.2, Math.min(cabL.x + 10.2, camL.x));
+      camL.z = Math.max(cabL.z - 9.2, Math.min(cabL.z + 9.2, camL.z));
+      var camW2 = window.__garden.localToWorld(camL);
+      cx2 = camW2.x; cz2 = camW2.z;
+      cy2 = Math.min(cy2, hillY2(cabL.x, cabL.z) + 8.6);
+    }
+    var gY = (window.__hillYWorld ? window.__hillYWorld(cx2, cz2) : hillY2(cx2, cz2)) + 0.5;
     if (cy2 < gY) cy2 = gY;
     window.CAM.set(cx2, cy2, cz2);
-    var lakeLookAhead = nearLakeCam ? Math.min(2.2, lakeAimDist * 0.22) : 0;
-    window.TARGET.set(pPos.x + lakeAimX * lakeLookAhead, pPos.y + pY + (indoorMode ? 1.55 : 1.05), pPos.z + lakeAimZ * lakeLookAhead);
+    var lakeLookAhead = nearLakeCam ? Math.min(0.6, lakeAimDist * 0.06) : 0;
+    window.TARGET.set(pPos.x + lakeAimX * lakeLookAhead, gy2 + pY + (diving && inLake ? 0.45 : ((indoorMode || caveMode) ? 1.55 : 1.35)), pPos.z + lakeAimZ * lakeLookAhead);
   }, 16);
 
   /* ---- HUD FPS + chunk ---- */
