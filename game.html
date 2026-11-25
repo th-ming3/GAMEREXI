@@ -21154,10 +21154,10 @@ window.__initCampaign = function (gardenRoot) {
       if (visited(i, mi)) continue;
       var m = ob.marks[mi], y = hY(m.x, m.z);
       var beam = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.09, 0.09, 2.3, 8, 1, true),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.52, depthWrite: false, side: THREE.DoubleSide })
+        new THREE.CylinderGeometry(0.16, 0.16, 5.2, 10, 1, true),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })
       );
-      beam.position.set(m.x, y + 1.15, m.z);
+      beam.position.set(m.x, y + 2.6, m.z);
       var ring = new THREE.Mesh(
         new THREE.RingGeometry(0.44, 0.62, 24),
         new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide })
@@ -21165,7 +21165,7 @@ window.__initCampaign = function (gardenRoot) {
       ring.rotation.x = -Math.PI / 2;
       ring.position.set(m.x, y + 0.06, m.z);
       markerRoot.add(beam); markerRoot.add(ring);
-      markers.push({ beam: beam, ring: ring, x: m.x, z: m.z, npc: m.npc, oi: i, mi: mi, baseY: y + 1.15 });
+      markers.push({ beam: beam, ring: ring, x: m.x, z: m.z, npc: m.npc, oi: i, mi: mi, baseY: y + 2.6 });
     }
   }
 
@@ -21398,6 +21398,11 @@ window.__initCampaign = function (gardenRoot) {
   hud.style.cssText = 'position:fixed;right:16px;top:232px;z-index:52;width:220px;padding:8px 12px;border-radius:10px;background:rgba(255,252,246,.78);border:1px solid rgba(122,90,52,.22);color:#5f4626;font:600 12px/1.5 Georgia,serif;pointer-events:none';
   document.body.appendChild(hud);
 
+  var arrow = document.createElement('div');
+  arrow.style.cssText = 'position:fixed;left:50%;top:64px;z-index:58;width:34px;height:34px;margin-left:-17px;pointer-events:none;transition:transform .12s linear';
+  arrow.innerHTML = '<svg viewBox="0 0 24 24" width="34" height="34"><path d="M12 2 L20 20 L12 15 L4 20 Z" fill="#b23c28" stroke="#fff6e0" stroke-width="1.4"/></svg>';
+  document.body.appendChild(arrow);
+
   setInterval(function () {
     tickT += 0.1;
     var now = performance.now();
@@ -21470,6 +21475,19 @@ window.__initCampaign = function (gardenRoot) {
       }
     });
     var dist = p && markers.length ? d2(p, markers[0].x, markers[0].z) : -1;
+    if (p && markers.length && window.CAM && window.TARGET) {
+      var m0 = markers[0];
+      var mw = gardenRoot.localToWorld(new THREE.Vector3(m0.x, 0, m0.z));
+      var camF = Math.atan2(window.TARGET.z - window.CAM.z, window.TARGET.x - window.CAM.x);
+      var mA = Math.atan2(mw.z - window.CAM.z, mw.x - window.CAM.x);
+      var rel = mA - camF;
+      while (rel > Math.PI) rel -= 2 * Math.PI;
+      while (rel < -Math.PI) rel += 2 * Math.PI;
+      arrow.style.transform = 'rotate(' + (-rel * 180 / Math.PI) + 'deg)';
+      arrow.style.opacity = Math.abs(rel) < 0.5 ? '0.35' : '1';
+    } else {
+      arrow.style.opacity = '0';
+    }
     hud.innerHTML = '<b>' + quest.ch + '</b> · ' + quest.id + '<br>' + quest.name +
       '<br><span style="font-weight:400">' + ob.text + '</span>' +
       '<br>Tiến độ: <b>' + (CS.prog[key] || 0) + '</b>/' + (ob.need || ob.marks.length || 1) +
@@ -24725,12 +24743,26 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
     window.__landmarks = { cabin: CAB, rocks: RK, tomb: TOMB, lake: LAKE, den: window.__denPos, well: { x: -10.5, z: -27 }, bigTree: { x: 7, z: -20 } };
   })();
 
+  /* Dãy đồi xa làm nền trời (nhìn thấy từ mọi chỗ trong world) */
+  (function distantHills() {
+    var mat = new THREE.MeshStandardMaterial({ color: 0x8ba0b5, roughness: 1, flatShading: true });
+    var mat2 = new THREE.MeshStandardMaterial({ color: 0x7b93a8, roughness: 1, flatShading: true });
+    for (var i = 0; i < 30; i++) {
+      var a = (i / 30) * Math.PI * 2 + (i % 3) * 0.07;
+      var r = 62 + (i % 6) * 8;
+      var h = 10 + (i % 8) * 4;
+      var m = new THREE.Mesh(new THREE.ConeGeometry(11 + (i % 4) * 5, h, 7), i % 2 ? mat : mat2);
+      m.position.set(Math.cos(a) * r, h / 2 - 2, Math.sin(a) * r);
+      gardenRoot.add(m);
+    }
+  })();
+
   /* ============ CHUNK STREAMING (chế độ game): map vô tận kiểu Minecraft ============
      Sinh chunk đất+cỏ+hoa dại+đá quanh người chơi theo seed xác định,
      huỷ (dispose) khi xa, cull ngoài frustum + tầm nhìn → bộ nhớ/draw-call không tăng dù map rộng cỡ nào */
   (function buildChunkSystem() {
     if (!window.__GAME) return;
-    var CHSZ = 10, GEN_R = 48, KILL_R = 56, VIEW_R = 40, CENTER_R = 13.5;
+    var CHSZ = 10, GEN_R = 48, KILL_R = 56, VIEW_R = 40, CENTER_R = 18;
     var chunkMap = {}, chunkList = [], genQueue = [], lastGenCX = NaN, lastGenCZ = NaN;
     /* ---- ĐƯỜNG ĐẤT: hàm world-space xác định — mọi chunk vẽ khớp liền mạch ---- */
     function pathZ(x) { return 15.5 + 5.2 * Math.sin(x * 0.085) + 3.1 * Math.sin(x * 0.041 + 2.0) - 12.5 * Math.exp(-(x*x)/70); }
@@ -25228,8 +25260,8 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
       grp.add(grassI);
       /* hoa dại (đăng ký để nhiệm vụ hái hoa) + đá xác định theo seed */
       var arrF2 = [];
-      var flowerBase = region === 'meadow' ? 2 : (region === 'lake' ? 1 : (region === 'forest' ? 1 : 0));
-      var flowerRange = region === 'meadow' ? 4 : (region === 'canyon' || region === 'border' ? 1 : 2);
+      var flowerBase = region === 'meadow' ? 4 : (region === 'lake' ? 2 : (region === 'forest' ? 2 : 0));
+      var flowerRange = region === 'meadow' ? 7 : (region === 'canyon' || region === 'border' ? 1 : 3);
       var nf2 = flowerBase + (rng() * flowerRange | 0);
       for (var fi = 0; fi < nf2; fi++) {
         var fx = bx + rng() * CHSZ, fz = bz + rng() * CHSZ;
@@ -25243,7 +25275,7 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
         arrF2.push({ h: wfg, s: wfg });
       }
       /* cây: rừng dày và cao, hẻm đá chỉ có cây chịu hạn thưa */
-      var treeChance = region === 'forest' ? 0.82 : (region === 'meadow' ? 0.18 : (region === 'lake' ? 0.14 : 0.045));
+      var treeChance = region === 'forest' ? 0.92 : (region === 'meadow' ? 0.55 : (region === 'lake' ? 0.16 : 0.06));
       var nTr = rng() < treeChance ? (region === 'forest' && rng() < 0.35 ? 2 : 1) : 0;
       var treeAdded = 0, treesArr = [];
       for (var ti2 = 0; ti2 < nTr; ti2++) {
@@ -25272,13 +25304,13 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
         shC.position.set(tx2, ty2 + 0.015, tz2);
         grp.add(shC);
       }
-      var ns2 = region === 'canyon' ? 3 + (rng() * 4 | 0) : (region === 'border' ? 2 + (rng() * 3 | 0) : (rng() * 3 | 0));
+      var ns2 = region === 'canyon' ? 4 + (rng() * 5 | 0) : (region === 'border' ? 3 + (rng() * 4 | 0) : (region === 'meadow' ? 3 + (rng() * 4 | 0) : (rng() * 3 | 0)));
       for (var si = 0; si < ns2; si++) {
         var sx2 = bx + rng() * CHSZ, sz2 = bz + rng() * CHSZ;
         for (var sr2 = 0; sr2 < 5 && (onPathW(sx2, sz2, 1.5) || nearDen(sx2, sz2, 3.2) || lakeDepth(sx2, sz2) > 0.12); sr2++) { sx2 = bx + rng() * CHSZ; sz2 = bz + rng() * CHSZ; }
         if (Math.hypot(sx2 + 10.5, sz2 + 27) < 4.5 || Math.hypot(sx2 - 7, sz2 + 20) < 4.5
           || Math.hypot(sx2 - 26, sz2 - 9) < 4.8 || Math.hypot(sx2 - 0.4, sz2 - 6.8) < 2.5) continue;
-        var bigRock = rng() < (region === 'canyon' ? 0.48 : 0.12);
+        var bigRock = rng() < (region === 'canyon' ? 0.6 : (region === 'meadow' ? 0.22 : 0.12));
         var rw2 = bigRock ? (region === 'canyon' ? 0.65 + rng() * 0.85 : 0.42 + rng() * 0.5) : 0.18 + rng() * 0.22;
         var st3 = new THREE.Mesh(stoneGeoC, regionStone(region, rng() < 0.5));
         st3.scale.set(rw2, rw2 * (0.8 + rng() * 0.5), rw2 * (0.85 + rng() * 0.3));
@@ -25606,17 +25638,17 @@ window.__initAdventure = function () {
     var group = new THREE.Group();
     var rockMat = new THREE.MeshStandardMaterial({ color: 0x4b5551, roughness: 0.86, flatShading: true });
     var trimMat = new THREE.MeshStandardMaterial({ color: 0x8b927d, roughness: 0.72 });
-    var glowMat = new THREE.MeshStandardMaterial({ color: def.color, emissive: def.color, emissiveIntensity: 0.55, roughness: 0.2 });
+    var glowMat = new THREE.MeshStandardMaterial({ color: def.color, emissive: def.color, emissiveIntensity: 1.25, roughness: 0.2 });
     var base = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.82, 0.34, 8), rockMat);
     base.position.y = 0.17; group.add(base);
-    var pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, 1.8, 7), rockMat);
-    pillar.position.y = 1.18; pillar.rotation.z = 0.06; group.add(pillar);
-    var crown = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.24, 0.22, 7), trimMat);
-    crown.position.y = 2.13; group.add(crown);
-    var core = new THREE.Mesh(new THREE.OctahedronGeometry(0.24, 0), glowMat);
-    core.position.y = 2.48; group.add(core);
-    var ring = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.035, 8, 32), glowMat.clone());
-    ring.position.y = 2.48; ring.rotation.x = Math.PI / 2; group.add(ring);
+    var pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.4, 2.6, 7), rockMat);
+    pillar.position.y = 1.48; pillar.rotation.z = 0.06; group.add(pillar);
+    var crown = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.28, 0.26, 7), trimMat);
+    crown.position.y = 2.92; group.add(crown);
+    var core = new THREE.Mesh(new THREE.OctahedronGeometry(0.34, 0), glowMat);
+    core.position.y = 3.3; group.add(core);
+    var ring = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.05, 8, 32), glowMat.clone());
+    ring.position.y = 3.3; ring.rotation.x = Math.PI / 2; group.add(ring);
     for (var ri = 0; ri < 4; ri++) {
       var rune = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.34, 0.025), glowMat.clone());
       var angle = ri * Math.PI / 2;
@@ -25910,6 +25942,9 @@ window.__createPlayerPhysics = function (context) {
     SC.add(starGroup);
   }
   var tint = document.getElementById('nightTint');
+  var vig = document.createElement('div');
+  vig.style.cssText = 'position:fixed;inset:0;z-index:3;pointer-events:none;background:radial-gradient(ellipse at center, rgba(0,0,0,0) 58%, rgba(20,14,8,.28) 100%)';
+  document.body.appendChild(vig);
   var diveTint = document.createElement('div');
   diveTint.style.cssText = 'position:fixed;inset:0;z-index:4;pointer-events:none;background:#08718a;mix-blend-mode:multiply;opacity:0;transition:opacity .35s';
   document.body.appendChild(diveTint);
@@ -25943,7 +25978,7 @@ window.__createPlayerPhysics = function (context) {
     requestAnimationFrame(frame);
   }
   if (starGroup) starGroup.scale.setScalar(1.75);
-  if (SC && SC.fog) { SC.fog.near = 14; SC.fog.far = 33; }
+  if (SC && SC.fog) { SC.fog.near = 16; SC.fog.far = 80; }
   requestAnimationFrame(frame);
 
   /* ---- NHÂN VẬT: Soldier.glb CC0 (Quaternius) — skeleton thật, Idle/Walk/Run ---- */
@@ -26468,7 +26503,7 @@ window.__createPlayerPhysics = function (context) {
     }
     if (SC && SC.fog) {
       if (diving && inLake) { SC.fog.near = 1.2; SC.fog.far = 19; SC.fog.color.setHex(0x07546a); }
-      else { SC.fog.near = 14; SC.fog.far = 33; }
+      else { SC.fog.near = 16; SC.fog.far = 80; }
     }
     diveTint.style.opacity = diving && inLake ? '0.20' : '0';
     walkT += dt * (ml > 0.01 ? (keys.shift ? 10.5 : 7.5) : 1.6);

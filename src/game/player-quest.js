@@ -37,6 +37,9 @@
     SC.add(starGroup);
   }
   var tint = document.getElementById('nightTint');
+  var vig = document.createElement('div');
+  vig.style.cssText = 'position:fixed;inset:0;z-index:3;pointer-events:none;background:radial-gradient(ellipse at center, rgba(0,0,0,0) 58%, rgba(20,14,8,.28) 100%)';
+  document.body.appendChild(vig);
   var diveTint = document.createElement('div');
   diveTint.style.cssText = 'position:fixed;inset:0;z-index:4;pointer-events:none;background:#08718a;mix-blend-mode:multiply;opacity:0;transition:opacity .35s';
   document.body.appendChild(diveTint);
@@ -70,7 +73,7 @@
     requestAnimationFrame(frame);
   }
   if (starGroup) starGroup.scale.setScalar(1.75);
-  if (SC && SC.fog) { SC.fog.near = 14; SC.fog.far = 33; }
+  if (SC && SC.fog) { SC.fog.near = 16; SC.fog.far = 80; }
   requestAnimationFrame(frame);
 
   /* ---- NHÂN VẬT: Soldier.glb CC0 (Quaternius) — skeleton thật, Idle/Walk/Run ---- */
@@ -595,7 +598,7 @@
     }
     if (SC && SC.fog) {
       if (diving && inLake) { SC.fog.near = 1.2; SC.fog.far = 19; SC.fog.color.setHex(0x07546a); }
-      else { SC.fog.near = 14; SC.fog.far = 33; }
+      else { SC.fog.near = 16; SC.fog.far = 80; }
     }
     diveTint.style.opacity = diving && inLake ? '0.20' : '0';
     walkT += dt * (ml > 0.01 ? (keys.shift ? 10.5 : 7.5) : 1.6);

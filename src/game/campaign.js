@@ -169,10 +169,10 @@ window.__initCampaign = function (gardenRoot) {
       if (visited(i, mi)) continue;
       var m = ob.marks[mi], y = hY(m.x, m.z);
       var beam = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.09, 0.09, 2.3, 8, 1, true),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.52, depthWrite: false, side: THREE.DoubleSide })
+        new THREE.CylinderGeometry(0.16, 0.16, 5.2, 10, 1, true),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })
       );
-      beam.position.set(m.x, y + 1.15, m.z);
+      beam.position.set(m.x, y + 2.6, m.z);
       var ring = new THREE.Mesh(
         new THREE.RingGeometry(0.44, 0.62, 24),
         new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide })
@@ -180,7 +180,7 @@ window.__initCampaign = function (gardenRoot) {
       ring.rotation.x = -Math.PI / 2;
       ring.position.set(m.x, y + 0.06, m.z);
       markerRoot.add(beam); markerRoot.add(ring);
-      markers.push({ beam: beam, ring: ring, x: m.x, z: m.z, npc: m.npc, oi: i, mi: mi, baseY: y + 1.15 });
+      markers.push({ beam: beam, ring: ring, x: m.x, z: m.z, npc: m.npc, oi: i, mi: mi, baseY: y + 2.6 });
     }
   }
 
@@ -413,6 +413,11 @@ window.__initCampaign = function (gardenRoot) {
   hud.style.cssText = 'position:fixed;right:16px;top:232px;z-index:52;width:220px;padding:8px 12px;border-radius:10px;background:rgba(255,252,246,.78);border:1px solid rgba(122,90,52,.22);color:#5f4626;font:600 12px/1.5 Georgia,serif;pointer-events:none';
   document.body.appendChild(hud);
 
+  var arrow = document.createElement('div');
+  arrow.style.cssText = 'position:fixed;left:50%;top:64px;z-index:58;width:34px;height:34px;margin-left:-17px;pointer-events:none;transition:transform .12s linear';
+  arrow.innerHTML = '<svg viewBox="0 0 24 24" width="34" height="34"><path d="M12 2 L20 20 L12 15 L4 20 Z" fill="#b23c28" stroke="#fff6e0" stroke-width="1.4"/></svg>';
+  document.body.appendChild(arrow);
+
   setInterval(function () {
     tickT += 0.1;
     var now = performance.now();
@@ -485,6 +490,19 @@ window.__initCampaign = function (gardenRoot) {
       }
     });
     var dist = p && markers.length ? d2(p, markers[0].x, markers[0].z) : -1;
+    if (p && markers.length && window.CAM && window.TARGET) {
+      var m0 = markers[0];
+      var mw = gardenRoot.localToWorld(new THREE.Vector3(m0.x, 0, m0.z));
+      var camF = Math.atan2(window.TARGET.z - window.CAM.z, window.TARGET.x - window.CAM.x);
+      var mA = Math.atan2(mw.z - window.CAM.z, mw.x - window.CAM.x);
+      var rel = mA - camF;
+      while (rel > Math.PI) rel -= 2 * Math.PI;
+      while (rel < -Math.PI) rel += 2 * Math.PI;
+      arrow.style.transform = 'rotate(' + (-rel * 180 / Math.PI) + 'deg)';
+      arrow.style.opacity = Math.abs(rel) < 0.5 ? '0.35' : '1';
+    } else {
+      arrow.style.opacity = '0';
+    }
     hud.innerHTML = '<b>' + quest.ch + '</b> · ' + quest.id + '<br>' + quest.name +
       '<br><span style="font-weight:400">' + ob.text + '</span>' +
       '<br>Tiến độ: <b>' + (CS.prog[key] || 0) + '</b>/' + (ob.need || ob.marks.length || 1) +

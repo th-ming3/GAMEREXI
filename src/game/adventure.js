@@ -10,17 +10,17 @@ window.__initAdventure = function () {
     var group = new THREE.Group();
     var rockMat = new THREE.MeshStandardMaterial({ color: 0x4b5551, roughness: 0.86, flatShading: true });
     var trimMat = new THREE.MeshStandardMaterial({ color: 0x8b927d, roughness: 0.72 });
-    var glowMat = new THREE.MeshStandardMaterial({ color: def.color, emissive: def.color, emissiveIntensity: 0.55, roughness: 0.2 });
+    var glowMat = new THREE.MeshStandardMaterial({ color: def.color, emissive: def.color, emissiveIntensity: 1.25, roughness: 0.2 });
     var base = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.82, 0.34, 8), rockMat);
     base.position.y = 0.17; group.add(base);
-    var pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, 1.8, 7), rockMat);
-    pillar.position.y = 1.18; pillar.rotation.z = 0.06; group.add(pillar);
-    var crown = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.24, 0.22, 7), trimMat);
-    crown.position.y = 2.13; group.add(crown);
-    var core = new THREE.Mesh(new THREE.OctahedronGeometry(0.24, 0), glowMat);
-    core.position.y = 2.48; group.add(core);
-    var ring = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.035, 8, 32), glowMat.clone());
-    ring.position.y = 2.48; ring.rotation.x = Math.PI / 2; group.add(ring);
+    var pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.4, 2.6, 7), rockMat);
+    pillar.position.y = 1.48; pillar.rotation.z = 0.06; group.add(pillar);
+    var crown = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.28, 0.26, 7), trimMat);
+    crown.position.y = 2.92; group.add(crown);
+    var core = new THREE.Mesh(new THREE.OctahedronGeometry(0.34, 0), glowMat);
+    core.position.y = 3.3; group.add(core);
+    var ring = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.05, 8, 32), glowMat.clone());
+    ring.position.y = 3.3; ring.rotation.x = Math.PI / 2; group.add(ring);
     for (var ri = 0; ri < 4; ri++) {
       var rune = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.34, 0.025), glowMat.clone());
       var angle = ri * Math.PI / 2;

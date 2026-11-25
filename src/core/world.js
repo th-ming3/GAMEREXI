@@ -3179,12 +3179,26 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
     window.__landmarks = { cabin: CAB, rocks: RK, tomb: TOMB, lake: LAKE, den: window.__denPos, well: { x: -10.5, z: -27 }, bigTree: { x: 7, z: -20 } };
   })();
 
+  /* Dãy đồi xa làm nền trời (nhìn thấy từ mọi chỗ trong world) */
+  (function distantHills() {
+    var mat = new THREE.MeshStandardMaterial({ color: 0x8ba0b5, roughness: 1, flatShading: true });
+    var mat2 = new THREE.MeshStandardMaterial({ color: 0x7b93a8, roughness: 1, flatShading: true });
+    for (var i = 0; i < 30; i++) {
+      var a = (i / 30) * Math.PI * 2 + (i % 3) * 0.07;
+      var r = 62 + (i % 6) * 8;
+      var h = 10 + (i % 8) * 4;
+      var m = new THREE.Mesh(new THREE.ConeGeometry(11 + (i % 4) * 5, h, 7), i % 2 ? mat : mat2);
+      m.position.set(Math.cos(a) * r, h / 2 - 2, Math.sin(a) * r);
+      gardenRoot.add(m);
+    }
+  })();
+
   /* ============ CHUNK STREAMING (chế độ game): map vô tận kiểu Minecraft ============
      Sinh chunk đất+cỏ+hoa dại+đá quanh người chơi theo seed xác định,
      huỷ (dispose) khi xa, cull ngoài frustum + tầm nhìn → bộ nhớ/draw-call không tăng dù map rộng cỡ nào */
   (function buildChunkSystem() {
     if (!window.__GAME) return;
-    var CHSZ = 10, GEN_R = 48, KILL_R = 56, VIEW_R = 40, CENTER_R = 13.5;
+    var CHSZ = 10, GEN_R = 48, KILL_R = 56, VIEW_R = 40, CENTER_R = 18;
     var chunkMap = {}, chunkList = [], genQueue = [], lastGenCX = NaN, lastGenCZ = NaN;
     /* ---- ĐƯỜNG ĐẤT: hàm world-space xác định — mọi chunk vẽ khớp liền mạch ---- */
     function pathZ(x) { return 15.5 + 5.2 * Math.sin(x * 0.085) + 3.1 * Math.sin(x * 0.041 + 2.0) - 12.5 * Math.exp(-(x*x)/70); }
@@ -3682,8 +3696,8 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
       grp.add(grassI);
       /* hoa dại (đăng ký để nhiệm vụ hái hoa) + đá xác định theo seed */
       var arrF2 = [];
-      var flowerBase = region === 'meadow' ? 2 : (region === 'lake' ? 1 : (region === 'forest' ? 1 : 0));
-      var flowerRange = region === 'meadow' ? 4 : (region === 'canyon' || region === 'border' ? 1 : 2);
+      var flowerBase = region === 'meadow' ? 4 : (region === 'lake' ? 2 : (region === 'forest' ? 2 : 0));
+      var flowerRange = region === 'meadow' ? 7 : (region === 'canyon' || region === 'border' ? 1 : 3);
       var nf2 = flowerBase + (rng() * flowerRange | 0);
       for (var fi = 0; fi < nf2; fi++) {
         var fx = bx + rng() * CHSZ, fz = bz + rng() * CHSZ;
@@ -3697,7 +3711,7 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
         arrF2.push({ h: wfg, s: wfg });
       }
       /* cây: rừng dày và cao, hẻm đá chỉ có cây chịu hạn thưa */
-      var treeChance = region === 'forest' ? 0.82 : (region === 'meadow' ? 0.18 : (region === 'lake' ? 0.14 : 0.045));
+      var treeChance = region === 'forest' ? 0.92 : (region === 'meadow' ? 0.55 : (region === 'lake' ? 0.16 : 0.06));
       var nTr = rng() < treeChance ? (region === 'forest' && rng() < 0.35 ? 2 : 1) : 0;
       var treeAdded = 0, treesArr = [];
       for (var ti2 = 0; ti2 < nTr; ti2++) {
@@ -3726,13 +3740,13 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
         shC.position.set(tx2, ty2 + 0.015, tz2);
         grp.add(shC);
       }
-      var ns2 = region === 'canyon' ? 3 + (rng() * 4 | 0) : (region === 'border' ? 2 + (rng() * 3 | 0) : (rng() * 3 | 0));
+      var ns2 = region === 'canyon' ? 4 + (rng() * 5 | 0) : (region === 'border' ? 3 + (rng() * 4 | 0) : (region === 'meadow' ? 3 + (rng() * 4 | 0) : (rng() * 3 | 0)));
       for (var si = 0; si < ns2; si++) {
         var sx2 = bx + rng() * CHSZ, sz2 = bz + rng() * CHSZ;
         for (var sr2 = 0; sr2 < 5 && (onPathW(sx2, sz2, 1.5) || nearDen(sx2, sz2, 3.2) || lakeDepth(sx2, sz2) > 0.12); sr2++) { sx2 = bx + rng() * CHSZ; sz2 = bz + rng() * CHSZ; }
         if (Math.hypot(sx2 + 10.5, sz2 + 27) < 4.5 || Math.hypot(sx2 - 7, sz2 + 20) < 4.5
           || Math.hypot(sx2 - 26, sz2 - 9) < 4.8 || Math.hypot(sx2 - 0.4, sz2 - 6.8) < 2.5) continue;
-        var bigRock = rng() < (region === 'canyon' ? 0.48 : 0.12);
+        var bigRock = rng() < (region === 'canyon' ? 0.6 : (region === 'meadow' ? 0.22 : 0.12));
         var rw2 = bigRock ? (region === 'canyon' ? 0.65 + rng() * 0.85 : 0.42 + rng() * 0.5) : 0.18 + rng() * 0.22;
         var st3 = new THREE.Mesh(stoneGeoC, regionStone(region, rng() < 0.5));
         st3.scale.set(rw2, rw2 * (0.8 + rng() * 0.5), rw2 * (0.85 + rng() * 0.3));
