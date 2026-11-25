@@ -74,6 +74,23 @@ for token, asset in [
     ('__RA_ENEMY_LURE_B64__', 'assets/models/runtime/dandelion-patch.glb'),
     ('__RA_BOSS_01_B64__', 'assets/models/runtime/combat-mech-lod1.glb'),
     ('__RA_GUARDIAN_01_B64__', 'assets/models/runtime/stone-feline-guardian-lod1.glb'),
+    ('__RA_PROP_BENCH_B64__', 'assets/models/runtime/cracked-marble-bench-lod1.glb'),
+    ('__RA_PROP_SIGN_B64__', 'assets/models/runtime/blade-sign-small-lod1.glb'),
+    ('__RA_PROP_BUSH_B64__', 'assets/models/runtime/bilberry-bush-lod1.glb'),
+    ('__RA_PROP_FERN_B64__', 'assets/models/runtime/bracken-fern-lod1.glb'),
+    ('__RA_PROP_REED_B64__', 'assets/models/runtime/common-reed-lod1.glb'),
+    ('__RA_PROP_LOG_B64__', 'assets/models/runtime/fallen-log-lod1.glb'),
+    ('__RA_PROP_SHROOM_B64__', 'assets/models/runtime/fly-agaric-lod1.glb'),
+    ('__RA_PROP_THORN_B64__', 'assets/models/runtime/dead-thornbush-lod1.glb'),
+    ('__RA_PROP_CATTAIL_B64__', 'assets/models/runtime/cattail-clump-lod1.glb'),
+    ('__RA_PROP_PONDSTONE_B64__', 'assets/models/runtime/granite-pond-edge-stone-1-lod1.glb'),
+    ('__RA_PROP_PONDSTONE2_B64__', 'assets/models/runtime/granite-pond-edge-stone-2-lod1.glb'),
+    ('__RA_PROP_CLIFF_B64__', 'assets/models/runtime/cliff-face-lod1.glb'),
+    ('__RA_PROP_KOPJE_B64__', 'assets/models/runtime/granite-kopje-lod1.glb'),
+    ('__RA_PROP_RUNE_B64__', 'assets/models/runtime/glowing-rune-stone-lod1.glb'),
+    ('__RA_PROP_PILLAR_B64__', 'assets/models/runtime/dungeon-stone-pillar-lod1.glb'),
+    ('__RA_PROP_CAMPFIRE_B64__', 'assets/models/runtime/campfire-ring-lod1.glb'),
+    ('__RA_PROP_ERRATIC_B64__', 'assets/models/runtime/erratic-boulder-lod1.glb'),
 ]:
     world = world.replace(token, base64.b64encode(open(os.path.join(ROOT, asset), 'rb').read()).decode())
 world = world.replace('</script>', '<\\/script>')

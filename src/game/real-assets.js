@@ -19,7 +19,24 @@ window.__createRealAssets = function () {
     enemyBoulder: '__RA_ENEMY_BOULDER_B64__',
     enemyLure: '__RA_ENEMY_LURE_B64__',
     boss01: '__RA_BOSS_01_B64__',
-    guardian01: '__RA_GUARDIAN_01_B64__'
+    guardian01: '__RA_GUARDIAN_01_B64__',
+    bench: '__RA_PROP_BENCH_B64__',
+    sign: '__RA_PROP_SIGN_B64__',
+    bush: '__RA_PROP_BUSH_B64__',
+    fern: '__RA_PROP_FERN_B64__',
+    reedClump: '__RA_PROP_REED_B64__',
+    log: '__RA_PROP_LOG_B64__',
+    shroom: '__RA_PROP_SHROOM_B64__',
+    thorn: '__RA_PROP_THORN_B64__',
+    cattailClump: '__RA_PROP_CATTAIL_B64__',
+    pondStone: '__RA_PROP_PONDSTONE_B64__',
+    pondStone2: '__RA_PROP_PONDSTONE2_B64__',
+    cliff: '__RA_PROP_CLIFF_B64__',
+    kopje: '__RA_PROP_KOPJE_B64__',
+    runeStone: '__RA_PROP_RUNE_B64__',
+    pillar: '__RA_PROP_PILLAR_B64__',
+    campfire: '__RA_PROP_CAMPFIRE_B64__',
+    erratic: '__RA_PROP_ERRATIC_B64__'
   };
   var loader = new THREE.GLTFLoader();
   var templates = {};

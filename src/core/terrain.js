@@ -5,15 +5,16 @@ window.__createTerrain = function (context) {
   var smooth = context.smooth, lakeDepth = context.lakeDepth;
 
   function hillY(x, z) {
-    var h = 0.13 * Math.sin(x * 0.45 + 1.3) * Math.cos(z * 0.5)
-         + 0.06 * Math.sin(x * 1.7 + z * 1.3)
-         + smooth(-z, 2.5, 9) * 0.75;
+    var h = 0.42 * Math.sin(x * 0.45 + 1.3) * Math.cos(z * 0.5)
+          + 0.22 * Math.sin(x * 1.7 + z * 1.3)
+          + 0.3 * Math.sin(x * 0.9 - z * 1.1 + 2.2)
+          + smooth(-z, 2.5, 9) * 0.75;
     var rC = Math.sqrt(x * x + z * z);
-    var wild = smooth(rC, 13, 40);
+    var wild = smooth(rC, 7, 24);
     if (wild > 0.002) {
-      var extra = 1.7 * Math.sin(x * 0.1 + 2.1) * Math.cos(z * 0.12 + 0.7)
-        + 0.5 * Math.sin(x * 0.21 + z * 0.17 + 1.3)
-        + 0.3 * Math.sin(x * 0.33 - z * 0.27 + 0.5) + 0.45;
+      var extra = 2.4 * Math.sin(x * 0.1 + 2.1) * Math.cos(z * 0.12 + 0.7)
+        + 0.8 * Math.sin(x * 0.21 + z * 0.17 + 1.3)
+        + 0.55 * Math.sin(x * 0.33 - z * 0.27 + 0.5) + 0.6;
       h -= lakeDepth(x, z) * LAKE_DEPTH;
       var fl = 1;
       var SPOTS = hillY._fl || (hillY._fl = [[0.4, 6.8, 8], [26, 9, 7], [-27.5, -9.5, 5.5], [-18, 6, 5.5], [-30, -12, 6.5], [-10.5, -27, 6.5], [7, -20, 6.5], [4.5, 17, 9.2]]);

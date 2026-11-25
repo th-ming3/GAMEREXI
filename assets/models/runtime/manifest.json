@@ -656,6 +656,214 @@
     "animations": []
   },
   {
+    "name": "cracked-marble-bench-lod1.glb",
+    "bytes": 750012,
+    "triangles": 1172,
+    "meshes": [
+      {
+        "name": "bench_grass",
+        "triangles": 24
+      },
+      {
+        "name": "bench_marble",
+        "triangles": 1148
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "blade-sign-small-lod1.glb",
+    "bytes": 35268,
+    "triangles": 124,
+    "meshes": [
+      {
+        "name": "blade_small_mesh",
+        "triangles": 124
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "bilberry-bush-lod1.glb",
+    "bytes": 298276,
+    "triangles": 2834,
+    "meshes": [
+      {
+        "name": "bilberry_lod1",
+        "triangles": 2834
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "bracken-fern-lod1.glb",
+    "bytes": 626428,
+    "triangles": 4170,
+    "meshes": [
+      {
+        "name": "bracken_lod1",
+        "triangles": 4170
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "common-reed-lod1.glb",
+    "bytes": 561880,
+    "triangles": 4040,
+    "meshes": [
+      {
+        "name": "reed_lod1",
+        "triangles": 4040
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "fallen-log-lod1.glb",
+    "bytes": 993408,
+    "triangles": 2500,
+    "meshes": [
+      {
+        "name": "fallen-log",
+        "triangles": 2500
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "fly-agaric-lod1.glb",
+    "bytes": 170960,
+    "triangles": 1496,
+    "meshes": [
+      {
+        "name": "fly_agaric_lod1",
+        "triangles": 1496
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "dead-thornbush-lod1.glb",
+    "bytes": 142232,
+    "triangles": 1408,
+    "meshes": [
+      {
+        "name": "dead_bush_lod1",
+        "triangles": 1408
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "cattail-clump-lod1.glb",
+    "bytes": 339368,
+    "triangles": 3958,
+    "meshes": [
+      {
+        "name": "dense_clump_lod1",
+        "triangles": 3958
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "granite-pond-edge-stone-1-lod1.glb",
+    "bytes": 121908,
+    "triangles": 320,
+    "meshes": [
+      {
+        "name": "edge_stone_1_lod1",
+        "triangles": 320
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "granite-pond-edge-stone-2-lod1.glb",
+    "bytes": 92328,
+    "triangles": 320,
+    "meshes": [
+      {
+        "name": "edge_stone_2_lod1",
+        "triangles": 320
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "cliff-face-lod1.glb",
+    "bytes": 1367732,
+    "triangles": 9000,
+    "meshes": [
+      {
+        "name": "cliff-face",
+        "triangles": 9000
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "granite-kopje-lod1.glb",
+    "bytes": 4240800,
+    "triangles": 3870,
+    "meshes": [
+      {
+        "name": "kopje_outcrop",
+        "triangles": 3870
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "glowing-rune-stone-lod1.glb",
+    "bytes": 125416,
+    "triangles": 448,
+    "meshes": [
+      {
+        "name": "rune_stone_mesh_lod1",
+        "triangles": 448
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "dungeon-stone-pillar-lod1.glb",
+    "bytes": 85356,
+    "triangles": 1006,
+    "meshes": [
+      {
+        "name": "pillar_mesh",
+        "triangles": 1006
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "campfire-ring-lod1.glb",
+    "bytes": 471404,
+    "triangles": 2802,
+    "meshes": [
+      {
+        "name": "campfire-ring",
+        "triangles": 2802
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "erratic-boulder-lod1.glb",
+    "bytes": 1095892,
+    "triangles": 2999,
+    "meshes": [
+      {
+        "name": "erratic-boulder",
+        "triangles": 2999
+      }
+    ],
+    "animations": []
+  },
+  {
     "name": "coral-lod1.glb",
     "bytes": 1044820,
     "triangles": 4535,

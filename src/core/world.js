@@ -3653,7 +3653,7 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
       var region = window.__REGION ? window.__REGION.at(midX, midZ) : 'meadow';
       var chunkBodies = [];
       /* đất: tile 4×4 vertex uốn theo hillY — đúng địa hình trung tâm */
-      var gg = new THREE.PlaneGeometry(CHSZ + 0.8, CHSZ + 0.8, 7, 7);
+      var gg = new THREE.PlaneGeometry(CHSZ + 0.8, CHSZ + 0.8, 13, 13);
       gg.rotateX(-Math.PI / 2);
       var gp2 = gg.attributes.position, gc2 = new Float32Array(gp2.count * 3);
       var gt2 = new THREE.Color();
@@ -3739,6 +3739,24 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
         shC.scale.set(tsc * 0.42, tsc * 0.42, 1);
         shC.position.set(tx2, ty2 + 0.015, tz2);
         grp.add(shC);
+      }
+      /* props thật theo vùng — mỗi chunk có 1-3 vật trang trí GLB */
+      var props = [];
+      if (region === 'meadow') props = [['bench', 0.4, 0.55], ['sign', 0.3, 0.5], ['bush', 0.85, 0.8], ['fern', 0.7, 0.6], ['campfire', 0.1, 1.2]];
+      else if (region === 'forest') props = [['log', 0.75, 0.9], ['shroom', 0.65, 0.5], ['fern', 0.9, 0.7], ['thorn', 0.45, 0.55], ['bush', 0.55, 0.7]];
+      else if (region === 'lake') props = [['pondStone', 1.1, 0.5], ['pondStone2', 0.85, 0.45], ['cattailClump', 0.95, 0.75], ['reedClump', 0.75, 0.6]];
+      else if (region === 'canyon') props = [['cliff', 0.32, 2.4], ['kopje', 0.28, 2.0], ['erratic', 0.5, 0.9], ['thorn', 0.55, 0.5]];
+      else if (region === 'border') props = [['pillar', 0.28, 1.5], ['runeStone', 0.24, 0.8], ['erratic', 0.4, 0.8]];
+      var maxDepth = region === 'lake' ? 0.4 : 0.1;
+      for (var pi = 0; pi < props.length; pi++) {
+        if (rng() > props[pi][1]) continue;
+        var px2 = bx + rng() * CHSZ, pz2 = bz + rng() * CHSZ;
+        if (onPathW(px2, pz2, 1.7) || nearDen(px2, pz2, 3.4) || lakeDepth(px2, pz2) > maxDepth) continue;
+        if (Math.hypot(px2 - 0.4, pz2 - 6.8) < 3.2 || Math.hypot(px2 - 26, pz2 - 9) < 5.2 || Math.hypot(px2 + 10.5, pz2 + 27) < 5 || Math.hypot(px2 - 7, pz2 + 20) < 5) continue;
+        var pm = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel(props[pi][0], props[pi][2]) : new THREE.Group();
+        pm.position.set(px2, hillY(px2, pz2) - 0.03, pz2);
+        pm.rotation.y = rng() * 6.283;
+        grp.add(pm);
       }
       var ns2 = region === 'canyon' ? 4 + (rng() * 5 | 0) : (region === 'border' ? 3 + (rng() * 4 | 0) : (region === 'meadow' ? 3 + (rng() * 4 | 0) : (rng() * 3 | 0)));
       for (var si = 0; si < ns2; si++) {

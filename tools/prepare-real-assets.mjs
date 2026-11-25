@@ -16,6 +16,10 @@ const NAMES = [
   'cattail-lod1.glb', 'timber-frame-house.glb', 'sunken-ruins.glb',
   'temple-interior.glb',   'kelp-lod1.glb', 'seagrass-lod1.glb', 'young-spruce-lod1.glb',
   'npc-tam.glb', 'npc-ba-man.glb', 'npc-hoa.glb', 'npc-lam.glb', 'wall-lever-lod1.glb',   'porcini-mushroom-lod1.glb', 'granite-boulder-lod1.glb', 'combat-mech-lod1.glb', 'stone-feline-guardian-lod1.glb',
+  'cracked-marble-bench-lod1.glb', 'blade-sign-small-lod1.glb', 'bilberry-bush-lod1.glb', 'bracken-fern-lod1.glb', 'common-reed-lod1.glb',
+  'fallen-log-lod1.glb', 'fly-agaric-lod1.glb', 'dead-thornbush-lod1.glb', 'cattail-clump-lod1.glb',
+  'granite-pond-edge-stone-1-lod1.glb', 'granite-pond-edge-stone-2-lod1.glb', 'cliff-face-lod1.glb', 'granite-kopje-lod1.glb',
+  'glowing-rune-stone-lod1.glb', 'dungeon-stone-pillar-lod1.glb', 'campfire-ring-lod1.glb', 'erratic-boulder-lod1.glb',
   'coral-lod1.glb', 'kohaku-koi.glb', 'ogon-koi.glb'
 ];
 
