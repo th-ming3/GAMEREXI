@@ -235,6 +235,7 @@
     if (kk === 'e' && !flyMode) {
       if (window.__WATER_SYSTEM && window.__WATER_SYSTEM.tryToggle()) return;
       if (window.__CAMPAIGN_TRY_E && window.__CAMPAIGN_TRY_E()) return;
+      if (window.__tryCollect && window.__tryCollect()) return;
       if (window.__NPC_SYSTEM && window.__NPC_SYSTEM.tryTalk()) return;
       if (!activateWaypoint() && !toggleHouse()) petNear();
     }

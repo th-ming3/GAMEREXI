@@ -94,6 +94,43 @@ window.__initAdventure = function () {
     return room;
   };
 
+  /* Vật nhặt phát sáng rải khắp map — đi tới gần và bấm E để nhặt */
+  var collectibles = [];
+  (function scatterCollectibles() {
+    var mat = new THREE.MeshStandardMaterial({ color: 0xffd76a, emissive: 0xffb830, emissiveIntensity: 1.6, roughness: 0.25 });
+    var geo = new THREE.OctahedronGeometry(0.22, 0);
+    for (var i = 0; i < 26; i++) {
+      var a = i * 2.399963, r = 6 + ((i * 37) % 34);
+      var x = Math.cos(a) * r, z = Math.sin(a) * r * 0.9;
+      if (window.__lakeInfo) { var L = window.__lakeInfo, dx = (x - L.x) / L.rx, dz = (z - L.z) / L.rz; if (dx * dx + dz * dz < 1.1) continue; }
+      if (Math.hypot(x - 0.4, z - 6.8) < 3 || Math.hypot(x - 26, z - 9) < 4) continue;
+      var m = new THREE.Mesh(geo, mat);
+      m.position.set(x, hill(x, z) + 0.55, z);
+      m.userData = { baseY: hill(x, z) + 0.55, ph: i * 0.9 };
+      garden.add(m);
+      collectibles.push(m);
+    }
+    window.__collectibles = collectibles;
+  })();
+  window.__tryCollect = function () {
+    var pl = window.__playerPos ? garden.worldToLocal(window.__playerPos.clone()) : null;
+    if (!pl) return false;
+    for (var i = 0; i < collectibles.length; i++) {
+      var c = collectibles[i];
+      if (!c.visible) continue;
+      if (Math.hypot(c.position.x - pl.x, c.position.z - pl.z) < 1.7) {
+        c.visible = false;
+        if (window.__addScore) window.__addScore(5);
+        if (window.__toast) window.__toast('✦ Nhặt được mảnh sáng (+5)');
+        if (window.__sfx) window.__sfx.chime();
+        var w = garden.localToWorld(c.position.clone()); w.y += 0.6;
+        if (window.__spawnBurstW) window.__spawnBurstW(w, 10);
+        return true;
+      }
+    }
+    return false;
+  };
+
   /* Minimap phong cách bản đồ cổ: mực nâu trên giấy, nhãn vùng, mốc nhiệm vụ */
   var wrap = document.createElement('div');
   wrap.id = 'adventureMap';
@@ -160,6 +197,12 @@ window.__initAdventure = function () {
     var cab = mapPoint(26, 9);
     ctx.fillStyle = '#8a5a2e'; ctx.fillRect(cab[0] - 5, cab[1] - 5, 10, 10);
     ctx.strokeStyle = '#5a3d1e'; ctx.lineWidth = 1.4; ctx.strokeRect(cab[0] - 5, cab[1] - 5, 10, 10);
+    collectibles.forEach(function (c) {
+      if (!c.visible) return;
+      var p = mapPoint(c.position.x, c.position.z);
+      ctx.fillStyle = '#ffd76a';
+      ctx.beginPath(); ctx.arc(p[0], p[1], 3, 0, Math.PI * 2); ctx.fill();
+    });
     var cs = window.__campaignState ? window.__campaignState() : null;
     if (cs && cs.markers && cs.markers.length) {
       cs.markers.forEach(function (m, mi) {
@@ -203,6 +246,11 @@ window.__initAdventure = function () {
       var pulse = wp.active ? 1 + Math.sin(time * 2 + index) * 0.12 : 0.85;
       wp.ring.scale.setScalar(pulse);
       wp.core.material.emissiveIntensity = wp.active ? 1.5 : 0.45;
+    });
+    collectibles.forEach(function (c) {
+      if (!c.visible) return;
+      c.rotation.y = time * 1.4 + c.userData.ph;
+      c.position.y = c.userData.baseY + Math.sin(time * 2 + c.userData.ph) * 0.1;
     });
     caveCrystals.forEach(function (crystal) {
       if (!crystal.visible) return;

@@ -2494,7 +2494,7 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
   function lakeGroundLocalY(x,z) {
     return hillY(x, z);
   }
-  var lakeBaseY = 0; window.__lakeWaterY = function(){return lakeBaseY+1.15+(window.__waterOffset||0);};
+  var lakeBaseY = 0; window.__lakeWaterY = function(){return lakeBaseY-0.35+(window.__waterOffset||0);};
   (function () {
     var ly = lakeBaseY = lakeGroundLocalY(LAKE.x, LAKE.z) + LAKE_DEPTH;
     var baseW = new THREE.Mesh(new THREE.CircleGeometry(1.28, 40), new THREE.MeshStandardMaterial({ color: 0x2e3a30, roughness: 1 }));
@@ -2505,15 +2505,15 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
     /* A recessed basin, smaller waterline, and a broad earthy bank make the shoreline legible. */
     var bankW = new THREE.Mesh(new THREE.RingGeometry(0.90, 1.00, 80), new THREE.MeshStandardMaterial({ color: 0x88764e, roughness: 0.98, side: THREE.DoubleSide }));
     bankW.rotation.x = -Math.PI / 2; bankW.scale.set(LAKE.rx, LAKE.rz, 1);
-    bankW.position.set(LAKE.x, ly + 1.10, LAKE.z); gardenRoot.add(bankW);
+    bankW.position.set(LAKE.x, ly - 0.40, LAKE.z); gardenRoot.add(bankW);
     var waterGeoW = new THREE.CircleGeometry(1, 80);
     var surfW = new THREE.Mesh(waterGeoW, new THREE.MeshPhysicalMaterial({ color: 0x1d7a8c, roughness: 0.07, metalness: 0.05, clearcoat: 0.45, clearcoatRoughness: 0.3, emissive: 0x06222e, emissiveIntensity: 0.25, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }));
     surfW.rotation.x = -Math.PI / 2;
     surfW.scale.set(LAKE.rx * 0.86, LAKE.rz * 0.86, 1);
-    surfW.position.set(LAKE.x, ly + 1.15, LAKE.z);
+    surfW.position.set(LAKE.x, ly - 0.35, LAKE.z);
     gardenRoot.add(surfW);
     var shoreW = new THREE.Mesh(new THREE.TorusGeometry(1,0.045,9,80),new THREE.MeshStandardMaterial({color:0xc1ad78,roughness:0.88}));
-    shoreW.rotation.x=-Math.PI/2; shoreW.scale.set(LAKE.rx*0.88,LAKE.rz*0.88,1); shoreW.position.set(LAKE.x,ly+1.165,LAKE.z); gardenRoot.add(shoreW);
+    shoreW.rotation.x=-Math.PI/2; shoreW.scale.set(LAKE.rx*0.88,LAKE.rz*0.88,1); shoreW.position.set(LAKE.x,ly-0.335,LAKE.z); gardenRoot.add(shoreW);
     window.__lakeSurf = surfW; window.__lakeShore = shoreW; window.__lakeBank = bankW;
     /* gợn sáng lăn tăn: 26 hạt trắng mỏng trôi trên mặt hồ */
     var rippleGeoW = new THREE.TorusGeometry(0.12, 0.008, 5, 24);
@@ -2523,7 +2523,7 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
       var rm = new THREE.Mesh(rippleGeoW, rippleMatW);
       rm.rotation.x = -Math.PI / 2; rm.scale.set(1, 0.72, 1);
       var aR = Math.random() * 6.283, rR = Math.sqrt(Math.random()) * 0.78;
-      rm.position.set(LAKE.x + Math.cos(aR) * LAKE.rx * 0.86 * rR, ly + 1.18, LAKE.z + Math.sin(aR) * LAKE.rz * 0.86 * rR);
+      rm.position.set(LAKE.x + Math.cos(aR) * LAKE.rx * 0.86 * rR, ly - 0.32, LAKE.z + Math.sin(aR) * LAKE.rz * 0.86 * rR);
       rm.rotation.z = Math.random() * 6.283;
       gardenRoot.add(rm);
       ripples.push({ m: rm, ph: Math.random() * 6.283, sp: 0.4 + Math.random() * 0.7 });
@@ -2539,7 +2539,7 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
       var holder = new THREE.Group();
       gardenRoot.add(holder);
       var ka0 = Math.random() * 6.283;
-      var item = { m: holder, a: ka0, rx: LAKE.rx * (0.25 + Math.random() * 0.55), rz: LAKE.rz * (0.25 + Math.random() * 0.55), sp: 0.14 + Math.random() * 0.16, ph: Math.random() * 6.283, sway: 0, mixer: null, depth: 0.6 + Math.random() * 1.8 };
+      var item = { m: holder, a: ka0, rx: LAKE.rx * (0.25 + Math.random() * 0.55), rz: LAKE.rz * (0.25 + Math.random() * 0.55), sp: 0.14 + Math.random() * 0.16, ph: Math.random() * 6.283, sway: 0, mixer: null, depth: 1.0 + Math.random() * 1.8 };
       kois.push(item);
       koiLoader.parse(bytes.buffer, '', function (gltf) {
         var model = gltf.scene;
@@ -2562,7 +2562,7 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
       var lm2 = new THREE.Mesh(lilyGeoW, lilyMatW);
       lm2.rotation.x = -Math.PI / 2;
       var la2 = Math.random() * 6.283, lr2 = 0.3 + Math.random() * 0.62;
-      lm2.position.set(LAKE.x + Math.cos(la2) * LAKE.rx * lr2, ly + 1.19, LAKE.z + Math.sin(la2) * LAKE.rz * lr2);
+      lm2.position.set(LAKE.x + Math.cos(la2) * LAKE.rx * lr2, ly - 0.31, LAKE.z + Math.sin(la2) * LAKE.rz * lr2);
       lm2.scale.setScalar(0.7 + Math.random() * 0.6);
       gardenRoot.add(lm2);
       lilies.push({ m: lm2, ph: Math.random() * 6.283, y0: lm2.position.y });
@@ -3227,9 +3227,9 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
     gardenRoot.add(creekW);
     window.__creekMesh = creekW;
     if (window.__REAL_ASSETS) {
-      var br = window.__REAL_ASSETS.makeModel('bridge', 2.6);
+      var br = window.__REAL_ASSETS.makeModel('bridge', 2.6); br.scale.multiplyScalar(2.4);
       var bp = pts[3];
-      br.position.set(bp[0], hillY(bp[0], bp[1]) + 0.9, bp[1]);
+      br.position.set(bp[0], hillY(bp[0], bp[1]) + 1.6, bp[1]);
       br.rotation.y = Math.atan2(pts[4][0] - pts[2][0], pts[4][1] - pts[2][1]);
       gardenRoot.add(br);
       var gar = window.__REAL_ASSETS.makeModel('garageHouse', 3.2);
@@ -3247,7 +3247,7 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
      huỷ (dispose) khi xa, cull ngoài frustum + tầm nhìn → bộ nhớ/draw-call không tăng dù map rộng cỡ nào */
   (function buildChunkSystem() {
     if (!window.__GAME) return;
-    var CHSZ = 10, GEN_R = 48, KILL_R = 56, VIEW_R = 40, CENTER_R = 18;
+    var CHSZ = 10, GEN_R = 56, KILL_R = 66, VIEW_R = 48, CENTER_R = 18;
     var chunkMap = {}, chunkList = [], genQueue = [], lastGenCX = NaN, lastGenCZ = NaN;
     /* ---- ĐƯỜNG ĐẤT: hàm world-space xác định — mọi chunk vẽ khớp liền mạch ---- */
     function pathZ(x) { return 15.5 + 5.2 * Math.sin(x * 0.085) + 3.1 * Math.sin(x * 0.041 + 2.0) - 12.5 * Math.exp(-(x*x)/70); }

@@ -95,6 +95,18 @@ window.__initNPCs = function (gardenRoot) {
     } else hint.style.opacity = '0';
   }, 180);
 
+  var walkT0 = performance.now();
+  setInterval(function () {
+    var el = (performance.now() - walkT0) / 1000;
+    npcs.forEach(function (n, i) {
+      var a = el * 0.22 + i * 1.9;
+      var nx = n.info.x + Math.cos(a) * 1.5;
+      var nz = n.info.z + Math.sin(a) * 1.1;
+      n.group.position.set(nx, window.__hillY ? window.__hillY(nx, nz) : 0, nz);
+      n.group.rotation.y = Math.atan2(-Math.sin(a), Math.cos(a) * 0.73) + Math.PI;
+    });
+  }, 100);
+
   window.__NPC_SYSTEM = { npcs: npcs, tryTalk: tryTalk, panel: panel };
   return window.__NPC_SYSTEM;
 };
