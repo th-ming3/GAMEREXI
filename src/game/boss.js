@@ -5,10 +5,13 @@ window.__initBoss = function (gardenRoot) {
   var defeated = false, lastHit = -1000;
 
   var hud = document.createElement('div');
-  hud.style.cssText = 'position:fixed;left:16px;top:216px;z-index:56;padding:8px 12px;border-radius:10px;background:rgba(255,252,246,.8);border:1px solid rgba(122,90,52,.22);color:#5f4626;font:600 12.5px/1.5 Georgia,serif;pointer-events:none';
+  hud.style.cssText = 'position:fixed;left:16px;top:216px;z-index:56;padding:8px 12px;border-radius:10px;background:rgba(255,252,246,.8);border:1px solid rgba(122,90,52,.22);color:#5f4626;font:600 12.5px/1.5 Georgia,serif;pointer-events:none;display:none';
   document.body.appendChild(hud);
 
   function refresh() {
+    var p = localPlayer();
+    var near = p && d2(p, bx, bz) < 28;
+    hud.style.display = near ? 'block' : 'none';
     var core = state === 'RECOVER' ? ' <b style="color:#2b8b6a">CORE HỞ</b>' : '';
     hud.innerHTML = 'Người Gác Mạch · HP <b>' + Math.max(0, hp) + '</b>/12<br>Phase <b>' + phase + '</b> · ' + state + core;
   }

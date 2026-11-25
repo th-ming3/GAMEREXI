@@ -16,6 +16,11 @@ window.__initCombat = function (gardenRoot) {
 
   function refreshHud() {
     var alive = enemies.filter(function (e) { return e.hp > 0; }).length;
+    var p = window.__playerPos ? gardenRoot.worldToLocal(window.__playerPos.clone()) : null;
+    var near = false;
+    if (p) enemies.forEach(function (e) { if (e.hp > 0 && Math.hypot(e.x - p.x, e.z - p.z) < 22) near = true; });
+    hud.style.display = (near || playerHp < 100 || kills > 0) ? 'block' : 'none';
+    if (hud.style.display === 'none') return;
     hud.innerHTML = 'Sức khỏe <b>' + Math.max(0, Math.round(playerHp)) + '</b> / 100<br>Quái còn <b>' + alive + '</b> · Đã thắng <b>' + kills + '</b><br><span style="opacity:.72">J hoặc click trái để đánh</span>';
   }
 

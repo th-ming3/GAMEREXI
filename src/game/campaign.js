@@ -410,12 +410,12 @@ window.__initCampaign = function (gardenRoot) {
   window.__CAMPAIGN = CAM;
 
   var hud = document.createElement('div');
-  hud.style.cssText = 'position:fixed;right:16px;top:232px;z-index:52;width:220px;padding:8px 12px;border-radius:10px;background:rgba(255,252,246,.78);border:1px solid rgba(122,90,52,.22);color:#5f4626;font:600 12px/1.5 Georgia,serif;pointer-events:none';
+  hud.style.cssText = 'position:fixed;right:16px;top:246px;z-index:52;width:220px;padding:8px 12px;border-radius:10px;background:rgba(255,252,246,.78);border:1px solid rgba(122,90,52,.22);color:#5f4626;font:600 12px/1.5 Georgia,serif;pointer-events:none';
   document.body.appendChild(hud);
 
   var arrow = document.createElement('div');
-  arrow.style.cssText = 'position:fixed;left:50%;top:64px;z-index:58;width:34px;height:34px;margin-left:-17px;pointer-events:none;transition:transform .12s linear';
-  arrow.innerHTML = '<svg viewBox="0 0 24 24" width="34" height="34"><path d="M12 2 L20 20 L12 15 L4 20 Z" fill="#b23c28" stroke="#fff6e0" stroke-width="1.4"/></svg>';
+  arrow.style.cssText = 'position:fixed;left:50%;top:34px;z-index:58;width:26px;height:26px;margin-left:-13px;pointer-events:none;transition:transform .12s linear';
+  arrow.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 2 L20 20 L12 15 L4 20 Z" fill="#b23c28" stroke="#fff6e0" stroke-width="1.4"/></svg>';
   document.body.appendChild(arrow);
 
   setInterval(function () {
