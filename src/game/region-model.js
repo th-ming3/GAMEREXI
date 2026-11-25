@@ -62,7 +62,7 @@ window.__REGION = (function () {
   }
 
   var waypoints = [
-    { id: 'lake', name: 'Bến Hồ Gương', x: 10.5, z: 11.5, color: 0x72e4df },
+    { id: 'lake', name: 'Bến Hồ Gương', x: 13.4, z: 9.6, color: 0x72e4df },
     { id: 'forest', name: 'Cổ Thụ Thì Thầm', x: 7, z: -17.5, color: 0xa6e57d },
     { id: 'canyon', name: 'Cổng Hẻm Hổ Phách', x: -24, z: -8, color: 0xffc26e }
   ];

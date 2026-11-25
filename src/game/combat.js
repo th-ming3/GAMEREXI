@@ -39,6 +39,7 @@ window.__initCombat = function (gardenRoot) {
 
   enemyData.forEach(function (info) {
     var group = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel(info.asset, { height: info.height }) : new THREE.Group();
+    group.traverse(function (o) { if (o.isMesh && o.material) { o.material = o.material.clone(); if (o.material.emissive) { o.material.emissive.setHex(0x661111); o.material.emissiveIntensity = 0.55; } } });
     var y = window.__hillY ? window.__hillY(info.x, info.z) : 0;
     group.position.set(info.x, y, info.z);
     gardenRoot.add(group);
@@ -47,8 +48,16 @@ window.__initCombat = function (gardenRoot) {
     alert.position.set(info.x, y + 0.06, info.z);
     alert.visible = false;
     gardenRoot.add(alert);
+    var barBg = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x1a120c, transparent: true, opacity: 0.85, depthWrite: false }));
+    barBg.scale.set(1.15, 0.13, 1);
+    barBg.position.set(info.x, y + info.height + 0.55, info.z);
+    gardenRoot.add(barBg);
+    var barFg = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x7ee06a, transparent: true, opacity: 1, depthWrite: false }));
+    barFg.scale.set(1.1, 0.09, 1);
+    barFg.position.set(info.x - 0.55 + 0.55, y + info.height + 0.55, info.z);
+    gardenRoot.add(barFg);
     enemies.push({
-      info: info, group: group, alert: alert, hp: info.hp, state: 'IDLE', timer: 0,
+      info: info, group: group, alert: alert, barBg: barBg, barFg: barFg, hp: info.hp, maxHp: info.hp, state: 'IDLE', timer: 0,
       homeX: info.x, homeZ: info.z, flash: 0
     });
   });
@@ -82,7 +91,7 @@ window.__initCombat = function (gardenRoot) {
     lastAttackAt = now;
     var p = localPlayer();
     if (!p) return;
-    var best = null, bd = 2.7;
+    var best = null, bd = 3.4;
     for (var i = 0; i < enemies.length; i++) {
       var e = enemies[i];
       if (e.hp <= 0) continue;
@@ -91,8 +100,21 @@ window.__initCombat = function (gardenRoot) {
     }
     if (!best) return;
     var dmg = 1 + (window.__dmgBonus || 0);
+    var d0 = dist2d(p, best.group.position) || 1;
+    if (d0 > 1.6) {
+      var lx = (best.group.position.x - p.x) / d0, lz = (best.group.position.z - p.z) / d0;
+      var nw = new THREE.Vector3(p.x + lx * 1.1, 0, p.z + lz * 1.1);
+      var ww = gardenRoot.localToWorld(nw);
+      window.__playerPos.x = ww.x; window.__playerPos.z = ww.z;
+      p = localPlayer();
+    }
     best.hp -= dmg;
     best.flash = 0.25;
+    var kd = dist2d(p, best.group.position) || 1;
+    best.group.position.x += (best.group.position.x - p.x) / kd * 1.3;
+    best.group.position.z += (best.group.position.z - p.z) / kd * 1.3;
+    var gy2 = window.__hillY ? window.__hillY(best.group.position.x, best.group.position.z) : 0;
+    best.group.position.y = gy2;
     window.__shakeT = now; window.__shakeAmt = 0.05;
     floatText('-' + dmg, '#ffd76a', false);
     if (window.__sfx) window.__sfx.chime();
@@ -101,6 +123,8 @@ window.__initCombat = function (gardenRoot) {
       best.group.visible = false;
       best.state = 'DEAD';
       if (best.alert) best.alert.visible = false;
+      if (best.barBg) best.barBg.visible = false;
+      if (best.barFg) best.barFg.visible = false;
       if (window.__addScore) window.__addScore(10);
     } else if (best.state === 'TELL') {
       best.state = 'RECOVER';
@@ -132,6 +156,18 @@ window.__initCombat = function (gardenRoot) {
       } else e.group.scale.setScalar(1);
       var d = dist2d(p, e.group.position);
       e.timer -= dt;
+      var frac = Math.max(0, e.hp / e.maxHp);
+      if (e.barBg) { e.barBg.visible = e.hp > 0; e.barFg.visible = e.hp > 0 && frac > 0; }
+      if (e.barFg && e.barFg.visible) {
+        e.barFg.scale.x = 1.1 * frac;
+        e.barFg.material.color.setHex(frac > 0.5 ? 0x7ee06a : (frac > 0.25 ? 0xffc14a : 0xff5a4a));
+        e.barFg.position.x = e.group.position.x - 0.55 + 0.55 * frac;
+        e.barFg.position.z = e.group.position.z;
+        e.barFg.position.y = (window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0) + e.info.height + 0.55;
+        e.barBg.position.x = e.group.position.x;
+        e.barBg.position.z = e.group.position.z;
+        e.barBg.position.y = e.barFg.position.y;
+      }
       if (e.state === 'IDLE' || e.state === 'CHASE') {
         if (d > 13) { e.state = 'IDLE'; if (e.alert) { e.alert.visible = false; } continue; }
         if (e.state === 'IDLE' && e.alert) e.alert.visible = true;

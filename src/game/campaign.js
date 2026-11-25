@@ -169,10 +169,10 @@ window.__initCampaign = function (gardenRoot) {
       if (visited(i, mi)) continue;
       var m = ob.marks[mi], y = hY(m.x, m.z);
       var beam = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.16, 0.16, 5.2, 10, 1, true),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })
+        new THREE.CylinderGeometry(0.13, 0.2, 3.6, 10, 1, true),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide })
       );
-      beam.position.set(m.x, y + 2.6, m.z);
+      beam.position.set(m.x, y + 1.8, m.z);
       var ring = new THREE.Mesh(
         new THREE.RingGeometry(0.44, 0.62, 24),
         new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide })
@@ -180,7 +180,7 @@ window.__initCampaign = function (gardenRoot) {
       ring.rotation.x = -Math.PI / 2;
       ring.position.set(m.x, y + 0.06, m.z);
       markerRoot.add(beam); markerRoot.add(ring);
-      markers.push({ beam: beam, ring: ring, x: m.x, z: m.z, npc: m.npc, oi: i, mi: mi, baseY: y + 2.6 });
+      markers.push({ beam: beam, ring: ring, x: m.x, z: m.z, npc: m.npc, oi: i, mi: mi, baseY: y + 1.8 });
     }
   }
 
@@ -284,7 +284,7 @@ window.__initCampaign = function (gardenRoot) {
       if (quest.reward) toast('✔ ' + quest.id + ' — ' + quest.name + ' (+' + quest.reward + ')');
       else toast('✔ ' + quest.id + ' — ' + quest.name);
       if (CS.idx < QUESTS.length - 1) CS.idx++;
-      else CS.idx = QUESTS.length - 1;
+      else if (window.__showEnding) setTimeout(function () { window.__showEnding(CS.policy); }, 1400);
     }
     save();
   }

@@ -533,6 +533,7 @@
 
   /* ---- vòng điều khiển 16ms: WASD + animation + camera ---- */
   setInterval(function () {
+    if (window.__MENU_OPEN) return;
     var now = performance.now();
     var elapsedTick = Math.max(0, (now - lastTick) / 1000);
     var dt = Math.min(0.1, elapsedTick);

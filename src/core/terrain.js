@@ -36,7 +36,7 @@ window.__createTerrain = function (context) {
       fl = Math.min(fl, smooth(Math.sqrt(dxS * dxS + dzS * dzS), SPOTS[fi][2] * 0.5, SPOTS[fi][2]));
     }
     fl = Math.min(fl, 1 - Math.min(1, lakeDepth(x, z) * 2.2));
-    h -= creekDepth(x, z) * 1.5 * fl;
+    h -= creekDepth(x, z) * 1.0 * fl;
     if (wild > 0.002) {
       var extra = 2.4 * Math.sin(x * 0.1 + 2.1) * Math.cos(z * 0.12 + 0.7)
         + 0.8 * Math.sin(x * 0.21 + z * 0.17 + 1.3)
