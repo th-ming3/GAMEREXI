@@ -108,7 +108,7 @@ window.__createTerrain = function (context) {
   /* Lưới nền toàn lục địa Đại Việt (LOD xa) để núi non, bờ biển và 8 khu vực luôn hiện rõ ngay lập tức */
   function buildContinentBackdrop() {
     var b = (window.__WORLD_MAP_DATA && window.__WORLD_MAP_DATA.bounds) || { minX: -110.4, maxX: 369.6, minZ: -162.7, maxZ: 125.3 };
-    var step = 3.5;
+    var step = 6.0;
     var cols = Math.floor((b.maxX - b.minX) / step) + 1;
     var rows = Math.floor((b.maxZ - b.minZ) / step) + 1;
     var positions = new Float32Array(cols * rows * 3);

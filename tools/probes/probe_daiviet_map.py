@@ -42,11 +42,14 @@ with sync_playwright() as p:
     )
     page = browser.new_page(viewport={'width': 1280, 'height': 800})
     errors = []
-    page.on('pageerror', lambda err: errors.append(f'PAGEERROR: {err}'))
-    page.on('console', lambda msg: errors.append(f'CONSOLE_ERR: {msg.text}') if msg.type == 'error' else None)
+    page.on('pageerror', lambda err: (errors.append(f'PAGEERROR: {err}'), print('PAGEERROR:', err, flush=True)))
+    page.on('console', lambda msg: (errors.append(f'CONSOLE_ERR: {msg.text}'), print('CONSOLE_ERR:', msg.text, flush=True)) if msg.type == 'error' else None)
 
+    print('Goto', GAME_URL, flush=True)
     page.goto(GAME_URL, wait_until='domcontentloaded', timeout=60000)
+    print('Wait bootOK', flush=True)
     page.wait_for_function('() => window.__bootOK === true && !!window.__REGION && !!window.__WORLD_MAP_DATA', timeout=30000)
+    print('Booted! Clicking start...', flush=True)
     page.evaluate('''() => {
         const b = Array.from(document.querySelectorAll('button')).find(x => (x.textContent || '').includes('Bắt đầu'));
         if (b) b.click();

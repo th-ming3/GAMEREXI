@@ -1,62 +1,31 @@
-# GAMEREXI — Luật làm việc với agent
+# AGENTS.md — GAMEREXI (game Cánh Đồng)
 
-## 1. Mục tiêu và nền tảng
+> Rules RIÊNG của dự án này. Rules toàn cục nằm ở `C:\Users\84916\.config\opencode\AGENTS.md` (vẫn áp dụng). File này nằm trong repo, tự nạp theo cwd `D:\GAMEREXI`.
 
-- Game **Cánh Đồng**, chơi chính bằng `game.html`.
-- Chạy trực tiếp trên web desktop/mobile; đóng gói PWA để cài trên Android, iOS và desktop.
-- Nếu cần shell native, ưu tiên **Tauri/Rust** dùng lại frontend hiện có. Không tạo shell Electron mới.
-- Game phải hoạt động offline; mọi asset runtime phải được nhúng hoặc cache đúng cơ chế.
+## 0. LUẬT SẮT — TEST CHỈ TRÊN CLOUD, CẤM LOCAL (user lệnh cứng 26/11/2026)
+- **MỌI test/verify game BẮT BUỘC chạy trên link cloud**: https://th-ming3.github.io/GAMEREXI/ (root = game) hoặc https://th-ming3.github.io/GAMEREXI/game.html.
+- **CẤM TUYỆT ĐỐI** chạy local để test: không `python -m http.server`, không Playwright trỏ `127.0.0.1`/`localhost`, không probe `file:///D:/GAMEREXI/game.html` làm bằng chứng "đã test". Vi phạm = lỗi nghiêm trọng.
+- Máy local CHỈ dùng để: sửa code, `python build.py` (build), `git` (commit/push). Máy local là nơi BUILD, không phải nơi CHẠY.
+- Quy trình bắt buộc: sửa code → `python build.py --web` → deploy branch `gh-pages` → test trên link cloud (aiHawk `browser_open main` / browse) → có bằng chứng live mới được báo "xong".
+- Vì test trên cloud nên **deploy phải xong trước khi kết luận**; deploy lỗi thì nói thẳng "code đã sửa nhưng bản live chưa lên".
 
-## 2. Ngôn ngữ và công nghệ
+## 1. Quy trình deploy (chuẩn, đã verify)
+1. `python build.py --web` → sinh `dist/` (game.html ~1.7MB + `dist/models/*.glb|fbx|png` lazy-load, tách khỏi HTML — review 26/11: bản inline 66MB bị chặn).
+2. Build local full (`python build.py`) CHỈ để chơi offline `file://` — **không dùng làm test**, không deploy file này.
+3. Deploy: worktree branch `gh-pages` ← copy `dist/*` → commit → push PAT thẳng URL:
+   ```powershell
+   $env:GIT_TERMINAL_PROMPT = "0"; git push "https://th-ming3:<PAT_cEFD>@github.com/th-ming3/GAMEREXI.git" gh-pages
+   ```
+   PAT GitHub 3 (`th-ming3`) = `ghp_cEFD…` trong `D:\creds-API.md` (KHÔNG lấy PAT đầu file — `ghp_gYTW` là thming2, đã từng nhầm). KHÔNG lưu token vào `.git/config`.
+4. Verify live: `curl.exe -s -o NUL -w '%{http_code}' https://th-ming3.github.io/GAMEREXI/game.html` = 200 + aiHawk check `window.__bootOK && window.__charLoaded` + title "CÁNH ĐỒNG" hiện.
 
-- Three.js/JavaScript cho renderer, input và UI hiện có.
-- **Backend mới ưu tiên Rust** (Axum/Tauri command); không tạo backend nếu tính năng offline không cần.
-- Python chỉ dùng cho build/tooling, không đưa vào runtime game.
-- Comment trong code dùng **tiếng Việt**, giữ thuật ngữ chuyên ngành/định danh API bằng English khi cần.
-- Text người chơi mặc định tiếng Việt; chuẩn bị tách chuỗi để thêm English, không hardcode ngôn ngữ vào logic.
+## 2. Hệ thống đang có (chống mò)
+- **28 nhiệm vụ campaign** (HOME→MARSH→ROOT→WELL→BANK→RIDGE), boss Gốc Lạc + Hộ Mạch Nứt, 4 NPC, combat, lặn hồ, minimap, ending chọn chính sách nước.
+- **Build 2 mode**: local full inline base64 (`python build.py`) / web slim URL + models lazy (`python build.py --web`). Token `models/…` được loader tự nhận (real-assets.js, world.js koi/rabbit, player-quest.js soldier).
+- **Anti-treo menu** (menu.js): thanh tiến trình, nút "Vào game ngay" sau 6s, "Tải lại trang" sau 10s — không bao giờ giữ người chơi ở màn hình tải.
+- **Fix review 26/11/2026**: click đánh quái (`closest` guard), invite không báo thành công giả (world.js `markFailRetry`), a11y live region (`window.__a11ySay`), touch controls cho mọi máy có chạm, first-step hint Q-HOME-001.
 
-## 3. Tổ chức file bắt buộc
-
-- Không chất thêm tính năng lớn vào file cũ. Mỗi hệ thống mới nằm trong module riêng:
-  - `src/core/`: renderer, scene, terrain và world runtime.
-  - `src/game/region-model.js`: biome/height/color dùng chung, deterministic.
-  - `src/game/`: player, quest, underwater, cave, minimap và gameplay systems.
-  - `src/shells/`: HTML/CSS/service-worker templates.
-  - `src/platform/`: PWA/native bridge khi cần.
-  - `tools/probes/`: kiểm thử headless thật.
-- Mỗi module có đầu vào/đầu ra rõ ràng; không dùng biến global mới nếu có thể truyền qua context.
-- `__hillY(x,z)` chỉ garden-local; `__hillYWorld(x,z)` nhận world-space. Không trộn hai hệ tọa độ.
-- `game.html`, `index.html`, `invite.html`, `done.html`, `sw.js` là output build, **cấm sửa tay**.
-- File text luôn UTF-8 không BOM; tiếng Việt phải hiển thị đúng dấu.
-
-## 4. Build và kiểm thử
-
-- Sửa source rồi chạy `python build.py`; không chỉnh trực tiếp output.
-- Thay đổi gameplay phải có probe phù hợp: input thật, progression, collision, mobile và ảnh active-play.
-- Không tin FPS SwiftShader để kết luận hiệu năng GPU thật; phải ghi rõ backend khi đo.
-- Sau thay đổi UI phải reload tab Opera liên quan và verify bản mới bằng DOM/render thật.
-- Không commit khi còn U+FFFD, mojibake, lỗi runtime hoặc probe liên quan chưa pass.
-
-## 5. Quy tắc gameplay/đồ họa
-
-- Không bãi trống lặp ngẫu nhiên vô tận; vùng chơi phải có biome, landmark, lộ trình và mục tiêu rõ ràng.
-- Physics dùng dynamic body thật (cannon-es/Rapier), collider tách visual và đăng ký/dọn theo lifecycle chunk.
-- Không vá lệch tọa độ bằng `hillY2`/`ell` tự tính; sửa nguồn dùng chung.
-- Asset sinh vật ưu tiên GLB/FBX rig và material thật; procedural chỉ dùng cho terrain, prop kit, VFX phù hợp.
-- **Cấm dùng khối primitive/placeholder để thay cây, cỏ, hoa, sinh vật hoặc công trình rồi giao như bản hoàn thiện.** Thiếu asset phải tự nghiên cứu và tải model/texture phù hợp từ thư viện mở (Poly Haven, Sketchfab có giấy phép, Poly Pizza, Quaternius/Kenney khi phù hợp), ghi nguồn + license vào `assets/ASSET-SOURCES.md`, rồi mới tích hợp. Không hỏi lại user những gì có thể tự tìm.
-- Model phải có hình dáng/material chi tiết phù hợp cận cảnh; cây có tán lá thật, sinh vật có rig/texture, công trình có cấu trúc và vân bề mặt. Nếu asset không đạt thì thay asset, không che bằng glow hay billboard khối.
-- Mọi biome phải khác cao độ, vật liệu, vegetation, landmark và ít nhất một điểm tương tác.
-
-## 6. Kế hoạch triển khai từ bundle
-
-- Nguồn kế hoạch cần đọc và triển khai: `D:/Downloads_Moi/CanhDong_Master_Spec_Consolidated_Draft_2026-11-20.zip`.
-- Bổ sung closure/QA: `D:/Downloads_Moi/CanhDong_Game_Project_Closure_Work_and_QA_Update_2026-11-20.zip`; đã lưu giải nén tại `docs/closure-2026-11-20/`.
-- Đây là bản kế hoạch cho dev, không phải source game hoàn chỉnh. Làm theo vertical slice: web-first, biome có identity, quest/camera/input/save/mobile thật, rồi mới mở rộng.
-- **Khi hoàn thành toàn bộ phần phù hợp của kế hoạch này, tự xóa mục này khỏi `AGENTS.md`** để tránh giữ lại việc đã xong.
-
-## 7. Bản đồ dự án, bảo mật, dữ liệu
-
-- Thêm/sửa/xóa file, route hoặc hệ thống phải cập nhật bản đồ bằng script trong cùng lượt; không sửa tay output map.
-- Trước khi xong phải audit SEO/PWA, secret/XSS/quyền API và backup dữ liệu nếu có.
-- Không lưu API key/token trong source, manifest, service worker hoặc output build.
-- Push đúng repo `th-ming3/GAMEREXI`, PAT chỉ đưa thẳng vào URL lúc push, không lưu vào git config.
+## 3. Không được làm
+- Không `Set-Content`/PowerShell replace file có tiếng Việt (rule toàn cục 0.5) — chỉ Python UTF-8 hoặc `write`/`edit` tool.
+- Không tạo service/repo mới trùng naming; repo đúng: `th-ming3/GAMEREXI` (GitHub 3).
+- Không push khi file có U+FFFD/mojibake.
