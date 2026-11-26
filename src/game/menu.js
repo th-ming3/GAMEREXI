@@ -16,8 +16,24 @@ window.__initMenu = function () {
 
   var load = document.createElement('div');
   load.style.cssText = css;
-  load.innerHTML = '<div style="font:700 42px Georgia,serif;letter-spacing:.12em">CÁNH ĐỒNG</div><div style="margin-top:14px;font:italic 15px Georgia,serif;opacity:.8">đang tải thế giới…</div>';
+  load.innerHTML = '<div style="font:700 42px Georgia,serif;letter-spacing:.12em">CÁNH ĐỒNG</div>' +
+    '<div id="loadHint" style="margin-top:14px;font:italic 15px Georgia,serif;opacity:.8">đang tải thế giới…</div>' +
+    '<div style="margin-top:16px;width:min(260px,60vw);height:4px;border-radius:2px;background:rgba(244,234,215,.16);overflow:hidden">' +
+    '<div id="loadBar" style="height:100%;width:4%;background:#ffd76a;transition:width .35s"></div></div>' +
+    '<button id="loadEnter" style="margin-top:18px;display:none;min-width:220px;padding:11px 24px;border-radius:12px;border:1px solid #ffd76a;background:rgba(255,215,106,.14);color:#ffd76a;font:700 16px Georgia,serif;cursor:pointer">Vào game ngay</button>' +
+    '<button id="loadRetry" style="margin-top:10px;display:none;min-width:220px;padding:11px 24px;border-radius:12px;border:1px solid rgba(244,234,215,.4);background:rgba(244,234,215,.06);color:#f4ead7;font:700 16px Georgia,serif;cursor:pointer">Tải lại trang</button>';
   document.body.appendChild(load);
+  var loadBar = document.getElementById('loadBar');
+  var loadHint = document.getElementById('loadHint');
+  var loadEnter = document.getElementById('loadEnter');
+  var loadRetry = document.getElementById('loadRetry');
+  var escaped = false;
+  loadEnter.addEventListener('click', function () {
+    if (escaped) return;
+    escaped = true;
+    startGame();
+  });
+  loadRetry.addEventListener('click', function () { location.reload(); });
 
   var title = document.createElement('div');
   title.style.cssText = css + ';display:none';
@@ -99,13 +115,41 @@ window.__initMenu = function () {
     ending.style.display = 'flex';
   };
 
+  var bootStartedAt = Date.now();
   var bootIv = setInterval(function () {
-    if (window.__bootOK && window.__charLoaded) {
+    var boot = !!window.__bootOK, ch = !!window.__charLoaded;
+    if (loadBar) loadBar.style.width = (ch ? 100 : (boot ? 55 : 20)) + '%';
+    if (boot && !ch && loadHint && Date.now() - bootStartedAt > 2500) {
+      loadHint.textContent = 'đang chuẩn bị nhân vật…';
+    }
+    if (boot && ch) {
       clearInterval(bootIv);
       load.style.display = 'none';
       title.style.display = 'flex';
+      return;
+    }
+    /* Kẹt quá lâu: mở lối thoát — không bao giờ giữ người chơi ở màn hình tải */
+    var waited = Date.now() - bootStartedAt;
+    if (!escaped && loadEnter && boot && !ch && waited > 6000) {
+      escaped = true;
+      loadHint.textContent = 'nhân vật chưa tải xong — bạn vẫn có thể vào chơi';
+      loadEnter.style.display = 'block';
+    }
+    if (!escaped && loadRetry && !boot && waited > 10000) {
+      escaped = true;
+      loadHint.textContent = 'tải bị chặn hoặc mạng chậm';
+      loadRetry.style.display = 'block';
     }
   }, 400);
+
+  /* Vùng trạng thái cho trình đọc màn hình (canvas khó tiếp cận) */
+  var a11y = document.createElement('div');
+  a11y.id = 'a11yStatus';
+  a11y.setAttribute('role', 'status');
+  a11y.setAttribute('aria-live', 'polite');
+  a11y.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0';
+  document.body.appendChild(a11y);
+  window.__a11ySay = function (text) { if (a11y) a11y.textContent = text; };
 
   window.__MENU = { start: startGame, togglePause: togglePause };
   return window.__MENU;

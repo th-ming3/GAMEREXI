@@ -87,38 +87,51 @@ window.__createRealAssets = function () {
     return material;
   }
 
+  function applyGltf(name, record, gltf) {
+    record.scene = gltf.scene;
+    record.scene.updateMatrixWorld(true);
+    record.box = new THREE.Box3().setFromObject(record.scene);
+    record.size = record.box.getSize(new THREE.Vector3());
+    var mesh = null;
+    record.scene.traverse(function (o) { if (!mesh && o.isMesh) mesh = o; });
+    if (mesh) {
+      record.geometry = mesh.geometry.clone();
+      record.material = Array.isArray(mesh.material) ? mesh.material[0].clone() : mesh.material.clone();
+      if (name === 'grass' || name === 'flower') {
+        record.geometry.scale(0.95, 1.0, 0.95);
+        windify(record.material);
+      }
+    }
+  }
+  function settle(name, record, failed) {
+    if (failed) console.warn('Real asset failed: ' + name);
+    record.ready = true;
+    var queue = waiting[name] || [];
+    for (var i = 0; i < queue.length; i++) queue[i](record);
+    waiting[name] = null;
+  }
+
   function parse(name) {
     if (templates[name]) return templates[name];
     var record = { ready: false, scene: null, geometry: null, material: null, box: null, size: null };
     templates[name] = record;
-    var base64 = SOURCES[name];
-    if (!base64 || base64.charAt(0) === '_') return record;
-    var bytes = Uint8Array.from(atob(base64), function (c) { return c.charCodeAt(0); });
+    var src = SOURCES[name];
+    if (!src || src.charAt(0) === '_') return record;
+    if (/^(models\/|https?:\/\/|\.\/|blob:)/.test(src)) {
+      loader.load(src, function (gltf) {
+        applyGltf(name, record, gltf);
+        settle(name, record, false);
+      }, undefined, function (error) {
+        settle(name, record, true);
+      });
+      return record;
+    }
+    var bytes = Uint8Array.from(atob(src), function (c) { return c.charCodeAt(0); });
     loader.parse(bytes.buffer, '', function (gltf) {
-      record.scene = gltf.scene;
-      record.scene.updateMatrixWorld(true);
-      record.box = new THREE.Box3().setFromObject(record.scene);
-      record.size = record.box.getSize(new THREE.Vector3());
-      var mesh = null;
-      record.scene.traverse(function (o) { if (!mesh && o.isMesh) mesh = o; });
-      if (mesh) {
-        record.geometry = mesh.geometry.clone();
-        record.material = Array.isArray(mesh.material) ? mesh.material[0].clone() : mesh.material.clone();
-        if (name === 'grass' || name === 'flower') {
-          record.geometry.scale(0.95, 1.0, 0.95);
-          windify(record.material);
-        }
-      }
-      record.ready = true;
-      var queue = waiting[name] || [];
-      for (var i = 0; i < queue.length; i++) queue[i](record);
-      waiting[name] = null;
+      applyGltf(name, record, gltf);
+      settle(name, record, false);
     }, function (error) {
-      console.warn('Real asset failed: ' + name, error);
-      record.ready = true;
-      var queue = waiting[name] || [];
-      for (var i = 0; i < queue.length; i++) queue[i](record);
-      waiting[name] = null;
+      settle(name, record, true);
     });
     return record;
   }

@@ -138,7 +138,7 @@ window.__initCombat = function (gardenRoot) {
     if (k === 'j') attack();
   });
   window.addEventListener('pointerdown', function (e) {
-    if (e.button === 0 && !e.target.closest && !e.target.closest('button')) attack();
+    if (e.button === 0 && (!e.target.closest || !e.target.closest('button, .hud, .touchpad, .touchbtn'))) attack();
   });
 
   setInterval(function () {

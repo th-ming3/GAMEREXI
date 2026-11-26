@@ -44,28 +44,46 @@ var statusText = byId('statusText');
 function markDone() { if (statusLine) statusLine.classList.add('done'); if (statusText) statusText.textContent = 'Đã ghi nhận lời trả lời'; }
 function markFail() { if (statusText) statusText.textContent = 'Chưa ghi được, thử lại sau'; }
 function markNone() { if (statusText) statusText.textContent = 'Chưa có lựa nào được ghi lại'; }
+function markSavedLocal() {
+  if (statusLine) statusLine.classList.add('done');
+  if (statusText) statusText.textContent = 'Đã lưu ở máy này (chưa gửi đi đâu)';
+}
+function markFailRetry(retry) {
+  if (statusLine) statusLine.classList.remove('done');
+  if (statusText) statusText.textContent = 'Chưa gửi được — nhấn để thử lại';
+  if (statusLine && retry) {
+    statusLine.style.cursor = 'pointer';
+    statusLine.onclick = function () { retry(); };
+  }
+}
 
 var consented = read('consent') === 'Vâng';
 if (!window.__GAME && consented) {
   var submitted = false;
   try { submitted = !!sessionStorage.getItem('inviteSubmitted'); } catch (e) {}
-  if (!submitted) {
+  var apiBase = String(window.API_BASE || '').replace(/\/$/, '');
+  function sendInvitePayload() {
     try { sessionStorage.setItem('inviteSubmitted', '1'); } catch (e) {}
-    var apiBase = String(window.API_BASE || '').replace(/\/$/, '');
-    if (apiBase && typeof fetch === 'function') {
-      fetch(apiBase + '/api/responses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ consent: 'Vâng', freeDay: dayVal, food: read('food'), drink: read('drink'), place: read('place') })
-      }).then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        markDone();
-      }).catch(function () {
-        markFail();
-        setTimeout(markDone, 2600);
-      });
-    } else { markDone(); }
-  } else { markDone(); }
+    if (!apiBase || typeof fetch !== 'function') {
+      /* Không có backend: giữ trung thực — đã lưu ở máy, chưa gửi đi đâu */
+      try { localStorage.setItem('inviteSavedAt', String(Date.now())); } catch (e2) {}
+      markSavedLocal();
+      return;
+    }
+    fetch(apiBase + '/api/responses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ consent: 'Vâng', freeDay: dayVal, food: read('food'), drink: read('drink'), place: read('place') })
+    }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      markDone();
+    }).catch(function () {
+      /* Thất bại thật: nói rõ chưa gửi được + cho bấm thử lại; KHÔNG báo thành công giả */
+      markFailRetry(function () { markFail(); sendInvitePayload(); });
+    });
+  }
+  if (!submitted) { sendInvitePayload(); }
+  else { markDone(); }
 } else { markNone(); }
 
 /* ================= VƯỜN HOA 3D ================= */
@@ -2534,14 +2552,14 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
     var koiLoader = new THREE.GLTFLoader();
     function spawnRiggedKoi(index) {
       var isGold = index % 2 === 1;
-      var b64 = isGold ? '__OGON_KOI_B64__' : '__KOHAKU_KOI_B64__';
-      var bytes = Uint8Array.from(atob(b64), function (c) { return c.charCodeAt(0); });
+      var koiSrc = isGold ? '__OGON_KOI_B64__' : '__KOHAKU_KOI_B64__';
+      var koiBytes = /^models\/|^https?:\/\//.test(koiSrc) ? null : Uint8Array.from(atob(koiSrc), function (c) { return c.charCodeAt(0); });
       var holder = new THREE.Group();
       gardenRoot.add(holder);
       var ka0 = Math.random() * 6.283;
       var item = { m: holder, a: ka0, rx: LAKE.rx * (0.25 + Math.random() * 0.55), rz: LAKE.rz * (0.25 + Math.random() * 0.55), sp: 0.14 + Math.random() * 0.16, ph: Math.random() * 6.283, sway: 0, mixer: null, depth: 1.0 + Math.random() * 1.8 };
       kois.push(item);
-      koiLoader.parse(bytes.buffer, '', function (gltf) {
+      function koiReady(gltf) {
         var model = gltf.scene;
         model.scale.setScalar(1.15 + Math.random() * 0.35);
         model.traverse(function (o) { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
@@ -2551,7 +2569,12 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
           mixer.clipAction(gltf.animations[0]).play();
           item.mixer = mixer;
         }
-      }, function (error) { console.warn('Koi GLB failed', error); });
+      }
+      if (koiBytes) {
+        koiLoader.parse(koiBytes.buffer, '', koiReady, function (error) { console.warn('Koi GLB failed', error); });
+      } else {
+        koiLoader.load(koiSrc, koiReady, undefined, function (error) { console.warn('Koi GLB failed', error); });
+      }
     }
     for (var ki = 0; ki < 5; ki++) spawnRiggedKoi(ki);
     /* súng: lá tròn nổi + 2 bông nhỏ */
@@ -3282,10 +3305,13 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
     window.__spawnRabbitNow = function () { rabbitTimer = 0; };
     window.__rabbitAssetReady = false;
     var rabbitTemplate = null, rabbitMaps = {}, rabbitMapsReady = false, rabbitModelReady = false;
+    function rabbitTexURI(tok) {
+      return /^models\/|^https?:\/\//.test(tok) ? tok : 'data:image/png;base64,' + tok;
+    }
     var rabbitTextureData = {
-      'Fur-skin.png': 'data:image/png;base64,__RABBIT_FUR_B64__',
-      'rabbit-skinn.png': 'data:image/png;base64,__RABBIT_SKIN_B64__',
-      'rabbit-NORM.png': 'data:image/png;base64,__RABBIT_NORM_B64__'
+      'Fur-skin.png': rabbitTexURI('__RABBIT_FUR_B64__'),
+      'rabbit-skinn.png': rabbitTexURI('__RABBIT_SKIN_B64__'),
+      'rabbit-NORM.png': rabbitTexURI('__RABBIT_NORM_B64__')
     };
     var rabbitManager = new THREE.LoadingManager();
     rabbitManager.setURLModifier(function(url){
@@ -3371,10 +3397,19 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
     var rabbitTextureLoader = new THREE.TextureLoader();
     Object.keys(rabbitTextureData).forEach(function(k){rabbitTextureLoader.load(rabbitTextureData[k],function(t){rabbitMaps[k]=t;markRabbitMapsReady();},undefined,function(){console.warn('Rabbit texture failed: '+k);});});
     try {
-      var rabbitBytes=Uint8Array.from(atob('__RABBIT_FBX_B64__'),function(c){return c.charCodeAt(0);});
-      rabbitTemplate=new THREE.FBXLoader(rabbitManager).parse(rabbitBytes.buffer,'');
-      rabbitModelReady=true;
-      markRabbitMapsReady();
+      var rabbitSrc = '__RABBIT_FBX_B64__';
+      if (/^models\/|^https?:\/\//.test(rabbitSrc)) {
+        new THREE.FBXLoader(rabbitManager).load(rabbitSrc, function (obj) {
+          rabbitTemplate = obj;
+          rabbitModelReady = true;
+          markRabbitMapsReady();
+        }, undefined, function () { console.error('CC0 rabbit FBX failed'); });
+      } else {
+        var rabbitBytes=Uint8Array.from(atob(rabbitSrc),function(c){return c.charCodeAt(0);});
+        rabbitTemplate=new THREE.FBXLoader(rabbitManager).parse(rabbitBytes.buffer,'');
+        rabbitModelReady=true;
+        markRabbitMapsReady();
+      }
     } catch(eRabbit) { console.error('CC0 rabbit FBX failed',eRabbit); }
     function rabbitRig(){
       if(!rabbitTemplate)return null;

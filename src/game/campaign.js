@@ -507,6 +507,13 @@ window.__initCampaign = function (gardenRoot) {
       '<br><span style="font-weight:400">' + ob.text + '</span>' +
       '<br>Tiến độ: <b>' + (CS.prog[key] || 0) + '</b>/' + (ob.need || ob.marks.length || 1) +
       (dist >= 0 ? ' · ' + dist.toFixed(0) + 'm' : '');
+    var a11y = window.__a11ySay;
+    if (a11y) {
+      var firstStep = (quest.id === 'Q-HOME-001')
+        ? ' Bắc đầu: đứng gần van bên hồ rồi nhấn E.'
+        : '';
+      a11y('Nhiệm vụ ' + quest.id + ', ' + quest.name + ', ' + ob.text + '.' + firstStep);
+    }
   }, 100);
 
   rebuildMarkers();

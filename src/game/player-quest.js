@@ -81,7 +81,8 @@
   window.__garden.add(charG);
   window.__char = charG;
   var mixer = null, actIdle = null, actWalk = null, actRun = null, curAct = null, avatarModel = null;
-  var soldierURI = 'data:model/gltf-binary;base64,' + '__SOLDIER_B64__';
+  var soldierSrc = '__SOLDIER_B64__';
+  var soldierURI = /^models\/|^https?:\/\//.test(soldierSrc) ? soldierSrc : 'data:model/gltf-binary;base64,' + soldierSrc;
   if (window.THREE && THREE.GLTFLoader) {
     new THREE.GLTFLoader().load(soldierURI, function (gltf) {
       var model = gltf.scene;
@@ -291,7 +292,12 @@
     function clearKeys() { Object.keys(keys).forEach(function (key) { keys[key] = false; }); }
     window.addEventListener('blur', clearKeys);
     document.addEventListener('visibilitychange', function () { if (document.hidden) clearKeys(); });
-    function update() { var m = window.innerWidth < 880; pad.style.display = m ? 'block' : 'none'; act.style.display = m ? 'flex' : 'none'; if (!m) clearKeys(); }
+    function update() {
+      var touch = ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0;
+      var m = window.innerWidth < 880 || touch;
+      pad.style.display = m ? 'block' : 'none'; act.style.display = m ? 'flex' : 'none';
+      if (!m) clearKeys();
+    }
     update(); window.addEventListener('resize', update);
   })();
   window.__setOrbit = function (yaw, pitch) { orbitYaw = yaw; if (typeof pitch === 'number') orbitPitch = pitch; };
