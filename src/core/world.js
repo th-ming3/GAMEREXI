@@ -3291,7 +3291,7 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
      huỷ (dispose) khi xa, cull ngoài frustum + tầm nhìn → bộ nhớ/draw-call không tăng dù map rộng cỡ nào */
   (function buildChunkSystem() {
     if (!window.__GAME) return;
-    var CHSZ = 14, GEN_R = 92, KILL_R = 112, VIEW_R = 84, CENTER_R = 18;
+    var CHSZ = 14, GEN_R = LOW ? 62 : 92, KILL_R = LOW ? 78 : 112, VIEW_R = LOW ? 56 : 84, CENTER_R = 18;
     var chunkMap = {}, chunkList = [], genQueue = [], lastGenCX = NaN, lastGenCZ = NaN;
     /* ---- ĐƯỜNG ĐẤT: hàm world-space xác định — mọi chunk vẽ khớp liền mạch ---- */
     function pathZ(x) { return 15.5 + 5.2 * Math.sin(x * 0.085) + 3.1 * Math.sin(x * 0.041 + 2.0) - 12.5 * Math.exp(-(x*x)/70); }
@@ -4129,8 +4129,8 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
         }
         genQueue.sort(function (a2, b2) { return a2.d - b2.d; });
       }
-      var budget = LOW ? 3 : 5;
-      while (genQueue.length && budget > 0 && chunkList.length < 76) {
+      var budget = LOW ? 2 : 5;
+      while (genQueue.length && budget > 0 && chunkList.length < (LOW ? 42 : 76)) {
         var nextChunk = genQueue.shift();
         if (!chunkMap[nextChunk.cx + '|' + nextChunk.cz]) buildChunk(nextChunk.cx, nextChunk.cz);
         budget--;

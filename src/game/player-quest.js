@@ -14,6 +14,10 @@
   if (window.__initAdventure) window.__initAdventure();
   function smoothG(x, a, b) { var t2 = Math.max(0, Math.min(1, (x - a) / (b - a))); return t2 * t2 * (3 - 2 * t2); }
   function hillY2(x, z) {
+    if (window.__skyIsleY) {
+      var sy = window.__skyIsleY(x, z);
+      if (sy !== null && pPos && pPos.y > 12) return sy;
+    }
     if (window.__hillY) return window.__hillY(x, z);
     return 0.13 * Math.sin(x * 0.45 + 1.3) * Math.cos(z * 0.5)
          + 0.06 * Math.sin(x * 1.7 + z * 1.3)
@@ -319,6 +323,19 @@
     if (window.__spawnHomeFX) window.__spawnHomeFX();
   }
   window.__goHome = goHome;
+  window.__warpTo = function (wx, wz, wyOpt) {
+    if (indoorMode) { indoorMode = false; if (indoorRoom) indoorRoom.visible = false; if (window.__cabinGroup) window.__cabinGroup.visible = true; }
+    if (caveMode) { caveMode = false; if (window.__caveRoom) window.__caveRoom.visible = false; if (window.__caveGroup) window.__caveGroup.visible = true; }
+    var wv = window.__garden ? window.__garden.localToWorld(new THREE.Vector3(wx, 0, wz)) : new THREE.Vector3(wx, 0, wz);
+    pPos.x = wv.x; pPos.z = wv.z;
+    if (typeof wyOpt === 'number' && wyOpt > 12) {
+      flyMode = true; pY = wyOpt;
+    } else {
+      flyMode = false; pY = 0;
+    }
+    jumpV = 0; onGround = !flyMode;
+    if (window.__physicsReset) window.__physicsReset(pPos.x, pPos.z);
+  };
   window.__playerPos = pPos;
 
   /* ---- toast ---- */
@@ -578,15 +595,18 @@
       pYaw = Math.atan2(-mvx, -mvz);
     }
     resolvePhysics(pPos, dt, moveVX, moveVZ);
-    var rr = Math.sqrt(pPos.x * pPos.x + pPos.z * pPos.z);
-    if (rr > 46) { pPos.x *= 46 / rr; pPos.z *= 46 / rr; }
+    var bnd = (window.__WORLD_MAP_DATA && window.__WORLD_MAP_DATA.bounds) || { minX: -115, maxX: 375, minZ: -168, maxZ: 130 };
+    if (pPos.x < bnd.minX) pPos.x = bnd.minX;
+    if (pPos.x > bnd.maxX) pPos.x = bnd.maxX;
+    if (pPos.z < bnd.minZ) pPos.z = bnd.minZ;
+    if (pPos.z > bnd.maxZ) pPos.z = bnd.maxZ;
     var pl = playerLocal();
     /* Space nhảy trên đất; dưới hồ Space bơi lên và Q bơi xuống */
     if (keys[' '] && onGround && !flyMode && !inLake) { jumpV = 3.3 + (keys.shift ? 0.9 : 0); onGround = false; if (window.__sfx) window.__sfx.whoosh(); }
     if (flyMode) {
-      if (keys.e || keys[' ']) pY += 5.2 * flightDt;
-      if (keys.q) pY -= 5.2 * flightDt;
-      pY = Math.max(0.2, Math.min(12, pY));
+      if (keys.e || keys[' ']) pY += 6.8 * flightDt;
+      if (keys.q) pY -= 6.8 * flightDt;
+      pY = Math.max(0.2, Math.min(32, pY));
       jumpV = 0;
     } else if (inLake) {
       if (keys.q) { pY -= 3.0 * dt; diving = true; }

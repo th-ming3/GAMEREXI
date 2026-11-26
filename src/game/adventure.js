@@ -150,7 +150,7 @@ window.__initAdventure = function () {
   canvas.style.cssText = 'display:block;width:176px;height:176px;margin:auto;border-radius:10px;border:1px solid rgba(96,66,32,.35)';
   wrap.appendChild(canvas);
   var hint = document.createElement('div');
-  hint.textContent = 'M — phóng to bản đồ';
+  hint.textContent = 'M — mở bản đồ · Bấm số để dịch chuyển';
   hint.style.cssText = 'font:10px/1.4 Georgia,serif;color:#8a6a42;text-align:center;margin-top:5px';
   wrap.appendChild(hint);
   document.body.appendChild(wrap);
@@ -158,90 +158,118 @@ window.__initAdventure = function () {
   window.addEventListener('keydown', function (event) {
     if ((event.key || '').toLowerCase() !== 'm') return;
     expanded = !expanded;
-    wrap.style.width = expanded ? 'min(76vw,520px)' : '196px';
-    canvas.style.width = expanded ? 'min(70vw,480px)' : '176px';
-    canvas.style.height = canvas.style.width;
+    wrap.style.width = expanded ? 'min(82vw,640px)' : '196px';
+    canvas.style.width = expanded ? 'min(78vw,610px)' : '176px';
+    canvas.style.height = expanded ? 'calc(min(78vw,610px) * 0.6)' : '106px';
   });
-  function mapPoint(x, z) { return [180 + x * 3.25, 180 + z * 3.25]; }
+  canvas.width = 480; canvas.height = 288;
+  canvas.style.height = '106px';
+  canvas.style.cursor = 'pointer';
+
+  var MDATA = window.__WORLD_MAP_DATA || { bounds: { minX: -110.4, maxX: 369.6, minZ: -162.7, maxZ: 125.3 }, landPolys: [], skyPolys: [], rivers: [], roads: [] };
+  function mapPoint(x, z) {
+    var b = MDATA.bounds;
+    return [((x - b.minX) / (b.maxX - b.minX || 1)) * 480, ((z - b.minZ) / (b.maxZ - b.minZ || 1)) * 288];
+  }
+  canvas.addEventListener('click', function (ev) {
+    var rect = canvas.getBoundingClientRect();
+    var cx = (ev.clientX - rect.left) * (480 / rect.width);
+    var cy = (ev.clientY - rect.top) * (288 / rect.height);
+    var best = null, bd = 24;
+    waypoints.forEach(function (wp) {
+      var p = mapPoint(wp.x, wp.z);
+      var d = Math.hypot(p[0] - cx, p[1] - cy);
+      if (d < bd) { bd = d; best = wp; }
+    });
+    if (best && window.__warpTo) {
+      var wy = best.id === 'r08' ? 22.5 : undefined;
+      window.__warpTo(best.x, best.z, wy);
+      if (window.__toast) window.__toast('✦ Dịch chuyển tới ' + best.name);
+    }
+  });
   function drawRegion() {
     var pl = window.__playerPos ? garden.worldToLocal(window.__playerPos.clone()) : { x: 0.4, z: 6.8 };
     var region = window.__REGION.at(pl.x, pl.z);
-    title.textContent = (window.__REGION.names[region] || 'Cánh Đồng') + ' · Cánh Đồng';
+    title.textContent = (window.__REGION.names[region] || 'Đại Việt') + ' · Đại Việt';
     var ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, 360, 360);
-    var g = ctx.createRadialGradient(180, 170, 30, 180, 180, 260);
-    g.addColorStop(0, '#e9d9ae'); g.addColorStop(1, '#d9c491');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 360, 360);
-    ctx.strokeStyle = 'rgba(96,66,32,.18)'; ctx.lineWidth = 1;
-    for (var gi = 40; gi < 360; gi += 40) { ctx.beginPath(); ctx.moveTo(gi, 0); ctx.lineTo(gi, 360); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, gi); ctx.lineTo(360, gi); ctx.stroke(); }
-    ctx.fillStyle = 'rgba(120,90,50,.16)';
-    ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(130, 0); ctx.lineTo(120, 300); ctx.lineTo(0, 340); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = 'rgba(90,130,70,.22)';
-    ctx.beginPath(); ctx.moveTo(130, 0); ctx.lineTo(360, 0); ctx.lineTo(360, 140); ctx.lineTo(125, 140); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = 'rgba(120,160,80,.2)';
-    ctx.beginPath(); ctx.moveTo(125, 140); ctx.lineTo(360, 140); ctx.lineTo(360, 360); ctx.lineTo(120, 360); ctx.closePath(); ctx.fill();
-    var lake = mapPoint(4.5, 17);
-    var lg = ctx.createRadialGradient(lake[0], lake[1], 4, lake[0], lake[1], 30);
-    lg.addColorStop(0, '#4fa8c0'); lg.addColorStop(1, '#2e7d96');
-    ctx.fillStyle = lg;
-    ctx.beginPath(); ctx.ellipse(lake[0], lake[1], 8.2 * 3.25, 6.8 * 3.25, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(250,240,210,.85)'; ctx.lineWidth = 2.5; ctx.setLineDash([7, 6]);
-    ctx.beginPath(); ctx.moveTo(70, 315); ctx.bezierCurveTo(150, 265, 200, 235, 255, 135); ctx.stroke(); ctx.setLineDash([]);
-    ctx.font = 'italic 11px Georgia,serif'; ctx.fillStyle = 'rgba(90,61,30,.75)';
-    ctx.fillText('Hồ Gương', lake[0] - 22, lake[1] + 3);
-    ctx.fillText('Hẻm Hổ Phách', 240, 250);
-    ctx.fillText('Rừng Thì Thầm', 190, 90);
-    waypoints.forEach(function (wp) {
+    ctx.clearRect(0, 0, 480, 288);
+    var og = ctx.createLinearGradient(0, 0, 0, 288);
+    og.addColorStop(0, '#9fc4cf'); og.addColorStop(1, '#84b0be');
+    ctx.fillStyle = og; ctx.fillRect(0, 0, 480, 288);
+
+    /* Vẽ lục địa & đảo Đại Việt từ SVG */
+    ctx.fillStyle = '#e7d9b2';
+    ctx.strokeStyle = '#6f5534';
+    ctx.lineWidth = 1.1;
+    (MDATA.landPolys || []).forEach(function (poly) {
+      if (!poly.length) return;
+      ctx.beginPath();
+      poly.forEach(function (pt, idx) {
+        var p = mapPoint(pt[0], pt[1]);
+        if (idx === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+      });
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    });
+
+    /* Vẽ sông ngòi */
+    ctx.strokeStyle = '#3d8ea6'; ctx.lineWidth = 1.6;
+    (MDATA.rivers || []).forEach(function (rv) {
+      if (rv.length < 2) return;
+      ctx.beginPath();
+      rv.forEach(function (pt, idx) {
+        var p = mapPoint(pt[0], pt[1]);
+        if (idx === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+      });
+      ctx.stroke();
+    });
+
+    /* Vẽ quan lộ */
+    ctx.strokeStyle = 'rgba(130, 82, 42, 0.72)'; ctx.lineWidth = 1.2; ctx.setLineDash([4, 3]);
+    (MDATA.roads || []).forEach(function (rd) {
+      if (rd.length < 2) return;
+      ctx.beginPath();
+      rd.forEach(function (pt, idx) {
+        var p = mapPoint(pt[0], pt[1]);
+        if (idx === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+      });
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    /* Vẽ quần đảo bay Khu 08 */
+    ctx.fillStyle = '#f5e49c'; ctx.strokeStyle = '#9d7622'; ctx.lineWidth = 1;
+    (MDATA.skyPolys || []).forEach(function (poly) {
+      if (!poly.length) return;
+      ctx.beginPath();
+      poly.forEach(function (pt, idx) {
+        var p = mapPoint(pt[0], pt[1]);
+        if (idx === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+      });
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    });
+
+    /* Vẽ 8 mốc khu vực (01 → 08) */
+    waypoints.forEach(function (wp, wi) {
       var p = mapPoint(wp.x, wp.z);
       ctx.fillStyle = wp.active ? '#e8b23a' : '#fbf3dc';
-      ctx.strokeStyle = '#5a3d1e'; ctx.lineWidth = 1.6;
-      ctx.beginPath(); ctx.arc(p[0], p[1], wp.active ? 6.5 : 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      if (wp.active) { ctx.strokeStyle = 'rgba(232,178,58,.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p[0], p[1], 10, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.strokeStyle = '#8b2f1f'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(p[0], p[1], wp.active ? 7.5 : 6.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#3b2412'; ctx.font = '700 8.5px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(wi + 1), p[0], p[1] + 0.5);
     });
-    var cave = mapPoint(cavePos.x, cavePos.z);
-    ctx.fillStyle = '#2e2620'; ctx.beginPath(); ctx.arc(cave[0], cave[1], 6.5, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#fbf3dc'; ctx.lineWidth = 1.4; ctx.stroke();
-    var cab = mapPoint(26, 9);
-    ctx.fillStyle = '#8a5a2e'; ctx.fillRect(cab[0] - 5, cab[1] - 5, 10, 10);
-    ctx.strokeStyle = '#5a3d1e'; ctx.lineWidth = 1.4; ctx.strokeRect(cab[0] - 5, cab[1] - 5, 10, 10);
-    collectibles.forEach(function (c) {
-      if (!c.visible) return;
-      var p = mapPoint(c.position.x, c.position.z);
-      ctx.fillStyle = '#ffd76a';
-      ctx.beginPath(); ctx.arc(p[0], p[1], 3, 0, Math.PI * 2); ctx.fill();
-    });
-    var cs = window.__campaignState ? window.__campaignState() : null;
-    if (cs && cs.markers && cs.markers.length) {
-      cs.markers.forEach(function (m, mi) {
-        var p = mapPoint(m.x, m.z);
-        var pulse = 5 + Math.sin(performance.now() * 0.004 + mi) * 1.5;
-        ctx.fillStyle = 'rgba(178,60,40,.25)';
-        ctx.beginPath(); ctx.arc(p[0], p[1], pulse + 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#b23c28';
-        ctx.beginPath(); ctx.arc(p[0], p[1], pulse, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#fff6e0'; ctx.lineWidth = 1.4; ctx.stroke();
-      });
-    }
-    if (window.__NPC_SYSTEM && window.__NPC_SYSTEM.npcs) {
-      window.__NPC_SYSTEM.npcs.forEach(function (n) {
-        var p = mapPoint(n.x, n.z);
-        ctx.fillStyle = '#3e6b4f';
-        ctx.beginPath(); ctx.arc(p[0], p[1], 3.6, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#fbf3dc'; ctx.lineWidth = 1; ctx.stroke();
-      });
-    }
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+
     var player = mapPoint(pl.x, pl.z);
     ctx.save(); ctx.translate(player[0], player[1]);
     var yaw = 0;
     if (window.CAM && window.TARGET) yaw = Math.atan2(window.TARGET.x - window.CAM.x, window.TARGET.z - window.CAM.z);
     ctx.rotate(yaw);
     ctx.fillStyle = '#b23c28'; ctx.strokeStyle = '#fff6e0'; ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(6.5, 7); ctx.lineTo(0, 3.5); ctx.lineTo(-6.5, 7); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(5.5, 6); ctx.lineTo(0, 3); ctx.lineTo(-5.5, 6); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.restore();
     ctx.strokeStyle = 'rgba(90,61,30,.55)'; ctx.lineWidth = 1.4;
-    ctx.strokeRect(0.5, 0.5, 359, 359);
-    ctx.fillStyle = 'rgba(90,61,30,.8)'; ctx.font = '700 11px Georgia,serif'; ctx.fillText('B', 8, 16);
-    ctx.beginPath(); ctx.moveTo(13, 20); ctx.lineTo(13, 32); ctx.stroke();
+    ctx.strokeRect(0.5, 0.5, 479, 287);
+    ctx.fillStyle = 'rgba(90,61,30,.85)'; ctx.font = '700 10px Georgia,serif'; ctx.fillText('B', 8, 14);
   }
   drawRegion();
   setInterval(drawRegion, 250);
