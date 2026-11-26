@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "cannon-es": "^0.20.0",
-    "puppeteer-core": "^24.43.1"
-  }
-}
