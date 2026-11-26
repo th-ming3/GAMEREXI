@@ -19,7 +19,12 @@ const NAMES = [
   'cracked-marble-bench-lod1.glb', 'blade-sign-small-lod1.glb', 'bilberry-bush-lod1.glb', 'bracken-fern-lod1.glb', 'common-reed-lod1.glb',
   'fallen-log-lod1.glb', 'fly-agaric-lod1.glb', 'dead-thornbush-lod1.glb', 'cattail-clump-lod1.glb',
   'granite-pond-edge-stone-1-lod1.glb', 'granite-pond-edge-stone-2-lod1.glb', 'cliff-face-lod1.glb', 'granite-kopje-lod1.glb',
-  'glowing-rune-stone-lod1.glb', 'dungeon-stone-pillar-lod1.glb', 'campfire-ring-lod1.glb', 'erratic-boulder-lod1.glb',
+  'glowing-rune-stone-lod1.glb', 'dungeon-stone-pillar-lod1.glb',   'campfire-ring-lod1.glb', 'erratic-boulder-lod1.glb',
+  'covered-wooden-bridge-lod1.glb', 'garage-lod1.glb',
+  'kenney-tree_default.glb', 'kenney-tree_detailed.glb', 'kenney-tree_fat.glb', 'kenney-tree_cone.glb',
+  'kenney-rock_largeA.glb', 'kenney-rock_largeC.glb', 'kenney-plant_bushLarge.glb', 'kenney-mushroom_redGroup.glb',
+  'kenney-log_large.glb', 'kenney-cliff_block_rock.glb', 'kenney-bridge_stone.glb', 'kenney-campfire_stones.glb',
+  'kenney-fence.glb', 'kenney-fountain-round.glb', 'kenney-wall-block.glb', 'kenney-tower.glb',
   'coral-lod1.glb', 'kohaku-koi.glb', 'ogon-koi.glb'
 ];
 

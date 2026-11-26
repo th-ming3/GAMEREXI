@@ -864,6 +864,230 @@
     "animations": []
   },
   {
+    "name": "covered-wooden-bridge-lod1.glb",
+    "bytes": 861296,
+    "triangles": 3486,
+    "meshes": [
+      {
+        "name": "covered-wooden-bridge",
+        "triangles": 3486
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "garage-lod1.glb",
+    "bytes": 391636,
+    "triangles": 1204,
+    "meshes": [
+      {
+        "name": "garage_door_mesh",
+        "triangles": 96
+      },
+      {
+        "name": "",
+        "triangles": 1108
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-tree_default.glb",
+    "bytes": 8944,
+    "triangles": 114,
+    "meshes": [
+      {
+        "name": "Mesh tree_default",
+        "triangles": 114
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-tree_detailed.glb",
+    "bytes": 30736,
+    "triangles": 402,
+    "meshes": [
+      {
+        "name": "Mesh tree_detailed",
+        "triangles": 402
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-tree_fat.glb",
+    "bytes": 5092,
+    "triangles": 50,
+    "meshes": [
+      {
+        "name": "Mesh tree_fat",
+        "triangles": 50
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-tree_cone.glb",
+    "bytes": 10432,
+    "triangles": 132,
+    "meshes": [
+      {
+        "name": "Mesh tree_cone",
+        "triangles": 132
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-rock_largeA.glb",
+    "bytes": 7072,
+    "triangles": 80,
+    "meshes": [
+      {
+        "name": "Mesh rock_largeA",
+        "triangles": 80
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-rock_largeC.glb",
+    "bytes": 6528,
+    "triangles": 72,
+    "meshes": [
+      {
+        "name": "Mesh rock_largeC",
+        "triangles": 72
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-plant_bushLarge.glb",
+    "bytes": 6128,
+    "triangles": 60,
+    "meshes": [
+      {
+        "name": "Mesh plant_bushLarge",
+        "triangles": 60
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-mushroom_redGroup.glb",
+    "bytes": 14448,
+    "triangles": 144,
+    "meshes": [
+      {
+        "name": "Mesh mushroom_redGroup",
+        "triangles": 144
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-log_large.glb",
+    "bytes": 7432,
+    "triangles": 96,
+    "meshes": [
+      {
+        "name": "Mesh log_large",
+        "triangles": 96
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-cliff_block_rock.glb",
+    "bytes": 2256,
+    "triangles": 12,
+    "meshes": [
+      {
+        "name": "Mesh cliff_block_rock",
+        "triangles": 12
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-bridge_stone.glb",
+    "bytes": 17252,
+    "triangles": 252,
+    "meshes": [
+      {
+        "name": "Mesh bridge_stone",
+        "triangles": 252
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-campfire_stones.glb",
+    "bytes": 17028,
+    "triangles": 264,
+    "meshes": [
+      {
+        "name": "Mesh campfire_stones",
+        "triangles": 264
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-fence.glb",
+    "bytes": 18600,
+    "triangles": 84,
+    "meshes": [
+      {
+        "name": "fence",
+        "triangles": 84
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-fountain-round.glb",
+    "bytes": 95320,
+    "triangles": 1002,
+    "meshes": [
+      {
+        "name": "fountain-round",
+        "triangles": 910
+      },
+      {
+        "name": "(%ignore)",
+        "triangles": 92
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-wall-block.glb",
+    "bytes": 19340,
+    "triangles": 76,
+    "meshes": [
+      {
+        "name": "wall-block",
+        "triangles": 76
+      }
+    ],
+    "animations": []
+  },
+  {
+    "name": "kenney-tower.glb",
+    "bytes": 16776,
+    "triangles": 56,
+    "meshes": [
+      {
+        "name": "tower",
+        "triangles": 56
+      }
+    ],
+    "animations": []
+  },
+  {
     "name": "coral-lod1.glb",
     "bytes": 1044820,
     "triangles": 4535,

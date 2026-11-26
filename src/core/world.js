@@ -3239,6 +3239,27 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
       var cf = window.__REAL_ASSETS.makeModel('campfire', 0.9);
       cf.position.set(18, hillY(18, 18), 18);
       gardenRoot.add(cf);
+      if (window.__REAL_ASSETS) {
+        var tower = window.__REAL_ASSETS.makeModel('kTower', 7.5);
+        tower.position.set(-24, hillY(-24, -8), -8);
+        gardenRoot.add(tower);
+        var fountain = window.__REAL_ASSETS.makeModel('kFountain', 1.6);
+        fountain.position.set(13.4, hillY(13.4, 9.6), 9.6);
+        gardenRoot.add(fountain);
+        [[24, 7.2], [28, 7.2], [24, 10.8], [28, 10.8]].forEach(function (wp) {
+          var w = window.__REAL_ASSETS.makeModel('kWall', 1.8);
+          w.position.set(wp[0], hillY(wp[0], wp[1]), wp[1]);
+          gardenRoot.add(w);
+        });
+        var fenceA = window.__REAL_ASSETS.makeModel('kFence', 1.2);
+        fenceA.position.set(-1.5, hillY(-1.5, 9.5), 9.5);
+        fenceA.rotation.y = 0.3;
+        gardenRoot.add(fenceA);
+        var fenceB = window.__REAL_ASSETS.makeModel('kFence', 1.2);
+        fenceB.position.set(1.2, hillY(1.2, 6.8), 6.8);
+        fenceB.rotation.y = -0.5;
+        gardenRoot.add(fenceB);
+      }
     }
   })();
 
@@ -3773,7 +3794,7 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
         var tsc = region === 'forest' ? 2.15 + rng() * 1.15 : (region === 'canyon' ? 0.85 + rng() * 0.55 : 1.35 + rng() * 0.85);
         var treeKind = region === 'forest' ? (rng() < 0.32 ? rng() * 0.22 : 0.68 + rng() * 0.32)
           : (region === 'canyon' ? rng() * 0.18 : (region === 'lake' && rng() < 0.45 ? 0.25 + rng() * 0.12 : rng()));
-        var treeName = treeKind < 0.24 ? 'pine' : (treeKind < 0.39 ? 'blossom' : 'broadleaf');
+        var treeName = treeKind < 0.24 ? 'pine' : (treeKind < 0.39 ? 'blossom' : (treeKind < 0.55 ? 'broadleaf' : (treeKind < 0.7 ? 'kTreeDetailed' : (treeKind < 0.85 ? 'kTreeDefault' : (treeKind < 0.94 ? 'kTreeFat' : 'kTreeCone')))));
         var treeG = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel(treeName, { height: tsc * 4.4 }) : new THREE.Group();
         treeG.userData.isTree3D = true;
         treeG.userData.species = treeName;
@@ -3792,9 +3813,9 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
       /* props thật theo vùng — mỗi chunk có 1-3 vật trang trí GLB */
       var props = [];
       if (region === 'meadow') props = [['bench', 0.4, 0.55], ['sign', 0.3, 0.5], ['bush', 0.85, 0.8], ['fern', 0.7, 0.6], ['campfire', 0.1, 1.2]];
-      else if (region === 'forest') props = [['log', 0.75, 0.9], ['shroom', 0.65, 0.5], ['fern', 0.9, 0.7], ['thorn', 0.45, 0.55], ['bush', 0.55, 0.7]];
+      else if (region === 'forest') props = [['log', 0.75, 0.9], ['kLog', 0.5, 1.1], ['shroom', 0.65, 0.5], ['kShroom', 0.5, 0.7], ['fern', 0.9, 0.7], ['thorn', 0.45, 0.55], ['bush', 0.55, 0.7], ['kBush', 0.6, 0.9]];
       else if (region === 'lake') props = [['pondStone', 1.1, 0.5], ['pondStone2', 0.85, 0.45], ['cattailClump', 0.95, 0.75], ['reedClump', 0.75, 0.6]];
-      else if (region === 'canyon') props = [['cliff', 0.32, 2.4], ['kopje', 0.28, 2.0], ['erratic', 0.5, 0.9], ['thorn', 0.55, 0.5]];
+      else if (region === 'canyon') props = [['cliff', 0.32, 2.4], ['kCliff', 0.5, 2.0], ['kopje', 0.28, 2.0], ['erratic', 0.5, 0.9], ['kRockA', 0.6, 1.2], ['kRockC', 0.5, 1.0], ['thorn', 0.55, 0.5]];
       else if (region === 'border') props = [['pillar', 0.28, 1.5], ['runeStone', 0.24, 0.8], ['erratic', 0.4, 0.8]];
       var maxDepth = region === 'lake' ? 0.4 : 0.1;
       for (var pi = 0; pi < props.length; pi++) {

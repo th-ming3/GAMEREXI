@@ -46,7 +46,7 @@ data_tag = wrap(config + '\nwindow.__TEXTURES = '
 vendor = wrap(read('src/vendor/three.min.js')) + wrap(read('src/vendor/GLTFLoader.js')) + wrap(read('src/vendor/FBXLoader.bundle.js')) + wrap(read('node_modules/cannon-es/dist/cannon-es.js').replace('export {', 'window.CANNON = {'))
 
 # ---- 3) app bundle: world (chung) [+ game pack] trong MOT <script> (scope chung)
-world = read('src/core/terrain.js') + '\n' + read('src/game/real-assets.js') + '\n' + read('src/game/npcs.js') + '\n' + read('src/game/water-state.js') + '\n' + read('src/game/combat.js') + '\n' + read('src/game/boss.js') + '\n' + read('src/game/campaign.js') + '\n' + read('src/game/underwater.js') + '\n' + read('src/core/world.js')
+world = read('src/core/terrain.js') + '\n' + read('src/game/real-assets.js') + '\n' + read('src/game/npcs.js') + '\n' + read('src/game/water-state.js') + '\n' + read('src/game/combat.js') + '\n' + read('src/game/boss.js') + '\n' + read('src/game/campaign.js') + '\n' + read('src/game/menu.js') + '\n' + read('src/game/underwater.js') + '\n' + read('src/core/world.js')
 # Bundle the CC0 rig and fur textures into both single-file experiences.
 for token, asset in [
     ('__RABBIT_FBX_B64__', 'assets/models/rabbit_src/rabbit.fbx'),
@@ -91,6 +91,24 @@ for token, asset in [
     ('__RA_PROP_PILLAR_B64__', 'assets/models/runtime/dungeon-stone-pillar-lod1.glb'),
     ('__RA_PROP_CAMPFIRE_B64__', 'assets/models/runtime/campfire-ring-lod1.glb'),
     ('__RA_PROP_ERRATIC_B64__', 'assets/models/runtime/erratic-boulder-lod1.glb'),
+    ('__RA_PROP_BRIDGE_B64__', 'assets/models/runtime/covered-wooden-bridge-lod1.glb'),
+    ('__RA_PROP_GARAGE_B64__', 'assets/models/runtime/garage-lod1.glb'),
+    ('__RA_K_TREEDEFAULT_B64__', 'assets/models/runtime/kenney-tree_default.glb'),
+    ('__RA_K_TREEDETAILED_B64__', 'assets/models/runtime/kenney-tree_detailed.glb'),
+    ('__RA_K_TREEFAT_B64__', 'assets/models/runtime/kenney-tree_fat.glb'),
+    ('__RA_K_TREECONE_B64__', 'assets/models/runtime/kenney-tree_cone.glb'),
+    ('__RA_K_ROCKA_B64__', 'assets/models/runtime/kenney-rock_largeA.glb'),
+    ('__RA_K_ROCKC_B64__', 'assets/models/runtime/kenney-rock_largeC.glb'),
+    ('__RA_K_BUSH_B64__', 'assets/models/runtime/kenney-plant_bushLarge.glb'),
+    ('__RA_K_SHROOM_B64__', 'assets/models/runtime/kenney-mushroom_redGroup.glb'),
+    ('__RA_K_LOG_B64__', 'assets/models/runtime/kenney-log_large.glb'),
+    ('__RA_K_CLIFF_B64__', 'assets/models/runtime/kenney-cliff_block_rock.glb'),
+    ('__RA_K_BRIDGESTONE_B64__', 'assets/models/runtime/kenney-bridge_stone.glb'),
+    ('__RA_K_CAMPSTONES_B64__', 'assets/models/runtime/kenney-campfire_stones.glb'),
+    ('__RA_K_FENCE_B64__', 'assets/models/runtime/kenney-fence.glb'),
+    ('__RA_K_FOUNTAIN_B64__', 'assets/models/runtime/kenney-fountain-round.glb'),
+    ('__RA_K_WALL_B64__', 'assets/models/runtime/kenney-wall-block.glb'),
+    ('__RA_K_TOWER_B64__', 'assets/models/runtime/kenney-tower.glb'),
 ]:
     world = world.replace(token, base64.b64encode(open(os.path.join(ROOT, asset), 'rb').read()).decode())
 world = world.replace('</script>', '<\\/script>')

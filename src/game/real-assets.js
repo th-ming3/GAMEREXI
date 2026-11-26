@@ -38,7 +38,23 @@ window.__createRealAssets = function () {
     campfire: '__RA_PROP_CAMPFIRE_B64__',
     erratic: '__RA_PROP_ERRATIC_B64__',
     bridge: '__RA_PROP_BRIDGE_B64__',
-    garageHouse: '__RA_PROP_GARAGE_B64__'
+    garageHouse: '__RA_PROP_GARAGE_B64__',
+    kTreeDefault: '__RA_K_TREEDEFAULT_B64__',
+    kTreeDetailed: '__RA_K_TREEDETAILED_B64__',
+    kTreeFat: '__RA_K_TREEFAT_B64__',
+    kTreeCone: '__RA_K_TREECONE_B64__',
+    kRockA: '__RA_K_ROCKA_B64__',
+    kRockC: '__RA_K_ROCKC_B64__',
+    kBush: '__RA_K_BUSH_B64__',
+    kShroom: '__RA_K_SHROOM_B64__',
+    kLog: '__RA_K_LOG_B64__',
+    kCliff: '__RA_K_CLIFF_B64__',
+    kBridgeStone: '__RA_K_BRIDGESTONE_B64__',
+    kCampStones: '__RA_K_CAMPSTONES_B64__',
+    kFence: '__RA_K_FENCE_B64__',
+    kFountain: '__RA_K_FOUNTAIN_B64__',
+    kWall: '__RA_K_WALL_B64__',
+    kTower: '__RA_K_TOWER_B64__'
   };
   var loader = new THREE.GLTFLoader();
   var templates = {};
