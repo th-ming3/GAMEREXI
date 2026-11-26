@@ -23682,26 +23682,156 @@ window.__initNPCs = function (gardenRoot) {
   if (window.__NPC_SYSTEM) return window.__NPC_SYSTEM;
   var DATA = [
     {
-      id: 'tam', name: 'Tâm', role: 'Kỹ sư hiện trường', asset: 'npcTam', x: -2.6, z: 4.2, yaw: 0.8,
+      id: 'tam', name: 'Tâm', role: 'Kỹ sư hiện trường', x: -1.8, z: 2.2, yaw: 1.05, plaza: true,
+      outfit: { tunic: 0x264b5d, sash: 0xc99c4a, pants: 0x1e2426, hat: 'turban', height: 1.72 },
       first: 'Đồng hồ đang nói mực nước giảm. Bờ hồ lại bảo điều ngược lại. Mình cần kiểm tra ba dấu trước khi chạm van.',
       late: 'Tôi đọc nó như lệnh cần sửa. Nó là dấu vết của một lần người ta phải chọn ai được an toàn trước.'
     },
     {
-      id: 'ba_man', name: 'Bà Mận', role: 'Giữ ký ức lũ', asset: 'npcBaMan', x: 2.4, z: 7.8, yaw: -1.2,
+      id: 'ba_man', name: 'Bà Mận', role: 'Giữ ký ức lũ', x: 4.3, z: 4.9, yaw: -1.15, plaza: true,
+      outfit: { tunic: 0x7c4a32, sash: 0xa63c33, pants: 0x22201d, hat: 'nonla', height: 1.62 },
       first: 'Trước khi đổi dòng, mình cần chắc đường sơ tán vẫn mở. Lũ không chỉ là con số trên đồng hồ.',
       late: 'Đi vạch nước này cùng tôi. Nếu mình đánh dấu được đường an toàn thứ hai, tôi sẽ yên tâm hơn.'
     },
     {
-      id: 'hoa', name: 'Hòa', role: 'Ngư dân bến Hồ Gương', asset: 'npcHoa', x: 11.2, z: 12.6, yaw: 2.1,
+      id: 'hoa', name: 'Hòa', role: 'Ngư dân bến Hồ Gương', x: 11.2, z: 12.6, yaw: 2.1, plaza: false,
+      outfit: { tunic: 0x2c5c50, sash: 0xd4b26a, pants: 0x1e2624, hat: 'nonla', height: 1.68 },
       first: 'Nếu mở nước mà cá không về thì ai trả lại cái bến này? Tôi cần thấy dấu cá trước đã.',
       late: 'Tôi đã chép lại lịch cá. Giờ mình có thể cùng giữ lịch bến cho những người tới sau.'
     },
     {
-      id: 'lam', name: 'Lâm', role: 'Người ghi chép sinh cảnh', asset: 'npcLam', x: 6.4, z: -11.8, yaw: -0.4,
+      id: 'lam', name: 'Lâm', role: 'Người ghi chép sinh cảnh', x: 3.9, z: -11.5, yaw: -1.35, plaza: false,
+      outfit: { tunic: 0x3b593c, sash: 0xd9b86c, pants: 0x242622, hat: 'turban', height: 1.70 },
       first: 'Tôi ghi dấu vết, không kết luận thay người dân. Cái cò và dấu chân đang nói khác cái đồng hồ.',
       late: 'Cuốn ghi chép cần cả lời người dân lẫn dấu tự nhiên. Nhà cửa cũng là một phần của sinh cảnh.'
     }
   ];
+
+  function makeDaiVietVillager(info) {
+    var o = info.outfit || {};
+    var root = new THREE.Group();
+    var body = new THREE.Group();
+    var sc = (o.height || 1.70) / 1.70;
+    body.scale.set(sc, sc, sc);
+    root.add(body);
+
+    var mSkin = new THREE.MeshStandardMaterial({ color: 0xefc9a5, roughness: 0.62, metalness: 0.02 });
+    var mTunic = new THREE.MeshStandardMaterial({ color: o.tunic || 0x2e5246, roughness: 0.72, metalness: 0.04 });
+    var mSash = new THREE.MeshStandardMaterial({ color: o.sash || 0xcfa44e, roughness: 0.56, metalness: 0.08 });
+    var mPants = new THREE.MeshStandardMaterial({ color: o.pants || 0x1e2426, roughness: 0.78 });
+    var mHair = new THREE.MeshStandardMaterial({ color: 0x1a1715, roughness: 0.75 });
+    var mStraw = new THREE.MeshStandardMaterial({ color: 0xd8bf84, roughness: 0.78, side: THREE.DoubleSide });
+    var mTurban = new THREE.MeshStandardMaterial({ color: 0x23333d, roughness: 0.68 });
+    var mEye = new THREE.MeshStandardMaterial({ color: 0x191816, roughness: 0.35 });
+
+    function sh(mesh) {
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    /* Đôi chân mặc quần tối màu & hài vải đứng chạm đất y = 0 */
+    [-0.085, 0.085].forEach(function (lx) {
+      var leg = sh(new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.050, 0.74, 9), mPants));
+      leg.position.set(lx, 0.39, 0);
+      body.add(leg);
+      var shoe = sh(new THREE.Mesh(new THREE.BoxGeometry(0.088, 0.075, 0.175), mHair));
+      shoe.position.set(lx, 0.038, 0.03);
+      body.add(shoe);
+    });
+
+    /* Thân áo dài / áo bà ba + tà áo xẻ + thắt lưng */
+    var torso = new THREE.Group();
+    torso.position.set(0, 0.76, 0);
+    body.add(torso);
+
+    var skirtFront = sh(new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.42, 0.045), mTunic));
+    skirtFront.position.set(0, -0.02, 0.095);
+    skirtFront.rotation.x = -0.08;
+    torso.add(skirtFront);
+
+    var skirtBack = sh(new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.48, 0.045), mTunic));
+    skirtBack.position.set(0, -0.04, -0.095);
+    skirtBack.rotation.x = 0.09;
+    torso.add(skirtBack);
+
+    var chest = sh(new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.145, 0.50, 10), mTunic));
+    chest.scale.set(1.08, 1, 0.76);
+    chest.position.y = 0.27;
+    torso.add(chest);
+
+    var belt = sh(new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.155, 0.08, 10), mSash));
+    belt.scale.set(1.09, 1, 0.78);
+    belt.position.y = 0.06;
+    torso.add(belt);
+
+    var neck = sh(new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 0.10, 8), mSkin));
+    neck.position.y = 0.55;
+    torso.add(neck);
+
+    /* Cánh tay buông tự nhiên hai bên (không T-pose) */
+    function makeArm(side) {
+      var piv = new THREE.Group();
+      piv.position.set(side * 0.195, 0.49, 0);
+      piv.rotation.z = side * 0.10;
+      var sleeve = sh(new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.042, 0.38, 8), mTunic));
+      sleeve.position.y = -0.19;
+      piv.add(sleeve);
+      var hand = sh(new THREE.Mesh(new THREE.SphereGeometry(0.036, 8, 8), mSkin));
+      hand.position.y = -0.41;
+      piv.add(hand);
+      return piv;
+    }
+    var leftArm = makeArm(-1);
+    var rightArm = makeArm(1);
+    torso.add(leftArm);
+    torso.add(rightArm);
+
+    /* Đầu, tóc búi/khăn đóng hoặc nón lá (mặt hướng +Z) */
+    var head = new THREE.Group();
+    head.position.set(0, 0.67, 0);
+    torso.add(head);
+
+    var skull = sh(new THREE.Mesh(new THREE.SphereGeometry(0.118, 14, 12), mSkin));
+    skull.scale.set(0.95, 1.04, 0.98);
+    head.add(skull);
+
+    [-0.040, 0.040].forEach(function (ex) {
+      var eye = new THREE.Mesh(new THREE.SphereGeometry(0.014, 7, 7), mEye);
+      eye.position.set(ex, 0.015, 0.105);
+      head.add(eye);
+    });
+
+    var hairCap = sh(new THREE.Mesh(new THREE.SphereGeometry(0.124, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.58), mHair));
+    hairCap.position.y = 0.018;
+    hairCap.rotation.x = -0.16;
+    head.add(hairCap);
+
+    var bun = sh(new THREE.Mesh(new THREE.SphereGeometry(0.048, 9, 8), mHair));
+    bun.position.set(0, 0.01, -0.115);
+    head.add(bun);
+
+    if (o.hat === 'nonla') {
+      var cone = sh(new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.17, 18, 1, true), mStraw));
+      cone.position.set(0, 0.145, 0);
+      head.add(cone);
+      var rim = sh(new THREE.Mesh(new THREE.TorusGeometry(0.315, 0.011, 6, 18), mSash));
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = 0.062;
+      head.add(rim);
+    } else {
+      var turb = sh(new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.028, 7, 14), mTurban));
+      turb.rotation.x = Math.PI / 2;
+      turb.position.y = 0.065;
+      head.add(turb);
+      var turb2 = sh(new THREE.Mesh(new THREE.TorusGeometry(0.108, 0.022, 6, 14), mSash));
+      turb2.rotation.x = Math.PI / 2;
+      turb2.position.y = 0.092;
+      head.add(turb2);
+    }
+
+    return { group: root, torso: torso, head: head, leftArm: leftArm, rightArm: rightArm };
+  }
 
   var panel = document.createElement('div');
   panel.style.cssText = 'position:fixed;left:50%;bottom:110px;transform:translateX(-50%);z-index:80;width:min(560px,86vw);display:none;padding:14px 18px;border-radius:14px;background:rgba(20,18,15,.92);color:#f6efe0;font:15px/1.55 "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;box-shadow:0 12px 36px rgba(0,0,0,.42);border:1px solid rgba(226,192,122,.34);backdrop-filter:blur(10px)';
@@ -23719,12 +23849,12 @@ window.__initNPCs = function (gardenRoot) {
 
   var npcs = [];
   DATA.forEach(function (info) {
-    var group = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel(info.asset, { height: 1.78 }) : new THREE.Group();
-    var y = window.__hillY ? window.__hillY(info.x, info.z) : 0;
-    group.position.set(info.x, y, info.z);
-    group.rotation.y = info.yaw;
-    gardenRoot.add(group);
-    npcs.push({ info: info, group: group });
+    var rig = makeDaiVietVillager(info);
+    var y = (window.__hillY ? window.__hillY(info.x, info.z) : 0) + (info.plaza ? 0.095 : 0.02);
+    rig.group.position.set(info.x, y, info.z);
+    rig.group.rotation.y = info.yaw;
+    gardenRoot.add(rig.group);
+    npcs.push({ info: info, group: rig.group, rig: rig, baseYaw: info.yaw });
   });
 
   function localPlayer() {
@@ -23774,17 +23904,22 @@ window.__initNPCs = function (gardenRoot) {
     } else hint.style.opacity = '0';
   }, 180);
 
-  var walkT0 = performance.now();
+  var idleT0 = performance.now();
   setInterval(function () {
-    var el = (performance.now() - walkT0) / 1000;
+    var el = (performance.now() - idleT0) / 1000;
     npcs.forEach(function (n, i) {
-      var a = el * 0.22 + i * 1.9;
-      var nx = n.info.x + Math.cos(a) * 1.5;
-      var nz = n.info.z + Math.sin(a) * 1.1;
-      n.group.position.set(nx, window.__hillY ? window.__hillY(nx, nz) : 0, nz);
-      n.group.rotation.y = Math.atan2(-Math.sin(a), Math.cos(a) * 0.73) + Math.PI;
+      var ph = el * 1.4 + i * 1.7;
+      var rig = n.rig;
+      if (rig) {
+        rig.torso.position.y = 0.76 + Math.sin(ph) * 0.012;
+        rig.head.rotation.y = Math.sin(el * 0.55 + i * 2.1) * 0.16;
+        rig.leftArm.rotation.x = Math.sin(ph) * 0.04;
+        rig.rightArm.rotation.x = -Math.sin(ph) * 0.04;
+      }
+      var y = (window.__hillY ? window.__hillY(n.info.x, n.info.z) : 0) + (n.info.plaza ? 0.095 : 0.02);
+      n.group.position.set(n.info.x, y, n.info.z);
     });
-  }, 100);
+  }, 60);
 
   window.__NPC_SYSTEM = { npcs: npcs, tryTalk: tryTalk, panel: panel };
   return window.__NPC_SYSTEM;
@@ -26332,41 +26467,43 @@ if (!window.__GAME && consented) {
 
   /* ---- bokeh mơ màng ---- */
   var bokeh = [];
-  for (var bi = 0; bi < (LOW ? 10 : 22); bi++) {
-    var sp = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: glowTex, color: [0xffe6cf, 0xffd2b8, 0xfff3e0][bi % 3],
-      transparent: true, opacity: rand(0.05, 0.13),
-      blending: THREE.AdditiveBlending, depthWrite: false
-    }));
-    var bs = rand(0.7, 2.4);
-    sp.scale.set(bs, bs, 1);
-    sp.position.set(rand(-8, 8), rand(0.5, 6), rand(-6, -1));
-    sp.userData = { vy: rand(0.05, 0.16), ph: rand(0, 6.28) };
-    scene.add(sp);
-    bokeh.push(sp);
+  if (!window.__GAME) {
+    for (var bi = 0; bi < (LOW ? 10 : 22); bi++) {
+      var sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowTex, color: [0xffe6cf, 0xffd2b8, 0xfff3e0][bi % 3],
+        transparent: true, opacity: rand(0.05, 0.13),
+        blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      var bs = rand(0.7, 2.4);
+      sp.scale.set(bs, bs, 1);
+      sp.position.set(rand(-8, 8), rand(0.5, 6), rand(-6, -1));
+      sp.userData = { vy: rand(0.05, 0.16), ph: rand(0, 6.28) };
+      scene.add(sp);
+      bokeh.push(sp);
+    }
+
+    /* vệt nắng xuyên tán cây (god rays) */
+    [[-2.3, 3.3, -1.5, 1.5, 6.4, 0.12, 0.16], [-0.7, 3.0, -2.4, 1.1, 5.6, 0.09, -0.1], [-4.3, 3.6, -2.0, 1.8, 7.0, 0.1, 0.22]].forEach(function (sf) {
+      var sh2 = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: shaftTex, transparent: true, opacity: sf[5],
+        blending: THREE.AdditiveBlending, depthWrite: false, rotation: sf[6]
+      }));
+      sh2.scale.set(sf[3], sf[4], 1);
+      sh2.position.set(sf[0], sf[1], sf[2]);
+      scene.add(sh2);
+    });
+
+    /* ---- hào quang sau đóa chính ---- */
+    [[-3.6, 2.85, -0.8, 3.2], [-1.7, 2.45, -0.6, 2.6], [-0.4, 2.05, -0.7, 2.0]].forEach(function (g) {
+      var glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowTex, color: 0xffd9ae, transparent: true, opacity: 0.3,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      glow.scale.set(g[3], g[3], 1);
+      glow.position.set(g[0], g[1], g[2]);
+      scene.add(glow);
+    });
   }
-
-  /* vệt nắng xuyên tán cây (god rays) */
-  [[-2.3, 3.3, -1.5, 1.5, 6.4, 0.12, 0.16], [-0.7, 3.0, -2.4, 1.1, 5.6, 0.09, -0.1], [-4.3, 3.6, -2.0, 1.8, 7.0, 0.1, 0.22]].forEach(function (sf) {
-    var sh2 = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: shaftTex, transparent: true, opacity: sf[5],
-      blending: THREE.AdditiveBlending, depthWrite: false, rotation: sf[6]
-    }));
-    sh2.scale.set(sf[3], sf[4], 1);
-    sh2.position.set(sf[0], sf[1], sf[2]);
-    scene.add(sh2);
-  });
-
-  /* ---- hào quang sau đóa chính ---- */
-  [[-3.6, 2.85, -0.8, 3.2], [-1.7, 2.45, -0.6, 2.6], [-0.4, 2.05, -0.7, 2.0]].forEach(function (g) {
-    var glow = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: glowTex, color: 0xffd9ae, transparent: true, opacity: 0.3,
-      blending: THREE.AdditiveBlending, depthWrite: false
-    }));
-    glow.scale.set(g[3], g[3], 1);
-    glow.position.set(g[0], g[1], g[2]);
-    scene.add(glow);
-  });
 
   /* ---- bướm ---- */
   var butterflies = [
@@ -28269,10 +28406,10 @@ if (!window.__GAME && consented) {
     }
 
     /* Quảng trường đá chính + đại lộ hướng thẳng Cổng Tam Quan (0, -26) — tránh hẳn lòng suối phía Tây */
-    addTerrainSlab(0, -11.0, 5.2, 26.5, 0, 2.4, 11);
-    addTerrainSlab(1.5, 4.4, 7.6, 7.2, 0, 3.4, 3.2);
-    addTerrainSlab(-4.2, -5.2, 2.5, 4.6, 1.35, 1.2, 2.2);
-    addTerrainSlab(7.2, -10.0, 2.5, 13.5, -0.58, 1.2, 6.0);
+    addTerrainSlab(0, -11.0, 5.0, 26.5, 0, 2.4, 11);
+    addTerrainSlab(1.8, 3.8, 7.0, 6.4, 0, 3.2, 3.0);
+    addTerrainSlab(-4.2, -5.2, 2.4, 4.4, 1.35, 1.2, 2.2);
+    addTerrainSlab(7.2, -10.0, 2.4, 13.5, -0.58, 1.2, 6.0);
 
     /* Tứ trụ thạch đăng cổ dọc trục hành lễ trước Cổng Tam Quan */
     var postStone = new THREE.MeshStandardMaterial({ color: 0x7c796c, roughness: 0.88, flatShading: true });
@@ -28295,7 +28432,7 @@ if (!window.__GAME && consented) {
 
   /* Suối ngọc tự nhiên uốn lượn phía Tây sân đá, chui dưới Cầu Ngói xuống Hồ Gương */
   (function creekAndStructures() {
-    var rawPts = [[-16, -22], [-11, -13], [-7.5, -5.5], [-6.8, 2.2], [-3.8, 10.2], [0.2, 14.8]];
+    var rawPts = [[-16, -22], [-11, -13], [-7.5, -5.5], [-8.4, 2.5], [-6.6, 8.8], [-2.5, 12.8]];
     var curve = new THREE.CatmullRomCurve3(rawPts.map(function (p) { return new THREE.Vector3(p[0], 0, p[1]); }));
     var pts = curve.getPoints(34).map(function (v) { return [v.x, v.z]; });
     var wY = window.__lakeWaterY ? window.__lakeWaterY() : 1.15;
@@ -29752,7 +29889,10 @@ window.__createHeroine = function () {
   var matBoot = new THREE.MeshStandardMaterial({ color: 0x172422, roughness: 0.36, metalness: 0.22 });
   var matVision = new THREE.MeshStandardMaterial({ color: 0x4ef7d4, emissive: 0x2de8bd, emissiveIntensity: 1.55, roughness: 0.18 });
   var matSilk = new THREE.MeshStandardMaterial({ color: 0xe8f9f1, emissive: 0x26745e, emissiveIntensity: 0.15, roughness: 0.45, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
-  var matEye = new THREE.MeshStandardMaterial({ color: 0x24d1a6, emissive: 0x0e6e58, emissiveIntensity: 0.5, roughness: 0.2 });
+  var matEye = new THREE.MeshStandardMaterial({ color: 0x1fc49c, emissive: 0x0b5b48, emissiveIntensity: 0.42, roughness: 0.22 });
+  var matSclera = new THREE.MeshStandardMaterial({ color: 0xfffaf6, roughness: 0.35 });
+  var matPupil = new THREE.MeshStandardMaterial({ color: 0x0c2620, roughness: 0.18 });
+  var matSpec = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9, roughness: 0.1 });
 
   function s(mesh) {
     mesh.castShadow = true;
@@ -29846,24 +29986,57 @@ window.__createHeroine = function () {
   cranium.position.y = 0.08;
   head.add(cranium);
 
-  /* Đôi mắt ngọc bích ở mặt trước (-Z) */
-  [-0.044, 0.044].forEach(function (ex) {
-    var eye = new THREE.Mesh(new THREE.SphereGeometry(0.019, 8, 8), matEye);
-    eye.scale.set(1.0, 1.15, 0.45);
-    eye.position.set(ex, 0.072, -0.114);
-    head.add(eye);
+  /* Đôi mắt ngọc bích nhiều lớp + chân mày ở mặt trước (-Z) */
+  [-0.043, 0.043].forEach(function (ex, ei) {
+    var sclera = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), matSclera);
+    sclera.scale.set(1.12, 0.96, 0.35);
+    sclera.position.set(ex, 0.072, -0.114);
+    head.add(sclera);
+
+    var iris = new THREE.Mesh(new THREE.SphereGeometry(0.0155, 10, 8), matEye);
+    iris.scale.set(0.95, 1.12, 0.35);
+    iris.position.set(ex, 0.072, -0.118);
+    head.add(iris);
+
+    var pupil = new THREE.Mesh(new THREE.SphereGeometry(0.0082, 8, 8), matPupil);
+    pupil.scale.set(0.95, 1.1, 0.35);
+    pupil.position.set(ex, 0.072, -0.121);
+    head.add(pupil);
+
+    var glint = new THREE.Mesh(new THREE.SphereGeometry(0.0042, 6, 6), matSpec);
+    glint.position.set(ex + 0.0055, 0.079, -0.1235);
+    head.add(glint);
+
+    var brow = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.005, 0.006), matHairJade);
+    brow.position.set(ex, 0.104, -0.116);
+    brow.rotation.z = ei === 0 ? 0.12 : -0.12;
+    head.add(brow);
   });
 
-  var hairCap = s(new THREE.Mesh(new THREE.SphereGeometry(0.136, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.62), matHairWhite));
+  var hairCap = s(new THREE.Mesh(new THREE.SphereGeometry(0.138, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.62), matHairWhite));
   hairCap.position.set(0, 0.095, 0.01);
   hairCap.rotation.x = 0.18;
   head.add(hairCap);
 
   [-0.06, 0, 0.06].forEach(function (bx, bi) {
-    var bang = s(new THREE.Mesh(new THREE.ConeGeometry(0.036, 0.13, 6), matHairWhite));
+    var bang = s(new THREE.Mesh(new THREE.ConeGeometry(0.038, 0.135, 6), matHairWhite));
     bang.position.set(bx, 0.11, -0.105);
     bang.rotation.set(Math.PI + 0.16, 0, (bi - 1) * 0.16);
     head.add(bang);
+  });
+
+  /* Hai lọn tóc mai bạch kim chuyển ngọc ôm má */
+  [-1, 1].forEach(function (side) {
+    var lockTop = s(new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.016, 0.18, 8), matHairWhite));
+    lockTop.scale.set(1.1, 1, 0.7);
+    lockTop.position.set(side * 0.102, 0.03, -0.055);
+    lockTop.rotation.set(0.10, 0, -side * 0.16);
+    head.add(lockTop);
+
+    var lockTip = s(new THREE.Mesh(new THREE.ConeGeometry(0.016, 0.13, 7), matHairJade));
+    lockTip.position.set(side * 0.092, -0.105, -0.065);
+    lockTip.rotation.set(Math.PI + 0.08, 0, side * 0.10);
+    head.add(lockTip);
   });
 
   /* Vương miện trâm vàng trên đỉnh đầu */
@@ -29876,18 +30049,18 @@ window.__createHeroine = function () {
   crownSpike.position.set(0, 0.275, 0.02);
   head.add(crownSpike);
 
-  /* Đuôi tóc dài buộc cao (bạch kim trên, ngọc bích dưới) */
+  /* Đuôi tóc dài buộc cao (bạch kim trên, ngọc bích dưới nhiều tầng) */
   var ponytailPivot = new THREE.Group();
   ponytailPivot.position.set(0, 0.19, 0.11);
   head.add(ponytailPivot);
-  var ponyTop = s(new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.46, 8), matHairWhite));
+  var ponyTop = s(new THREE.Mesh(new THREE.ConeGeometry(0.088, 0.50, 9), matHairWhite));
   ponyTop.rotation.x = Math.PI - 0.36;
-  ponyTop.position.set(0, -0.17, 0.11);
+  ponyTop.position.set(0, -0.18, 0.115);
   ponytailPivot.add(ponyTop);
-  [-0.04, 0.04].forEach(function (tx) {
-    var tailTip = s(new THREE.Mesh(new THREE.ConeGeometry(0.048, 0.44, 7), matHairJade));
+  [-0.046, 0, 0.046].forEach(function (tx, ti) {
+    var tailTip = s(new THREE.Mesh(new THREE.ConeGeometry(ti === 1 ? 0.054 : 0.046, ti === 1 ? 0.48 : 0.44, 7), matHairJade));
     tailTip.rotation.x = Math.PI - 0.45;
-    tailTip.position.set(tx, -0.44, 0.24);
+    tailTip.position.set(tx, ti === 1 ? -0.47 : -0.44, ti === 1 ? 0.26 : 0.24);
     ponytailPivot.add(tailTip);
   });
 
@@ -29920,39 +30093,43 @@ window.__createHeroine = function () {
   spearGroup.position.set(0.02, -0.46, 0.02);
   spearGroup.rotation.set(-0.32, 0, -0.16);
   var shaft = s(new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.014, 1.92, 8), matBoot));
-  shaft.position.y = 0.36;
+  shaft.position.y = 0.42;
   spearGroup.add(shaft);
   var guard = s(new THREE.Mesh(new THREE.TorusGeometry(0.062, 0.015, 6, 12), matGold));
-  guard.position.y = 1.26;
+  guard.position.y = 1.32;
   spearGroup.add(guard);
   var blade = s(new THREE.Mesh(new THREE.ConeGeometry(0.056, 0.35, 4), matGold));
   blade.scale.set(1.0, 1.0, 0.35);
-  blade.position.y = 1.46;
+  blade.position.y = 1.52;
   spearGroup.add(blade);
   var spearGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.036, 0), matVision);
   spearGem.scale.set(0.65, 1.4, 0.5);
-  spearGem.position.y = 1.30;
+  spearGem.position.y = 1.36;
   spearGroup.add(spearGem);
   rightArm.add(spearGroup);
 
   /* Đôi chân thon & ủng đen viền vàng-ngọc dài ngang đùi */
   function makeLeg(side) {
     var legPivot = new THREE.Group();
-    legPivot.position.set(side * 0.086, 0, 0);
-    var thigh = s(new THREE.Mesh(new THREE.CylinderGeometry(0.056, 0.048, 0.34, 9), matSkin));
+    legPivot.position.set(side * 0.088, 0, 0);
+    var thigh = s(new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.052, 0.34, 10), matSkin));
     thigh.position.y = -0.17;
     legPivot.add(thigh);
-    var bootUpper = s(new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.041, 0.42, 9), matBoot));
+    var bootUpper = s(new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.045, 0.42, 10), matBoot));
     bootUpper.position.y = -0.53;
     legPivot.add(bootUpper);
+    var bootCuff = s(new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.010, 6, 14), matGold));
+    bootCuff.rotation.x = Math.PI / 2;
+    bootCuff.position.y = -0.34;
+    legPivot.add(bootCuff);
     var kneeGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.022, 0), matVision);
     kneeGem.scale.set(0.7, 1.2, 0.4);
-    kneeGem.position.set(0, -0.38, -0.05);
+    kneeGem.position.set(0, -0.38, -0.055);
     legPivot.add(kneeGem);
-    var foot = s(new THREE.Mesh(new THREE.BoxGeometry(0.072, 0.068, 0.17), matBoot));
+    var foot = s(new THREE.Mesh(new THREE.BoxGeometry(0.078, 0.072, 0.178), matBoot));
     foot.position.set(0, -0.84, -0.035);
     legPivot.add(foot);
-    var soleGold = s(new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.015, 0.175), matGold));
+    var soleGold = s(new THREE.Mesh(new THREE.BoxGeometry(0.081, 0.016, 0.183), matGold));
     soleGold.position.set(0, -0.872, -0.035);
     legPivot.add(soleGold);
     return legPivot;
@@ -30232,7 +30409,7 @@ window.__createHeroine = function () {
     }
   }
   /* ---- trạng thái người chơi + camera third-person ---- */
-  var SPAWN = { x: 0.4, z: 6.8 };
+  var SPAWN = { x: 1.2, z: 4.5 };
   var playerPhysics = window.__createPlayerPhysics({ garden: window.__garden, landmarks: window.__landmarks });
   function resolvePhysics(pos, dt, vx, vz) {
     playerPhysics.resolve(pos, dt, vx, vz, !indoorMode && !caveMode && !flyMode);
