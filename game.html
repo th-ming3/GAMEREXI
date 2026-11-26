@@ -30003,7 +30003,7 @@ if (!window.__GAME && consented) {
           grp.add(cpM);
         }
       }
-      grp.userData = { cx: cx, cz: cz, midX: midX, midZ: midZ, grass: grassI, created: elapsed, hasTree: treeAdded > 0, den: isDen, trees: treesArr, flowers: arrF2, bodies: chunkBodies };
+      grp.userData = { cx: cx, cz: cz, midX: midX, midZ: midZ, grass: null, created: elapsed, hasTree: treeAdded > 0, den: isDen, trees: treesArr, flowers: arrF2, bodies: chunkBodies };
       gardenRoot.add(grp);
       chunkMap[cx + '|' + cz] = grp;
       chunkList.push(grp);
@@ -30151,8 +30151,8 @@ if (!window.__GAME && consented) {
           if (kcam > KILL_R) {
             gardenRoot.remove(ck);
             if (window.__physicsRemoveStatic && ck.userData.bodies) ck.userData.bodies.forEach(window.__physicsRemoveStatic);
-            ck.userData.grass.dispose();
-            ck.children[0].geometry.dispose();
+            if (ck.userData.grass) ck.userData.grass.dispose();
+            if (ck.children[0] && ck.children[0].geometry) ck.children[0].geometry.dispose();
             delete chunkMap[ck.userData.cx + '|' + ck.userData.cz];
             chunkList.splice(ki, 1);
           }
@@ -30174,9 +30174,10 @@ if (!window.__GAME && consented) {
         cc.visible = ok2;
         if (!ok2) continue;
         vis2++;
-        /* cỏ lắc bằng shader; CPU chỉ set matrix một lần lúc chunk sinh ra */
-        var bl2 = cc.userData.grass.userData.blades, im2 = cc.userData.grass;
-        if (!im2.userData.realReady) {
+        /* cỏ GPU 1-draw-call phủ toàn đồng; chỉ giữ fallback nếu chunk có grassI */
+        var im2 = cc.userData.grass;
+        if (im2 && im2.userData && im2.userData.blades && !im2.userData.realReady) {
+          var bl2 = im2.userData.blades;
           for (var wi2 = 0; wi2 < bl2.length; wi2++) {
             var bd = bl2[wi2];
             dummyC.position.set(bd.x, bd.y, bd.z);
