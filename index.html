@@ -21208,7 +21208,15 @@ window.__createRealAssets = function () {
     kFence: 'models/kenney-fence.glb',
     kFountain: 'models/kenney-fountain-round.glb',
     kWall: 'models/kenney-wall-block.glb',
-    kTower: 'models/kenney-tower.glb'
+    kTower: 'models/kenney-tower.glb',
+    dvTamQuan: 'models/dv-01-tam-quan.glb',
+    dvNhaBaGian: 'models/dv-02-nha-ba-gian.glb',
+    dvCauNgoi: 'models/dv-03-cau-ngoi.glb',
+    dvBiaRua: 'models/dv-04-bia-rua.glb',
+    dvWindmill: 'models/dv-05-windmill.glb',
+    dvLighthouse: '__RA_DV_LIGHTHOUSE_B64__',
+    dvJunkBoat: '__RA_DV_JUNK_BOAT_B64__',
+    dvBanyanShrine: '__RA_DV_BANYAN_SHRINE_B64__'
   };
   var loader = new THREE.GLTFLoader();
   var templates = {};
@@ -21339,7 +21347,21 @@ window.__createRealAssets = function () {
   }
 
   Object.keys(SOURCES).forEach(parse);
-  return { whenReady: whenReady, replaceInstanced: replaceInstanced, makeModel: makeModel, addTo: addTo, windUniform: windUniform };
+  return {
+    whenReady: whenReady,
+    replaceInstanced: replaceInstanced,
+    makeModel: makeModel,
+    addTo: addTo,
+    windUniform: windUniform,
+    templates: templates,
+    getLoadedCount: function () {
+      var n = 0;
+      Object.keys(templates).forEach(function (k) {
+        if (templates[k] && templates[k].ready && templates[k].scene) n++;
+      });
+      return n;
+    }
+  };
 };
 window.__REAL_ASSETS = window.__createRealAssets();
 
@@ -21769,6 +21791,80 @@ window.__REAL_ASSETS = window.__createRealAssets();
     return addShadow(new THREE.Mesh(geo, mat || MAT.stone));
   }
 
+  var REAL_GLB_ASSETS = {};
+  function applyGlbMaterials(root) {
+    root.traverse(function (o) {
+      if (!o.isMesh) return;
+      o.castShadow = true;
+      o.receiveShadow = true;
+      var hasVCol = !!(o.geometry && o.geometry.attributes && o.geometry.attributes.color);
+      var mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (var i = 0; i < mats.length; i++) {
+        var mt = mats[i];
+        if (!mt) continue;
+        if (hasVCol && !mt.map) { mt.vertexColors = true; mt.needsUpdate = true; }
+        if (typeof mt.metalness === 'number' && mt.metalness > 0.35) mt.metalness = 0.35;
+        if (typeof mt.roughness === 'number' && mt.roughness < 0.45) mt.roughness = 0.45;
+        if ('envMapIntensity' in mt) mt.envMapIntensity = 1.0;
+      }
+    });
+  }
+
+  function withRealAssets(fn) {
+    if (window.__REAL_ASSETS && window.__REAL_ASSETS.whenReady) {
+      fn(window.__REAL_ASSETS);
+    } else {
+      setTimeout(function () { withRealAssets(fn); }, 80);
+    }
+  }
+
+  function wrapWithRealGlb(assetName, fallbackGroup, scale, opts) {
+    opts = opts || {};
+    var s = scale || 1;
+    var outer = new THREE.Group();
+    outer.add(fallbackGroup);
+    outer.scale.setScalar(s);
+
+    var fbBox = new THREE.Box3().setFromObject(fallbackGroup);
+    var fbSize = fbBox.getSize(new THREE.Vector3());
+    var targetH = opts.height || fbSize.y || 6;
+
+    if (opts.beacon) {
+      var flame = new THREE.Mesh(new THREE.DodecahedronGeometry(0.65, 1), MAT.beaconFire);
+      flame.scale.set(1.0, 1.45, 1.0);
+      flame.position.y = targetH * 0.62;
+      outer.add(flame);
+      if (window.__DAIVIET_MODELS) window.__DAIVIET_MODELS.flames.push({ mesh: flame, baseY: targetH * 0.62, baseScale: 1, phase: 1.7 });
+    }
+
+    withRealAssets(function (RA) {
+      RA.whenReady(assetName, function (record) {
+        if (!record || !record.scene || !record.size || record.size.y <= 0) return;
+        var model = record.scene.clone(true);
+        applyGlbMaterials(model);
+        var k = targetH / record.size.y;
+        var cx = (record.box.min.x + record.box.max.x) * 0.5;
+        var cz = (record.box.min.z + record.box.max.z) * 0.5;
+        model.scale.setScalar(k);
+        model.position.set(-cx * k, -record.box.min.y * k + (opts.yOffset || 0), -cz * k);
+
+        var pivot = new THREE.Group();
+        pivot.rotation.y = opts.yaw || 0;
+        pivot.add(model);
+        outer.add(pivot);
+        if (fallbackGroup.parent === outer) outer.remove(fallbackGroup);
+        outer.userData.realGlbLoaded = assetName;
+        REAL_GLB_ASSETS[assetName] = true;
+        if (window.__DAIVIET_MODELS) {
+          window.__DAIVIET_MODELS.realGlbAssets = REAL_GLB_ASSETS;
+          window.__DAIVIET_MODELS.realGlbLoadedCount = Object.keys(REAL_GLB_ASSETS).length;
+        }
+      });
+    });
+
+    return outer;
+  }
+
   /* ============================================================================
    * 01 · CỔNG TAM QUAN VƯƠNG THÀNH (D/W = 0.74)
    * - Đài đá rêu 3 cửa vòm xuyên thấu + lỗ châu mai đỉnh tường thành
@@ -21901,8 +21997,7 @@ window.__REAL_ASSETS = window.__createRealAssets();
     roof2.position.y = p2Y + p2H - 0.08;
     g.add(roof2);
 
-    g.scale.setScalar(s);
-    return g;
+    return wrapWithRealGlb('dvTamQuan', g, s);
   }
 
   /* ============================================================================
@@ -22010,8 +22105,7 @@ window.__REAL_ASSETS = window.__createRealAssets();
     roof.position.set(0, plinthH + wallH - 0.12, -0.15);
     g.add(roof);
 
-    g.scale.setScalar(s);
-    return g;
+    return wrapWithRealGlb('dvNhaBaGian', g, s);
   }
 
   /* ============================================================================
@@ -22077,8 +22171,7 @@ window.__REAL_ASSETS = window.__createRealAssets();
       }
     });
 
-    g.scale.setScalar(s);
-    return g;
+    return wrapWithRealGlb('dvCauNgoi', g, s);
   }
 
   /* ============================================================================
@@ -22179,8 +22272,7 @@ window.__REAL_ASSETS = window.__createRealAssets();
     flames.push({ mesh: flameOuter, baseY: 1.68, baseScale: 1, phase: 0.4 });
     if (window.__DAIVIET_MODELS) window.__DAIVIET_MODELS.flames.push(flames[0]);
 
-    g.scale.setScalar(s);
-    return g;
+    return wrapWithRealGlb('dvBiaRua', g, s);
   }
 
   /* ============================================================================
@@ -22264,8 +22356,7 @@ window.__REAL_ASSETS = window.__createRealAssets();
     g.add(hubGroup);
     if (window.__DAIVIET_MODELS) window.__DAIVIET_MODELS.windmills.push(hubGroup);
 
-    g.scale.setScalar(s);
-    return g;
+    return wrapWithRealGlb('dvWindmill', g, s);
   }
 
   /* ============================================================================
@@ -22336,8 +22427,7 @@ window.__REAL_ASSETS = window.__createRealAssets();
     roof.position.y = towerH + 0.98 + colH - 0.12;
     g.add(roof);
 
-    g.scale.setScalar(s);
-    return g;
+    return wrapWithRealGlb('dvLighthouse', g, s, { beacon: true });
   }
 
   /* ============================================================================
@@ -22432,8 +22522,7 @@ window.__REAL_ASSETS = window.__createRealAssets();
     sailMesh.position.set(0.75, 1.95, 0.04);
     g.add(sailMesh);
 
-    g.scale.setScalar(s);
-    return g;
+    return wrapWithRealGlb('dvJunkBoat', g, s);
   }
 
   /* ============================================================================
@@ -22544,8 +22633,7 @@ window.__REAL_ASSETS = window.__createRealAssets();
     });
     g.add(shrine);
 
-    g.scale.setScalar(s);
-    return g;
+    return wrapWithRealGlb('dvBanyanShrine', g, s);
   }
 
   var api = {
@@ -22561,6 +22649,8 @@ window.__REAL_ASSETS = window.__createRealAssets();
     makeCurvedOctRoof: makeCurvedOctRoof,
     windmills: [],
     flames: [],
+    realGlbAssets: REAL_GLB_ASSETS,
+    realGlbLoadedCount: 0,
     update: function (dt) {
       var d = Math.min(0.1, dt || 0.016);
       for (var i = 0; i < api.windmills.length; i++) {
