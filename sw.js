@@ -1,4 +1,4 @@
-const CACHE = 'canhdong-73acaf2a5786';
+const CACHE = 'canhdong-fa2a5c53df0d';
 const CORE = ['./game.html', './manifest.webmanifest', './assets/icons/icon-192.png', './assets/icons/icon-512.png'];
 
 self.addEventListener('install', event => {

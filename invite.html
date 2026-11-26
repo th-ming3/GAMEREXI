@@ -21341,7 +21341,7 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
       g.add(makePavilion(7, 7, 3.5, 1, M.mossStone, M.stone));
     } else if (id === 'r04_05') {
       g.add(makeStoneBridge(22, 3.6));
-    } else {
+    } else if (det.region === 'r04') {
       g.add(makePavilion(5, 5, 3.0, 1, M.mossStone, M.wood));
 
     /* R05 — Đỉnh Tuyết Hoàng Liên & Cổ Tự Trên Mây */
@@ -21367,7 +21367,7 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
       var ice = new THREE.Mesh(new THREE.CircleGeometry(18, 22), M.jadeWater);
       ice.rotation.x = -Math.PI / 2; ice.position.y = 0.2; g.add(ice);
       var br5 = makeStoneBridge(16, 3.2); br5.position.set(-10, 0, 0); g.add(br5);
-    } else {
+    } else if (det.region === 'r05') {
       g.add(makePavilion(6, 6, 3.2, 2, M.roofGold, M.stone));
 
     /* R06 — Hắc Sơn Núi Lửa Huyền Thiết */
@@ -21391,7 +21391,7 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
       g.add(makePavilion(10, 8, 3.8, 2, M.roofGold, M.lacquerRed));
     } else if (id === 'r06_05' || id === 'r06_06') {
       g.add(makeStoneBridge(24, 4.2));
-    } else {
+    } else if (det.region === 'r06') {
       g.add(makeArchGate(7, 4.8, null));
 
     /* R07 — Thiên Khanh Sơn Đoòng & Vực Ngọc Bích */
@@ -21424,7 +21424,7 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
         var scf = new THREE.Mesh(new THREE.BoxGeometry(10, 0.4, 2.6), M.bamboo);
         scf.position.set(si7 * 1.5, si7 * 3.8, 0); scf.rotation.z = 0.28; g.add(scf);
       }
-    } else {
+    } else if (det.region === 'r07') {
       g.add(makePavilion(5.5, 5.5, 3.0, 1, M.mossStone, M.stone));
 
     /* R08 — Tiên Giới Đảo Bay Mây Trắng */
