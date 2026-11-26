@@ -31210,6 +31210,7 @@ window.__createHeroine = function () {
     var dx = lx - plNow.x, dz = lz - plNow.z;
     if (Math.hypot(dx, dz) > 0.1) pYaw = Math.atan2(-dx, -dz);
   };
+  var indoorMode = false, indoorReturn = null, indoorRoom = null, indoorYawReturn = 0, indoorPitchReturn = 0;
   var caveMode = false, caveReturn = null, caveYawReturn = 0, cavePitchReturn = 0;
   var swimRipples = [];
   if (THREE.RingGeometry && window.__garden) {
