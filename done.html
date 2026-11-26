@@ -22194,7 +22194,7 @@ window.__REAL_ASSETS = window.__createRealAssets();
       }
     });
 
-    return wrapWithRealGlb('dvCauNgoi', g, s);
+    return wrapWithRealGlb('dvCauNgoi', g, s, { yOffset: -0.25 });
   }
 
   /* ============================================================================
@@ -25461,19 +25461,21 @@ if (!window.__GAME && consented) {
   /* ---- ong mật: thân lông vàng sọc đen, cánh mỏ trong suốt ---- */
   /* ---- mây trôi trên trời ---- */
   var clouds = [];
-  for (var cli = 0; cli < 4; cli++) {
-    var cl = new THREE.Group();
-    var puffs = 4 + (cli % 2);
-    for (var pi2 = 0; pi2 < puffs; pi2++) {
-      var puff = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xfff6e8, transparent: true, opacity: 0.34, depthWrite: false }));
-      var psz = rand(1.8, 3.4);
-      puff.scale.set(psz * 1.5, psz * 0.75, 1);
-      puff.position.set(rand(-1.6, 1.6), rand(-0.25, 0.3), 0);
-      cl.add(puff);
+  if (!window.__GAME) {
+    for (var cli = 0; cli < 4; cli++) {
+      var cl = new THREE.Group();
+      var puffs = 4 + (cli % 2);
+      for (var pi2 = 0; pi2 < puffs; pi2++) {
+        var puff = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xfff6e8, transparent: true, opacity: 0.34, depthWrite: false }));
+        var psz = rand(1.8, 3.4);
+        puff.scale.set(psz * 1.5, psz * 0.75, 1);
+        puff.position.set(rand(-1.6, 1.6), rand(-0.25, 0.3), 0);
+        cl.add(puff);
+      }
+      cl.position.set(rand(-9, 9), rand(4.3, 5.6), rand(-14, -9));
+      cl.userData.vx = rand(0.05, 0.13);
+      clouds.push(cl);
     }
-    cl.position.set(rand(-9, 9), rand(4.3, 5.6), rand(-14, -9));
-    cl.userData.vx = rand(0.05, 0.13);
-    clouds.push(cl);
   }
 
   /* ---- nhụy lấm tấm hạt phấn ---- */
@@ -28279,7 +28281,7 @@ if (!window.__GAME && consented) {
         var lx = pa.getX(vi), lz = pa.getZ(vi);
         var wx = cx + lx * cr + lz * sr;
         var wz = cz - lx * sr + lz * cr;
-        pa.setXYZ(vi, wx, hillY(wx, wz) + 0.045, wz);
+        pa.setXYZ(vi, wx, hillY(wx, wz) + 0.095, wz);
         ua.setXY(vi, ua.getX(vi) * repU, ua.getY(vi) * repV);
       }
       geo.computeVertexNormals();
@@ -28288,11 +28290,11 @@ if (!window.__GAME && consented) {
       gardenRoot.add(mesh);
     }
 
-    /* Quảng trường đá chính + đại lộ hướng thẳng Cổng Tam Quan (0, -26) + nhánh qua Cầu Ngói */
-    addTerrainSlab(0, -10.5, 5.6, 26.5, 0, 2.5, 11);
-    addTerrainSlab(0, 1.8, 10.5, 10.5, 0, 4.5, 4.5);
-    addTerrainSlab(-4.8, -4.4, 3.0, 9.0, 0.92, 1.5, 4.0);
-    addTerrainSlab(7.2, -10.0, 2.6, 13.5, -0.58, 1.3, 6.0);
+    /* Quảng trường đá chính + đại lộ hướng thẳng Cổng Tam Quan (0, -26) — tránh hẳn lòng suối phía Tây */
+    addTerrainSlab(0, -11.0, 5.2, 26.5, 0, 2.4, 11);
+    addTerrainSlab(1.5, 4.4, 7.6, 7.2, 0, 3.4, 3.2);
+    addTerrainSlab(-4.2, -5.2, 2.5, 4.6, 1.35, 1.2, 2.2);
+    addTerrainSlab(7.2, -10.0, 2.5, 13.5, -0.58, 1.2, 6.0);
 
     /* Tứ trụ thạch đăng cổ dọc trục hành lễ trước Cổng Tam Quan */
     var postStone = new THREE.MeshStandardMaterial({ color: 0x7c796c, roughness: 0.88, flatShading: true });
@@ -28313,9 +28315,9 @@ if (!window.__GAME && consented) {
     });
   })();
 
-  /* Suối ngọc tự nhiên uốn lượn từ rừng xuống hồ + đá bờ + công trình Đại Việt */
+  /* Suối ngọc tự nhiên uốn lượn phía Tây sân đá, chui dưới Cầu Ngói xuống Hồ Gương */
   (function creekAndStructures() {
-    var rawPts = window.__creek || [[-16, -22], [-11.5, -13], [-7.5, -5.5], [-2.5, 1.5], [0.5, 8.5], [3.0, 14.5]];
+    var rawPts = [[-16, -22], [-11, -13], [-7.5, -5.5], [-6.8, 2.2], [-3.8, 10.2], [0.2, 14.8]];
     var curve = new THREE.CatmullRomCurve3(rawPts.map(function (p) { return new THREE.Vector3(p[0], 0, p[1]); }));
     var pts = curve.getPoints(34).map(function (v) { return [v.x, v.z]; });
     var wY = window.__lakeWaterY ? window.__lakeWaterY() : 1.15;
@@ -28946,15 +28948,18 @@ if (!window.__GAME && consented) {
       var coastD = (window.__REGION && window.__REGION.coastDist) ? window.__REGION.coastDist(midX, midZ) : 99;
       var inOcean = region === 'ocean' || coastD < -0.5;
       var isDryRock = region === 'r03' || region === 'r05' || region === 'r06' || region === 'r07';
-      /* cỏ instanced: mật độ theo 8 hệ sinh thái Đại Việt; ngoài biển không mọc cỏ */
+      function inCourtyard(cx, cz) {
+        return (Math.abs(cx) < 4.2 && cz > -29 && cz < 9.0) || (cx > -3.5 && cx < 6.4 && cz > 0.0 && cz < 9.0);
+      }
+      /* cỏ instanced: mật độ theo 8 hệ sinh thái Đại Việt; ngoài biển và trên sân đá không mọc cỏ */
       var grassDensity = inOcean ? 0 : (region === 'r06' ? 0.12 : (region === 'r03' || region === 'r05' ? 0.28 : (region === 'r02' || region === 'r04' ? 0.88 : 1)));
       var nB2 = inOcean ? 0 : Math.max(10, Math.round((LOW ? 36 : 64) * grassDensity));
       var grassI = new THREE.InstancedMesh(bladeGeo, bladeMat, Math.max(1, nB2));
       var blades = [];
       for (var bi = 0; bi < nB2; bi++) {
         var gx2 = bx + rng() * CHSZ, gz2 = bz + rng() * CHSZ;
-        for (var gr2 = 0; gr2 < 10 && (onPathW(gx2, gz2, 1.3) || lakeDepth(gx2, gz2) > 0.07); gr2++) { gx2 = bx + rng() * CHSZ; gz2 = bz + rng() * CHSZ; }
-        if (lakeDepth(gx2, gz2) > 0.07 || Math.hypot(gx2, gz2) < 10.0) continue;
+        for (var gr2 = 0; gr2 < 10 && (onPathW(gx2, gz2, 1.3) || lakeDepth(gx2, gz2) > 0.07 || inCourtyard(gx2, gz2)); gr2++) { gx2 = bx + rng() * CHSZ; gz2 = bz + rng() * CHSZ; }
+        if (lakeDepth(gx2, gz2) > 0.07 || Math.hypot(gx2, gz2) < 10.0 || inCourtyard(gx2, gz2)) continue;
         if (window.__REGION && window.__REGION.coastDist && window.__REGION.coastDist(gx2, gz2) < 1.8) continue;
         var tall = rng() < 0.12;
         blades.push({ x: gx2, y: hillY(gx2, gz2) - 0.01, z: gz2, yaw: rng() * 6.283, s: tall ? 1.35 + rng() * 0.5 : 0.55 + rng() * 0.7, sx: 0.75 + rng() * 0.55, sy: 0.62 + rng() * 0.6, phase: rng() * 6.283, amp: 0.07 + rng() * 0.11 });
@@ -29025,7 +29030,7 @@ if (!window.__GAME && consented) {
       for (var pi = 0; pi < props.length && !inOcean; pi++) {
         if (rng() > props[pi][1]) continue;
         var px2 = bx + rng() * CHSZ, pz2 = bz + rng() * CHSZ;
-        if (onPathW(px2, pz2, 1.7) || nearDen(px2, pz2, 3.4) || lakeDepth(px2, pz2) > maxDepth) continue;
+        if (onPathW(px2, pz2, 1.7) || nearDen(px2, pz2, 3.4) || lakeDepth(px2, pz2) > maxDepth || inCourtyard(px2, pz2)) continue;
         if (window.__REGION && window.__REGION.coastDist && window.__REGION.coastDist(px2, pz2) < 1.5) continue;
         if (Math.hypot(px2 - 0.4, pz2 - 6.8) < 3.2 || Math.hypot(px2 - 26, pz2 - 9) < 5.2 || Math.hypot(px2 + 10.5, pz2 + 27) < 5 || Math.hypot(px2 - 7, pz2 + 20) < 5) continue;
         var pm = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel(props[pi][0], props[pi][2]) : new THREE.Group();
@@ -29036,7 +29041,8 @@ if (!window.__GAME && consented) {
       var ns2 = inOcean ? 0 : (isDryRock ? 4 + (rng() * 5 | 0) : (region === 'r01' ? 3 + (rng() * 4 | 0) : (rng() * 3 | 0)));
       for (var si = 0; si < ns2; si++) {
         var sx2 = bx + rng() * CHSZ, sz2 = bz + rng() * CHSZ;
-        for (var sr2 = 0; sr2 < 5 && (onPathW(sx2, sz2, 1.5) || nearDen(sx2, sz2, 3.2) || lakeDepth(sx2, sz2) > 0.12); sr2++) { sx2 = bx + rng() * CHSZ; sz2 = bz + rng() * CHSZ; }
+        for (var sr2 = 0; sr2 < 5 && (onPathW(sx2, sz2, 1.5) || nearDen(sx2, sz2, 3.2) || lakeDepth(sx2, sz2) > 0.12 || inCourtyard(sx2, sz2)); sr2++) { sx2 = bx + rng() * CHSZ; sz2 = bz + rng() * CHSZ; }
+        if (inCourtyard(sx2, sz2)) continue;
         if (Math.hypot(sx2 + 10.5, sz2 + 27) < 4.5 || Math.hypot(sx2 - 7, sz2 + 20) < 4.5
           || Math.hypot(sx2 - 26, sz2 - 9) < 4.8 || Math.hypot(sx2 - 0.4, sz2 - 6.8) < 2.5) continue;
         var bigRock = rng() < (region === 'canyon' ? 0.6 : (region === 'meadow' ? 0.22 : 0.12));
