@@ -24547,14 +24547,17 @@ window.__initCombat = function (gardenRoot) {
         sw.mesh.material.opacity = 0.9 * (1 - k);
       }
     }
-    /* Vệt chém 3D Slash Ribbon theo đầu Ngọc Thương */
+    /* Vệt chém 3D Slash Ribbon theo đầu Ngọc Thương (tự xóa nếu teleport hoặc ngắt nhịp) */
     var seg = window.__getSpearSegment ? window.__getSpearSegment() : null;
+    if (seg && trailPts.length > 0 && seg.tip.distanceTo(trailPts[0].tip) > 3.2) {
+      trailPts.length = 0;
+    }
     if (seg && seg.active) {
       trailPts.unshift({ base: seg.base.clone(), tip: seg.tip.clone(), age: 0 });
       if (trailPts.length > TRAIL_N) trailPts.pop();
     } else {
       for (var ti = trailPts.length - 1; ti >= 0; ti--) {
-        trailPts[ti].age += d * 4.5;
+        trailPts[ti].age += d * 7.5;
         if (trailPts[ti].age >= 1) trailPts.splice(ti, 1);
       }
     }
@@ -26725,26 +26728,39 @@ if (!window.__GAME && consented) {
   window.__gpuGrassUniforms = gpuGrassUniforms;
 
   (function buildGpuGrassAndAtmosphere() {
-    var segs = 4;
+    var segs = 3;
     var baseVerts = [], baseUvs = [], baseIndices = [];
-    for (var si = 0; si <= segs; si++) {
-      var frac = si / segs;
-      var hw = 0.052 * (1.0 - frac * 0.92);
-      baseVerts.push(-hw, frac * 0.56, 0);
-      baseVerts.push(hw, frac * 0.56, 0);
-      baseUvs.push(0, frac);
-      baseUvs.push(1, frac);
-      if (si < segs) {
-        var r0 = si * 2, r1 = (si + 1) * 2;
-        baseIndices.push(r0, r0 + 1, r1, r0 + 1, r1 + 1, r1);
+    var bladeAngles = [0.0, 0.92, 1.88, 2.75];
+    var bladeScales = [1.0, 0.84, 1.12, 0.76];
+    var bladeOffs = [[0.0, 0.0], [0.11, 0.07], [-0.10, 0.09], [0.05, -0.11]];
+    var vBase = 0;
+    for (var bIdx = 0; bIdx < bladeAngles.length; bIdx++) {
+      var ang = bladeAngles[bIdx], ca = Math.cos(ang), sa = Math.sin(ang);
+      var ox = bladeOffs[bIdx][0], oz = bladeOffs[bIdx][1];
+      var bH = 0.50 * bladeScales[bIdx];
+      for (var si = 0; si <= segs; si++) {
+        var frac = si / segs;
+        var hw = 0.028 * (1.0 - frac * 0.92);
+        var lean = frac * frac * 0.08;
+        var lx0 = -hw * ca - lean * sa + ox, lz0 = -hw * sa + lean * ca + oz;
+        var lx1 = hw * ca - lean * sa + ox, lz1 = hw * sa + lean * ca + oz;
+        baseVerts.push(lx0, frac * bH, lz0);
+        baseVerts.push(lx1, frac * bH, lz1);
+        baseUvs.push(0, frac);
+        baseUvs.push(1, frac);
+        if (si < segs) {
+          var r0 = vBase + si * 2, r1 = vBase + (si + 1) * 2;
+          baseIndices.push(r0, r0 + 1, r1, r0 + 1, r1 + 1, r1);
+        }
       }
+      vBase += (segs + 1) * 2;
     }
     var gInstGeo = new THREE.InstancedBufferGeometry();
     gInstGeo.setAttribute('position', new THREE.Float32BufferAttribute(baseVerts, 3));
     gInstGeo.setAttribute('uv', new THREE.Float32BufferAttribute(baseUvs, 2));
     gInstGeo.setIndex(baseIndices);
 
-    var TARGET_BLADES = isMobile || LOW ? 6500 : 14000;
+    var TARGET_BLADES = isMobile || LOW ? 5500 : 12000;
     var offsets = new Float32Array(TARGET_BLADES * 3);
     var oriRot = new Float32Array(TARGET_BLADES * 2);
     var bendInfo = new Float32Array(TARGET_BLADES * 2);
@@ -26755,7 +26771,7 @@ if (!window.__GAME && consented) {
     }
     for (var bi = 0; bi < TARGET_BLADES * 3 && count < TARGET_BLADES; bi++) {
       var angle = Math.random() * 6.28318;
-      var rad = 2.0 + Math.pow(Math.random(), 0.62) * 44.0;
+      var rad = 1.6 + Math.pow(Math.random(), 0.72) * 34.0;
       var gx = Math.cos(angle) * rad;
       var gz = Math.sin(angle) * rad;
       if (inCourtyardG(gx, gz) || lakeDepth(gx, gz) > 0.04) continue;
@@ -26818,11 +26834,11 @@ if (!window.__GAME && consented) {
         'varying float vHue;',
         '#include <fog_pars_fragment>',
         'void main() {',
-        '  vec3 rootCol = vec3(0.16, 0.30, 0.10);',
-        '  vec3 tipA = vec3(0.42, 0.64, 0.20);',
-        '  vec3 tipB = vec3(0.72, 0.77, 0.26);',
-        '  vec3 col = mix(rootCol, mix(tipA, tipB, vHue), smoothstep(0.05, 0.95, vHeight));',
-        '  col *= mix(0.28, 1.06, uDay);',
+        '  vec3 rootCol = vec3(0.28, 0.43, 0.16);',
+        '  vec3 tipA = vec3(0.46, 0.65, 0.22);',
+        '  vec3 tipB = vec3(0.68, 0.76, 0.28);',
+        '  vec3 col = mix(rootCol, mix(tipA, tipB, vHue), smoothstep(0.05, 0.92, vHeight));',
+        '  col *= mix(0.28, 1.04, uDay);',
         '  gl_FragColor = vec4(col, 1.0);',
         '  #include <fog_fragment>',
         '}'
@@ -28444,9 +28460,9 @@ if (!window.__GAME && consented) {
           gardenRoot.add(rdL);
         }
       }
-      /* Cặp liễu rủ CC0 soi bóng bên bờ Hồ Gương */
-      [[-4.8, 21.8, 7.6, 0.8], [13.2, 20.4, 8.2, 2.5]].forEach(function (wl) {
-        var wm = window.__REAL_ASSETS.makeModel('willow', { height: wl[2] });
+      /* Cặp cổ thụ xanh tươi tán mềm soi bóng bên bờ Hồ Gương */
+      [[-4.8, 21.8, 7.6, 0.8], [13.2, 20.4, 8.2, 2.5]].forEach(function (wl, wi) {
+        var wm = window.__REAL_ASSETS.makeModel(wi === 0 ? 'broadleaf' : 'blossom', { height: wl[2] });
         wm.position.set(wl[0], hillY(wl[0], wl[1]) - 0.15, wl[1]);
         wm.rotation.y = wl[3];
         gardenRoot.add(wm);
@@ -29885,7 +29901,7 @@ if (!window.__GAME && consented) {
       for (var ti2 = 0; ti2 < nTr; ti2++) {
         var tx2 = bx + rng() * CHSZ, tz2 = bz + rng() * CHSZ;
         var ppTree = window.__playerPos ? ppL() : null;
-        if (onPathW(tx2, tz2, 2.0) || inCourtyard(tx2, tz2) || nearDen(tx2, tz2, 3.6) || lakeDepth(tx2, tz2) > 0.08
+        if (onPathW(tx2, tz2, 2.0) || inCourtyard(tx2, tz2) || (Math.abs(tx2) < 9.5 && tz2 > -30 && tz2 < 8) || nearDen(tx2, tz2, 3.6) || lakeDepth(tx2, tz2) > 0.08
           || Math.hypot(tx2 - 26, tz2 - 9) < 5.5 || Math.hypot(tx2 + 10.5, tz2 + 27) < 4.5 || Math.hypot(tx2 - 7, tz2 + 20) < 4.5
           || Math.hypot(tx2 - .4, tz2 - 6.8) < 11 || (ppTree && Math.hypot(tx2 - ppTree.x, tz2 - ppTree.z) < 10)) continue;
         if (window.__REGION && window.__REGION.coastDist && window.__REGION.coastDist(tx2, tz2) < 3.0) continue;
@@ -30722,6 +30738,7 @@ window.__createHeroine = function () {
   }
 
   function applySpearHandPose(posX, posY, posZ, rotX, rotY, rotZ) {
+    if (spearSheathed) return;
     var inv = 1 / (charScale || 1);
     spearGroup.scale.setScalar(inv);
     if (bones.J_Bip_R_Hand) {
@@ -30730,6 +30747,22 @@ window.__createHeroine = function () {
     } else {
       spearGroup.position.set(0.24, 0.85, -0.14);
       spearGroup.rotation.set(-0.25, 0, -0.15);
+    }
+  }
+
+  var spearSheathed = false;
+  function setSpearSwimmingSheath(swim) {
+    if (swim === spearSheathed) return;
+    spearSheathed = swim;
+    var inv = 1 / (charScale || 1);
+    spearGroup.scale.setScalar(inv);
+    if (swim && bones.J_Bip_C_Chest) {
+      bones.J_Bip_C_Chest.add(spearGroup);
+      spearGroup.position.set(0.0, -0.18 * inv, 0.14 * inv);
+      spearGroup.rotation.set(0.18, 0.12, -0.52);
+    } else if (bones.J_Bip_R_Hand) {
+      bones.J_Bip_R_Hand.add(spearGroup);
+      applySpearHandPose(0.055, -0.015, 0.008, -0.35, 0.08, 1.38);
     }
   }
 
@@ -30852,6 +30885,7 @@ window.__createHeroine = function () {
 
     root.position.y = 0;
     contactShadow.visible = !st.swimming;
+    setSpearSwimmingSheath(!!st.swimming);
     if (hips) hips.rotation.set(0, 0, 0);
     if (st.swimming) {
       var str = Math.sin(animT * 1.45);
@@ -30866,7 +30900,6 @@ window.__createHeroine = function () {
       if (rLoArm) rLoArm.rotation.set(0, 0.35, -0.2);
       if (spine) spine.rotation.set(0.08, 0, 0);
       if (head) head.rotation.set(0.45, 0, 0);
-      applySpearHandPose(0.055, -0.015, 0.008, -0.15, 0, 1.45);
     } else if (dodgeT > 0) {
       var dk = Math.sin(dodgeT * Math.PI);
       if (spine) spine.rotation.set(0.42 * dk, 0, 0);
