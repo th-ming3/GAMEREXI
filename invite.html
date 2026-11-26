@@ -21195,6 +21195,10 @@ window.__createRealAssets = function () {
     enemyReed: 'models/cattail-lod1.glb',
     enemyBoulder: 'models/granite-boulder-lod1.glb',
     enemyLure: 'models/dandelion-patch.glb',
+    enemySnake: 'models/enemy-snake.glb',
+    enemySpider: 'models/enemy-spider.glb',
+    enemyFrog: 'models/enemy-frog.glb',
+    willow: 'models/willow-tree.glb',
     boss01: 'models/combat-mech-lod1.glb',
     guardian01: 'models/stone-feline-guardian-lod1.glb',
     bench: 'models/cracked-marble-bench-lod1.glb',
@@ -21233,12 +21237,12 @@ window.__createRealAssets = function () {
     kWall: 'models/kenney-wall-block.glb',
     kTower: 'models/kenney-tower.glb',
     dvTamQuan: 'models/dv-01-tam-quan.glb',
-    dvNhaBaGian: '__RA_DV_NHA_BA_GIAN_B64__',
+    dvNhaBaGian: 'models/dv-02-nha-ba-gian.glb',
     dvCauNgoi: 'models/dv-03-cau-ngoi.glb',
-    dvBiaRua: '__RA_DV_BIA_RUA_B64__',
-    dvWindmill: '__RA_DV_WINDMILL_B64__',
-    dvLighthouse: '__RA_DV_LIGHTHOUSE_B64__',
-    dvJunkBoat: '__RA_DV_JUNK_BOAT_B64__',
+    dvBiaRua: 'models/dv-04-bia-rua.glb',
+    dvWindmill: 'models/dv-05-windmill.glb',
+    dvLighthouse: 'models/dv-06-lighthouse.glb',
+    dvJunkBoat: 'models/dv-07-junk-boat.glb',
     dvBanyanShrine: '__RA_DV_BANYAN_SHRINE_B64__'
   };
   var loader = new THREE.GLTFLoader();
@@ -21274,6 +21278,7 @@ window.__createRealAssets = function () {
 
   function applyGltf(name, record, gltf) {
     record.scene = gltf.scene;
+    record.animations = gltf.animations || [];
     record.scene.updateMatrixWorld(true);
     record.box = new THREE.Box3().setFromObject(record.scene);
     record.size = record.box.getSize(new THREE.Vector3());
@@ -21384,6 +21389,45 @@ window.__createRealAssets = function () {
     return holder;
   }
 
+  function makeAnimatedModel(name, targetSize, onReady) {
+    var holder = new THREE.Group();
+    var src = SOURCES[name];
+    if (!src || src.charAt(0) === '_') return makeModel(name, targetSize);
+    function onGltf(gltf) {
+      var model = gltf.scene;
+      model.updateMatrixWorld(true);
+      var box = new THREE.Box3().setFromObject(model);
+      var size = box.getSize(new THREE.Vector3());
+      var maxDim = Math.max(size.x || 0, size.y || 0, size.z || 0) || 1;
+      var k = (typeof targetSize === 'number' ? targetSize : 1.5) / maxDim;
+      if (targetSize && typeof targetSize === 'object' && targetSize.height) k = targetSize.height / (size.y || 1);
+      model.scale.setScalar(k);
+      var ctr = box.getCenter(new THREE.Vector3());
+      model.position.set(-ctr.x * k, -box.min.y * k, -ctr.z * k);
+      model.traverse(function (o) {
+        if (o.isMesh) {
+          o.castShadow = true;
+          o.receiveShadow = true;
+          if (o.material) {
+            var ms = Array.isArray(o.material) ? o.material : [o.material];
+            ms.forEach(function (m) { if (m) { m.roughness = Math.max(0.45, m.roughness || 0.7); } });
+          }
+        }
+      });
+      holder.add(model);
+      if (onReady) onReady(model, gltf.animations || [], holder);
+    }
+    if (/^(models\/|https?:\/\/|\.\/|blob:)/.test(src)) {
+      loader.load(src, onGltf, undefined, function () {});
+    } else {
+      try {
+        var bytes = Uint8Array.from(atob(src), function (c) { return c.charCodeAt(0); });
+        loader.parse(bytes.buffer, '', onGltf, function () {});
+      } catch (e) {}
+    }
+    return holder;
+  }
+
   function addTo(parent, name, targetSize) {
     var holder = makeModel(name, targetSize);
     parent.add(holder);
@@ -21395,6 +21439,7 @@ window.__createRealAssets = function () {
     whenReady: whenReady,
     replaceInstanced: replaceInstanced,
     makeModel: makeModel,
+    makeAnimatedModel: makeAnimatedModel,
     addTo: addTo,
     windUniform: windUniform,
     templates: templates,
@@ -22566,7 +22611,7 @@ window.__REAL_ASSETS = window.__createRealAssets();
     sailMesh.position.set(0.75, 1.95, 0.04);
     g.add(sailMesh);
 
-    return wrapWithRealGlb('dvJunkBoat', g, s);
+    return wrapWithRealGlb('dvJunkBoat', g, s, { height: 6.2, yaw: Math.PI * 0.5 });
   }
 
   /* ============================================================================
@@ -22611,40 +22656,23 @@ window.__REAL_ASSETS = window.__createRealAssets();
       g.add(trunk);
     }
 
-    /* Miếu thờ sơn son đặt trang nghiêm dưới bóng cổ thụ (+Z) */
+    /* Miếu cổ có texture thật đặt gọn dưới tán Đa (+Z), fallback khi chưa nạp GLB */
     var shrine = new THREE.Group();
     shrine.position.set(0, 0.05, 2.35);
-    var sBase = addShadow(new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.34, 1.95), MAT.stone));
-    sBase.position.y = 0.17;
-    shrine.add(sBase);
-    var sBack = addShadow(new THREE.Mesh(new THREE.BoxGeometry(2.05, 1.65, 1.35), MAT.redLacquer));
-    sBack.position.set(0, 1.16, -0.15);
-    shrine.add(sBack);
-    [-0.92, 0.92].forEach(function (sx) {
-      var scol = addShadow(new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.10, 1.65, 8), MAT.redLacquer));
-      scol.position.set(sx, 1.16, 0.72);
-      shrine.add(scol);
-      var slan = makeLantern(0.14, 0.18);
-      slan.position.set(sx * 1.12, 1.62, 0.82);
-      shrine.add(slan);
-    });
-    var sRoof = makeCurvedHipRoof(2.75, 2.35, 0.95, { cornerLift: 0.38 });
-    sRoof.position.y = 1.96;
-    shrine.add(sRoof);
-
-    /* Bát hương men lam & đôi nến */
-    var bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.18, 0.24, 10), MAT.ceramicBlue);
-    bowl.position.set(0, 0.46, 0.56);
-    shrine.add(bowl);
-    var stripe = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 6, 12), MAT.cobalt);
-    stripe.rotation.x = Math.PI * 0.5;
-    stripe.position.set(0, 0.48, 0.56);
-    shrine.add(stripe);
-    [-0.42, 0.42].forEach(function (cx) {
-      var candle = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.24, 6), MAT.warmGlow);
-      candle.position.set(cx, 0.46, 0.58);
-      shrine.add(candle);
-    });
+    if (RA) {
+      var realShrine = RA.makeModel('dvBiaRua', { height: 2.55 });
+      shrine.add(realShrine);
+    } else {
+      var sBase = addShadow(new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.34, 1.95), MAT.stone));
+      sBase.position.y = 0.17;
+      shrine.add(sBase);
+      var sBack = addShadow(new THREE.Mesh(new THREE.BoxGeometry(2.05, 1.65, 1.35), MAT.redLacquer));
+      sBack.position.set(0, 1.16, -0.15);
+      shrine.add(sBack);
+      var sRoof = makeCurvedHipRoof(2.75, 2.35, 0.95, { cornerLift: 0.38 });
+      sRoof.position.y = 1.96;
+      shrine.add(sRoof);
+    }
     g.add(shrine);
 
     return wrapWithRealGlb('dvBanyanShrine', g, s);
@@ -23919,69 +23947,65 @@ window.__initWaterState = function (gardenRoot) {
   return window.__WATER_SYSTEM;
 };
 
-/* Combat slice: quái thật, đuổi/tell/active/recovery, đánh J/click, HP HUD. */
+/* Hệ thống Chiến Đấu Hành Động: Thể lực, Né/I-frames (C), Đỡ & Phản Đòn (F), Combo 3 nhịp (J/Click), 3 Kỹ năng Ngọc Thương (1/2/3), 4 chủng loại quái có điểm yếu riêng. */
 window.__initCombat = function (gardenRoot) {
   if (window.__COMBAT) return window.__COMBAT;
-  var playerHp = 100, kills = 0, lastAttackAt = -1000, hurtFlash = 0;
-  var enemies = [];
+  var playerHp = 100, maxHp = 100, stamina = 100, maxStamina = 100;
+  var kills = 0, lastAttackAt = -1000, hurtFlash = 0, parryFlash = 0;
+  var comboStep = 0, comboResetAt = 0;
+  var invulnUntil = 0, guarding = false, parryWindowUntil = 0, stPauseUntil = 0;
+  var sanctuaryUntil = 0;
+  var skillCd = { s1: 0, s2: 0, s3: 0 };
+  var enemies = [], projectiles = [], shockwaves = [], mixers = [];
+  var shieldMesh = null;
+
   var enemyData = [
-    { id: 'EN-01', name: 'Mầm Mốc', asset: 'enemyMushroom', x: -24.5, z: -16.0, height: 0.9, hp: 3, speed: 0.9, range: 1.5, tell: 0.62, active: 0.2, recover: 0.82, damage: 8 },
-    { id: 'EN-02', name: 'Lưỡi Sậy', asset: 'enemyReed', x: 24.0, z: 22.5, height: 1.55, hp: 2, speed: 1.25, range: 1.6, tell: 0.72, active: 0.18, recover: 0.75, damage: 7 },
-    { id: 'EN-03', name: 'Vạc Bùn', asset: 'enemyBoulder', x: -32.0, z: -8.0, height: 1.35, hp: 5, speed: 0.55, range: 2.0, tell: 1.05, active: 0.25, recover: 1.1, damage: 12 },
-    { id: 'EN-05', name: 'Đèn Rỗng', asset: 'enemyLure', x: 18.5, z: -22.0, height: 0.75, hp: 2, speed: 0.8, range: 1.2, tell: 0.85, active: 0.18, recover: 0.9, damage: 5 }
+    { id: 'EN-01', name: 'Xà Tinh Đầm', kind: 'snake', weak: 'Phản đòn (F)', asset: 'enemySnake', x: -16.5, z: -12.0, height: 1.05, hp: 5, speed: 1.55, range: 1.85, tell: 0.56, active: 0.22, recover: 0.78, damage: 9 },
+    { id: 'EN-02', name: 'Cóc Độc Hồ', kind: 'frog', weak: 'Phản cầu / Né (C)', asset: 'enemyFrog', x: 14.5, z: 19.5, height: 1.0, hp: 4, speed: 0.85, range: 9.0, meleeRange: 2.0, tell: 0.85, active: 0.2, recover: 1.05, damage: 11, ranged: true },
+    { id: 'EN-03', name: 'Vạc Bùn Giáp', kind: 'boulder', weak: 'Kỹ năng [1] Phá Giáp', asset: 'enemyBoulder', x: -24.0, z: -20.0, height: 1.45, hp: 9, speed: 0.72, range: 2.35, tell: 1.02, active: 0.26, recover: 1.15, damage: 15, armored: true },
+    { id: 'EN-04', name: 'Nhện Rừng Rậm', kind: 'spider', weak: 'Kỹ năng [2] Toàn Phong', asset: 'enemySpider', x: 22.0, z: -16.0, height: 1.05, hp: 5, speed: 1.48, range: 1.9, tell: 0.62, active: 0.2, recover: 0.85, damage: 10 },
+    { id: 'EN-05', name: 'Xà Tinh Ven Bờ', kind: 'snake', weak: 'Phản đòn (F)', asset: 'enemySnake', x: -24.5, z: 10.5, height: 1.1, hp: 5, speed: 1.5, range: 1.85, tell: 0.56, active: 0.2, recover: 0.78, damage: 9 },
+    { id: 'EN-06', name: 'Vạc Bùn Cổ Đạo', kind: 'boulder', weak: 'Kỹ năng [1] Phá Giáp', asset: 'enemyBoulder', x: 18.5, z: -26.0, height: 1.5, hp: 9, speed: 0.7, range: 2.35, tell: 1.02, active: 0.25, recover: 1.15, damage: 15, armored: true },
+    { id: 'EN-07', name: 'Nhện Ám Mạch', kind: 'spider', weak: 'Kỹ năng [2] Toàn Phong', asset: 'enemySpider', x: 25.0, z: 22.0, height: 1.1, hp: 6, speed: 1.45, range: 1.9, tell: 0.6, active: 0.2, recover: 0.85, damage: 11 },
+    { id: 'EN-08', name: 'Cóc Độc Rừng Bắc', kind: 'frog', weak: 'Phản cầu / Né (C)', asset: 'enemyFrog', x: -10.5, z: -34.0, height: 1.05, hp: 5, speed: 0.85, range: 9.0, meleeRange: 2.0, tell: 0.82, active: 0.2, recover: 1.0, damage: 12, ranged: true }
   ];
 
-  var hud = document.createElement('div');
-  hud.style.cssText = 'position:fixed;left:16px;top:170px;z-index:56;padding:8px 12px;border-radius:10px;background:rgba(20,18,15,.74);border:1px solid rgba(226,192,122,.34);color:#f6efe0;font:600 12.5px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;pointer-events:none;backdrop-filter:blur(8px)';
-  document.body.appendChild(hud);
+  /* Thanh Hành Động chiến thuật (HP, Thể lực, 3 Kỹ năng, Đỡ/Phản đòn, Né) */
+  var bar = document.createElement('div');
+  bar.id = 'combatActionHud';
+  bar.style.cssText = 'position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:58;display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 14px;border-radius:14px;background:rgba(16,15,13,.84);border:1px solid rgba(226,192,122,.36);color:#f6efe0;font:600 12px/1.3 "Segoe UI",system-ui,sans-serif;backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(0,0,0,.45)';
+  bar.innerHTML =
+    '<div style="display:flex;align-items:center;gap:12px;width:100%;justify-content:space-between">' +
+      '<div style="flex:1;min-width:130px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Máu</span><span id="cHpTxt">100/100</span></div><div style="height:6px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden"><div id="cHpFill" style="height:100%;width:100%;background:linear-gradient(90deg,#e04b3f,#44c986);transition:width .12s"></div></div></div>' +
+      '<div style="flex:1;min-width:130px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Thể lực</span><span id="cStTxt">100</span></div><div style="height:6px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden"><div id="cStFill" style="height:100%;width:100%;background:linear-gradient(90deg,#d99a32,#ffe178);transition:width .08s"></div></div></div>' +
+      '<div id="cEnemyTxt" style="font-size:11px;color:#e8d3a3;white-space:nowrap">Kẻ địch: 8</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">' +
+      '<button type="button" data-sk="atk" style="padding:5px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font:inherit"><b>J</b> Đánh (Combo)</button>' +
+      '<button type="button" data-sk="1" id="btnS1" style="padding:5px 9px;border-radius:8px;border:1px solid rgba(78,247,212,.45);background:rgba(22,109,84,.45);color:#dffcf3;cursor:pointer;font:inherit"><b>1</b> Xuyên Thủy <span id="cdS1"></span></button>' +
+      '<button type="button" data-sk="2" id="btnS2" style="padding:5px 9px;border-radius:8px;border:1px solid rgba(230,190,99,.45);background:rgba(120,86,28,.45);color:#fff0c9;cursor:pointer;font:inherit"><b>2</b> Toàn Phong <span id="cdS2"></span></button>' +
+      '<button type="button" data-sk="3" id="btnS3" style="padding:5px 9px;border-radius:8px;border:1px solid rgba(110,224,255,.45);background:rgba(24,84,112,.45);color:#dcf7ff;cursor:pointer;font:inherit"><b>3</b> Kết Giới <span id="cdS3"></span></button>' +
+      '<button type="button" data-sk="parry" id="btnParry" style="padding:5px 9px;border-radius:8px;border:1px solid rgba(255,215,110,.38);background:rgba(50,42,26,.65);color:#ffd89a;cursor:pointer;font:inherit"><b>F</b> Đỡ / Phản</button>' +
+      '<button type="button" data-sk="dodge" style="padding:5px 9px;border-radius:8px;border:1px solid rgba(170,235,255,.35);background:rgba(32,52,60,.65);color:#d0f4ff;cursor:pointer;font:inherit"><b>C</b> Né</button>' +
+    '</div>';
+  document.body.appendChild(bar);
 
   var flashEl = document.createElement('div');
   flashEl.style.cssText = 'position:fixed;inset:0;z-index:45;pointer-events:none;background:radial-gradient(ellipse at center, rgba(200,30,20,0) 40%, rgba(200,30,20,.55) 100%);opacity:0';
   document.body.appendChild(flashEl);
 
+  var parryEl = document.createElement('div');
+  parryEl.style.cssText = 'position:fixed;inset:0;z-index:46;pointer-events:none;background:radial-gradient(ellipse at center, rgba(255,220,110,0) 45%, rgba(78,247,212,.45) 100%);opacity:0';
+  document.body.appendChild(parryEl);
+
   function floatText(txt, color, big) {
     var d = document.createElement('div');
     d.textContent = txt;
-    d.style.cssText = 'position:fixed;z-index:70;pointer-events:none;font:700 ' + (big ? 22 : 15) + 'px "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;color:' + color + ';text-shadow:0 1px 3px rgba(0,0,0,.6);left:' + (44 + Math.random() * 12) + '%;top:' + (42 + Math.random() * 8) + '%;transition:transform .8s ease-out,opacity .8s;';
+    d.style.cssText = 'position:fixed;z-index:70;pointer-events:none;font:800 ' + (big ? 21 : 15) + 'px "Segoe UI",system-ui,sans-serif;color:' + color + ';text-shadow:0 2px 6px rgba(0,0,0,.75);left:' + (43 + Math.random() * 14) + '%;top:' + (38 + Math.random() * 10) + '%;transition:transform .85s ease-out,opacity .85s;';
     document.body.appendChild(d);
-    requestAnimationFrame(function () { d.style.transform = 'translateY(-46px)'; d.style.opacity = '0'; });
-    setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 850);
+    requestAnimationFrame(function () { d.style.transform = 'translateY(-48px)'; d.style.opacity = '0'; });
+    setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 880);
   }
-
-  function refreshHud() {
-    var alive = enemies.filter(function (e) { return e.hp > 0; }).length;
-    var p = window.__playerPos ? gardenRoot.worldToLocal(window.__playerPos.clone()) : null;
-    var near = false;
-    if (p) enemies.forEach(function (e) { if (e.hp > 0 && Math.hypot(e.x - p.x, e.z - p.z) < 22) near = true; });
-    hud.style.display = (near || playerHp < 100 || kills > 0) ? 'block' : 'none';
-    if (hud.style.display === 'none') return;
-    hud.innerHTML = 'Sức khỏe <b>' + Math.max(0, Math.round(playerHp)) + '</b> / 100' + (window.__dmgBonus ? ' · Đòn tay <b>+' + window.__dmgBonus + '</b>' : '') + '<br>Quái còn <b>' + alive + '</b> · Đã thắng <b>' + kills + '</b><br><span style="opacity:.72">J hoặc click trái để đánh</span>';
-  }
-
-  enemyData.forEach(function (info) {
-    var group = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel(info.asset, { height: info.height }) : new THREE.Group();
-    group.traverse(function (o) { if (o.isMesh && o.material) { o.material = o.material.clone(); if (o.material.emissive) { o.material.emissive.setHex(0x661111); o.material.emissiveIntensity = 0.55; } } });
-    var y = window.__hillY ? window.__hillY(info.x, info.z) : 0;
-    group.position.set(info.x, y, info.z);
-    gardenRoot.add(group);
-    var alert = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.68, 24), new THREE.MeshBasicMaterial({ color: 0xff4433, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
-    alert.rotation.x = -Math.PI / 2;
-    alert.position.set(info.x, y + 0.06, info.z);
-    alert.visible = false;
-    gardenRoot.add(alert);
-    var barBg = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x1a120c, transparent: true, opacity: 0.85, depthWrite: false }));
-    barBg.scale.set(1.15, 0.13, 1);
-    barBg.position.set(info.x, y + info.height + 0.55, info.z);
-    gardenRoot.add(barBg);
-    var barFg = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x7ee06a, transparent: true, opacity: 1, depthWrite: false }));
-    barFg.scale.set(1.1, 0.09, 1);
-    barFg.position.set(info.x - 0.55 + 0.55, y + info.height + 0.55, info.z);
-    gardenRoot.add(barFg);
-    enemies.push({
-      info: info, group: group, alert: alert, barBg: barBg, barFg: barFg, hp: info.hp, maxHp: info.hp, state: 'IDLE', timer: 0,
-      homeX: info.x, homeZ: info.z, flash: 0
-    });
-  });
 
   function localPlayer() {
     if (!window.__playerPos) return null;
@@ -23989,171 +24013,584 @@ window.__initCombat = function (gardenRoot) {
     gardenRoot.worldToLocal(p);
     return p;
   }
-
   function dist2d(a, b) { return Math.hypot(a.x - b.x, a.z - b.z); }
 
-  function damagePlayer(amount) {
-    playerHp -= amount;
-    hurtFlash = 0.55;
-    window.__shakeT = performance.now(); window.__shakeAmt = 0.16;
-    floatText('-' + amount, '#ff5a4a', true);
+  function spawnShockwave(lx, ly, lz, colorHex, maxR, dur) {
+    var ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.3, 0.55, 28),
+      new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(lx, ly + 0.12, lz);
+    gardenRoot.add(ring);
+    shockwaves.push({ mesh: ring, age: 0, dur: dur || 0.42, maxR: maxR || 4.0 });
+  }
+
+  function playEnemyAnim(e, key) {
+    if (!e.actions) return;
+    var target = e.actions[key] || e.actions.idle;
+    if (!target || e.curAnim === target) return;
+    if (e.curAnim) e.curAnim.fadeOut(0.16);
+    target.reset().fadeIn(0.16).play();
+    e.curAnim = target;
+  }
+
+  enemyData.forEach(function (info) {
+    var eObj = {
+      info: info, group: null, alert: null, aoeRing: null, barBg: null, barFg: null,
+      hp: info.hp, maxHp: info.hp, state: 'IDLE', timer: 0,
+      homeX: info.x, homeZ: info.z, flash: 0, armorBroken: false,
+      mixer: null, actions: null, curAnim: null, staggerUntil: 0
+    };
+    var useAnim = info.asset !== 'enemyBoulder' && window.__REAL_ASSETS && window.__REAL_ASSETS.makeAnimatedModel;
+    var group = useAnim
+      ? window.__REAL_ASSETS.makeAnimatedModel(info.asset, { height: info.height }, function (model, anims) {
+          if (!anims || !anims.length) return;
+          var mx = new THREE.AnimationMixer(model);
+          var acts = {};
+          anims.forEach(function (cl) {
+            var nm = cl.name.toLowerCase();
+            if (nm.indexOf('idle') >= 0) acts.idle = mx.clipAction(cl);
+            else if (nm.indexOf('walk') >= 0 || nm.indexOf('jump') >= 0) acts.walk = mx.clipAction(cl);
+            else if (nm.indexOf('attack') >= 0) acts.attack = mx.clipAction(cl);
+            else if (nm.indexOf('death') >= 0) acts.death = mx.clipAction(cl);
+          });
+          if (!acts.idle) acts.idle = mx.clipAction(anims[0]);
+          if (!acts.walk) acts.walk = acts.idle;
+          acts.idle.play();
+          eObj.mixer = mx; eObj.actions = acts; eObj.curAnim = acts.idle;
+          mixers.push(mx);
+        })
+      : (window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel(info.asset, { height: info.height }) : new THREE.Group());
+
+    var y = window.__hillY ? window.__hillY(info.x, info.z) : 0;
+    group.position.set(info.x, y, info.z);
+    gardenRoot.add(group);
+    eObj.group = group;
+
+    var alertR = info.armored ? 2.35 : 0.72;
+    var alert = new THREE.Mesh(
+      new THREE.RingGeometry(alertR * 0.85, alertR, 28),
+      new THREE.MeshBasicMaterial({ color: info.armored ? 0xff4422 : 0xff7744, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false })
+    );
+    alert.rotation.x = -Math.PI / 2;
+    alert.position.set(info.x, y + 0.07, info.z);
+    alert.visible = false;
+    gardenRoot.add(alert);
+    eObj.alert = alert;
+
+    var barBg = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x16120c, transparent: true, opacity: 0.88, depthWrite: false }));
+    barBg.scale.set(1.25, 0.14, 1);
+    barBg.position.set(info.x, y + info.height + 0.55, info.z);
+    gardenRoot.add(barBg);
+    eObj.barBg = barBg;
+
+    var barFg = new THREE.Sprite(new THREE.SpriteMaterial({ color: info.armored ? 0xf2a649 : 0x7ee06a, transparent: true, opacity: 1, depthWrite: false }));
+    barFg.scale.set(1.2, 0.09, 1);
+    barFg.position.set(info.x, y + info.height + 0.55, info.z);
+    gardenRoot.add(barFg);
+    eObj.barFg = barFg;
+
+    enemies.push(eObj);
+  });
+
+  function refreshHud() {
+    var now = performance.now();
+    var alive = enemies.filter(function (e) { return e.hp > 0; }).length;
+    var hpFill = document.getElementById('cHpFill');
+    var stFill = document.getElementById('cStFill');
+    var hpTxt = document.getElementById('cHpTxt');
+    var stTxt = document.getElementById('cStTxt');
+    var enTxt = document.getElementById('cEnemyTxt');
+    if (hpFill) hpFill.style.width = Math.max(0, Math.min(100, (playerHp / maxHp) * 100)) + '%';
+    if (stFill) stFill.style.width = Math.max(0, Math.min(100, (stamina / maxStamina) * 100)) + '%';
+    if (hpTxt) hpTxt.textContent = Math.max(0, Math.round(playerHp)) + '/' + maxHp;
+    if (stTxt) stTxt.textContent = Math.round(stamina);
+    if (enTxt) enTxt.textContent = 'Quái: ' + alive + ' · Thắng: ' + kills + (sanctuaryUntil > now ? ' · KẾT GIỚI' : '');
+
+    [['s1', 'cdS1', 'btnS1'], ['s2', 'cdS2', 'btnS2'], ['s3', 'cdS3', 'btnS3']].forEach(function (pair) {
+      var rem = Math.max(0, (skillCd[pair[0]] - now) / 1000);
+      var cdEl = document.getElementById(pair[1]);
+      var btnEl = document.getElementById(pair[2]);
+      if (cdEl) cdEl.textContent = rem > 0.1 ? ' (' + rem.toFixed(1) + 's)' : '';
+      if (btnEl) btnEl.style.opacity = rem > 0.1 ? '0.52' : '1';
+    });
+    var bp = document.getElementById('btnParry');
+    if (bp) bp.style.boxShadow = guarding ? '0 0 12px rgba(255,215,100,.8)' : 'none';
+  }
+
+  function applyDmgToEnemy(e, rawDmg, knockDir, isPierce, isAoe) {
+    if (!e || e.hp <= 0) return;
+    var dmg = rawDmg;
+    var msgCol = '#ffd76a';
+    var tag = '';
+    if (e.info.armored && !e.armorBroken) {
+      if (isPierce) {
+        e.armorBroken = true;
+        dmg = Math.round(rawDmg * 2.0);
+        msgCol = '#4ef7d4';
+        tag = ' VỠ GIÁP!';
+        e.staggerUntil = performance.now() + 2000;
+      } else {
+        dmg = Math.max(1, Math.floor(rawDmg * 0.5));
+        tag = ' (Giáp)';
+      }
+    } else if (e.info.kind === 'spider' && isAoe) {
+      dmg = Math.round(rawDmg * 1.5);
+      msgCol = '#9effa8';
+    } else if (performance.now() < e.staggerUntil) {
+      dmg = Math.round(rawDmg * 1.6);
+      msgCol = '#4ef7d4';
+      tag = ' CHÍ MẠNG';
+    }
+    e.hp -= dmg;
+    e.flash = 0.28;
+    if (knockDir) {
+      e.group.position.x += knockDir.x * 1.25;
+      e.group.position.z += knockDir.z * 1.25;
+      e.group.position.y = window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0;
+    }
+    floatText('-' + dmg + tag, msgCol, !!tag);
+    if (e.hp <= 0) {
+      kills++;
+      e.hp = 0; e.state = 'DEAD'; e.group.visible = false;
+      if (e.alert) e.alert.visible = false;
+      if (e.barBg) e.barBg.visible = false;
+      if (e.barFg) e.barFg.visible = false;
+      if (window.__addScore) window.__addScore(15);
+    } else if (e.state === 'TELL' && (isAoe || isPierce)) {
+      e.state = 'RECOVER';
+      e.timer = e.info.recover;
+      playEnemyAnim(e, 'idle');
+    }
+  }
+
+  function damagePlayer(amount, attacker, allowParry) {
+    var now = performance.now();
+    if (now < invulnUntil) {
+      floatText('NÉ ĐÒN!', '#4ef7d4', true);
+      stamina = Math.min(maxStamina, stamina + 14);
+      parryFlash = 0.35;
+      return;
+    }
+    if (allowParry !== false && now < parryWindowUntil) {
+      parryFlash = 0.72;
+      stamina = Math.min(maxStamina, stamina + 28);
+      floatText('PHẢN ĐÒN HOÀN HẢO!', '#ffe57a', true);
+      var p = localPlayer();
+      if (p) spawnShockwave(p.x, window.__hillY ? window.__hillY(p.x, p.z) : 0, p.z, 0xffe066, 3.8, 0.38);
+      if (window.__sfx) window.__sfx.chime();
+      if (attacker) {
+        if (attacker.kind === 'proj') {
+          attacker.vx *= -1.8; attacker.vz *= -1.8; attacker.reflected = true;
+        } else if (attacker.info) {
+          attacker.staggerUntil = now + 2200;
+          attacker.state = 'RECOVER'; attacker.timer = 1.6;
+          applyDmgToEnemy(attacker, 3 + (window.__dmgBonus || 0), null, true, false);
+        } else if (window.__onBossParried) {
+          window.__onBossParried(3 + (window.__dmgBonus || 0));
+        }
+      }
+      refreshHud();
+      return;
+    }
+    var finalDmg = amount;
+    if (guarding && stamina >= 10) {
+      stamina = Math.max(0, stamina - 12);
+      stPauseUntil = now + 450;
+      finalDmg = Math.max(1, Math.round(amount * 0.3));
+      floatText('ĐỠ -' + finalDmg, '#b8e8ff', false);
+    } else {
+      if (sanctuaryUntil > now) finalDmg = Math.max(1, Math.round(finalDmg * 0.65));
+      floatText('-' + finalDmg, '#ff5a4a', true);
+      hurtFlash = 0.55;
+      window.__shakeT = now; window.__shakeAmt = 0.16;
+    }
+    playerHp -= finalDmg;
     if (window.__sfx) window.__sfx.whoosh();
     if (playerHp <= 0) {
-      playerHp = 100;
+      playerHp = maxHp; stamina = maxStamina;
+      floatText('Hồi phục tại Sân Kinh Kỳ', '#ffd89a', true);
       if (window.__goHome) window.__goHome();
     }
     refreshHud();
   }
-  window.__healFull = function () { playerHp = 100; refreshHud(); };
+  window.__healFull = function () { playerHp = maxHp; stamina = maxStamina; refreshHud(); };
+
+  function dodge() {
+    var now = performance.now();
+    if (stamina < 20) { floatText('Hết thể lực!', '#ffb37a', false); return false; }
+    stamina -= 20;
+    stPauseUntil = now + 450;
+    invulnUntil = now + 420;
+    if (window.__heroineDodge) window.__heroineDodge();
+    var p = localPlayer();
+    if (p) {
+      var nearTell = enemies.some(function (e) { return e.hp > 0 && e.state === 'TELL' && dist2d(p, e.group.position) < 4.8; });
+      if (nearTell) {
+        stamina = Math.min(maxStamina, stamina + 15);
+        parryFlash = 0.4;
+        floatText('NÉ HOÀN HẢO!', '#4ef7d4', true);
+      }
+      spawnShockwave(p.x, window.__hillY ? window.__hillY(p.x, p.z) : 0, p.z, 0x7ef7ff, 2.2, 0.28);
+    }
+    refreshHud();
+    return true;
+  }
+  window.__combatDodge = dodge;
+
+  function setGuard(active) {
+    var now = performance.now();
+    if (active && !guarding) {
+      parryWindowUntil = now + 340;
+    }
+    guarding = !!active;
+    if (window.__heroineGuard) window.__heroineGuard(guarding);
+    refreshHud();
+  }
 
   function attack() {
-    if (window.__heroineAttack) window.__heroineAttack();
     var now = performance.now();
-    if (now - lastAttackAt < 450) return;
+    if (now - lastAttackAt < 360) return;
     lastAttackAt = now;
+    comboStep = (now < comboResetAt) ? (comboStep % 3) + 1 : 1;
+    comboResetAt = now + 1200;
+    if (window.__heroineAttack) window.__heroineAttack(comboStep, 0);
     var p = localPlayer();
     if (!p) return;
-    var best = null, bd = 3.4;
-    for (var i = 0; i < enemies.length; i++) {
-      var e = enemies[i];
-      if (e.hp <= 0) continue;
+    var mult = comboStep === 3 ? 2.0 : (comboStep === 2 ? 1.3 : 1.0);
+    var buff = sanctuaryUntil > now ? 1.45 : 1.0;
+    var dmg = Math.round((1 + (window.__dmgBonus || 0)) * mult * buff);
+    var hitAny = false;
+    enemies.forEach(function (e) {
+      if (e.hp <= 0) return;
       var d = dist2d(p, e.group.position);
-      if (d < bd) { bd = d; best = e; }
+      if (d < 3.6) {
+        var inv = 1 / (d || 1);
+        applyDmgToEnemy(e, dmg, { x: (e.group.position.x - p.x) * inv, z: (e.group.position.z - p.z) * inv }, false, false);
+        hitAny = true;
+      }
+    });
+    if (window.__onBossSkillHit) {
+      if (window.__onBossSkillHit(p.x, p.z, 3.6, dmg, false, comboStep === 3 ? 24 : 12)) hitAny = true;
     }
-    if (!best) return;
-    var dmg = 1 + (window.__dmgBonus || 0);
-    var d0 = dist2d(p, best.group.position) || 1;
-    if (d0 > 1.6) {
-      var lx = (best.group.position.x - p.x) / d0, lz = (best.group.position.z - p.z) / d0;
-      var nw = new THREE.Vector3(p.x + lx * 1.1, 0, p.z + lz * 1.1);
-      var ww = gardenRoot.localToWorld(nw);
-      window.__playerPos.x = ww.x; window.__playerPos.z = ww.z;
-      p = localPlayer();
-    }
-    best.hp -= dmg;
-    best.flash = 0.25;
-    var kd = dist2d(p, best.group.position) || 1;
-    best.group.position.x += (best.group.position.x - p.x) / kd * 1.3;
-    best.group.position.z += (best.group.position.z - p.z) / kd * 1.3;
-    var gy2 = window.__hillY ? window.__hillY(best.group.position.x, best.group.position.z) : 0;
-    best.group.position.y = gy2;
-    window.__shakeT = now; window.__shakeAmt = 0.05;
-    floatText('-' + dmg, '#ffd76a', false);
-    if (window.__sfx) window.__sfx.chime();
-    if (best.hp <= 0) {
-      kills += 1;
-      best.group.visible = false;
-      best.state = 'DEAD';
-      if (best.alert) best.alert.visible = false;
-      if (best.barBg) best.barBg.visible = false;
-      if (best.barFg) best.barFg.visible = false;
-      if (window.__addScore) window.__addScore(10);
-    } else if (best.state === 'TELL') {
-      best.state = 'RECOVER';
-      best.timer = best.info.recover;
+    if (hitAny && window.__sfx) window.__sfx.chime();
+    if (comboStep === 3) {
+      window.__shakeT = now; window.__shakeAmt = 0.08;
+      spawnShockwave(p.x, window.__hillY ? window.__hillY(p.x, p.z) : 0, p.z, 0x4ef7d4, 2.8, 0.3);
     }
     refreshHud();
   }
 
+  function useSkill(id) {
+    var now = performance.now();
+    var key = 's' + id;
+    if (now < skillCd[key]) { floatText('Chờ hồi chiêu!', '#d8d0be', false); return; }
+    var cost = id === 1 ? 20 : (id === 2 ? 28 : 30);
+    if (stamina < cost) { floatText('Không đủ thể lực!', '#ffb37a', false); return; }
+    var p = localPlayer();
+    if (!p) return;
+    stamina -= cost;
+    stPauseUntil = now + 450;
+    skillCd[key] = now + (id === 1 ? 4000 : (id === 2 ? 7000 : 12000));
+    var buff = sanctuaryUntil > now ? 1.45 : 1.0;
+    if (window.__heroineAttack) window.__heroineAttack(1, id);
+    if (window.__sfx) window.__sfx.chime();
+
+    var py = window.__hillY ? window.__hillY(p.x, p.z) : 0;
+    if (id === 1) {
+      /* Xuyên Thủy Thương: lướt 3m, phá giáp Vạc Bùn */
+      invulnUntil = Math.max(invulnUntil, now + 260);
+      floatText('XUYÊN THỦY THƯƠNG!', '#4ef7d4', true);
+      spawnShockwave(p.x, py, p.z, 0x4ef7d4, 3.4, 0.35);
+      var dmg1 = Math.round((3.2 + (window.__dmgBonus || 0)) * buff);
+      enemies.forEach(function (e) {
+        if (e.hp <= 0) return;
+        var d = dist2d(p, e.group.position);
+        if (d < 4.5) {
+          var inv = 1 / (d || 1);
+          applyDmgToEnemy(e, dmg1, { x: (e.group.position.x - p.x) * inv * 1.4, z: (e.group.position.z - p.z) * inv * 1.4 }, true, false);
+        }
+      });
+      if (window.__onBossSkillHit) window.__onBossSkillHit(p.x, p.z, 4.5, dmg1, true, 36);
+    } else if (id === 2) {
+      /* Liên Hoàn Toàn Phong: AOE 4.8m ngắt đòn quái */
+      floatText('LIÊN HOÀN TOÀN PHONG!', '#ffe27a', true);
+      spawnShockwave(p.x, py, p.z, 0xffe27a, 5.0, 0.45);
+      window.__shakeT = now; window.__shakeAmt = 0.12;
+      var dmg2 = Math.round((2.6 + (window.__dmgBonus || 0)) * buff);
+      enemies.forEach(function (e) {
+        if (e.hp <= 0) return;
+        var d = dist2d(p, e.group.position);
+        if (d < 4.8) {
+          var inv = 1 / (d || 1);
+          applyDmgToEnemy(e, dmg2, { x: (e.group.position.x - p.x) * inv * 1.8, z: (e.group.position.z - p.z) * inv * 1.8 }, false, true);
+        }
+      });
+      if (window.__onBossSkillHit) window.__onBossSkillHit(p.x, p.z, 4.8, dmg2, false, 28);
+    } else if (id === 3) {
+      /* Thần Ngọc Kết Giới: hồi +30 HP + khiên ngọc 6s */
+      playerHp = Math.min(maxHp, playerHp + 30);
+      sanctuaryUntil = now + 6000;
+      floatText('THẦN NGỌC KẾT GIỚI (+30 HP)', '#7effc0', true);
+      spawnShockwave(p.x, py, p.z, 0x5ef2d6, 3.6, 0.5);
+    }
+    refreshHud();
+  }
+
+  [].forEach.call(bar.querySelectorAll('button'), function (btn) {
+    btn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      var sk = btn.getAttribute('data-sk');
+      if (sk === 'atk') attack();
+      else if (sk === '1' || sk === '2' || sk === '3') useSkill(Number(sk));
+      else if (sk === 'dodge') dodge();
+      else if (sk === 'parry') { setGuard(true); setTimeout(function () { setGuard(false); }, 360); }
+    });
+  });
+
   window.addEventListener('keydown', function (e) {
     var k = (e.key || '').toLowerCase();
     if (k === 'j') attack();
+    else if (k === '1') useSkill(1);
+    else if (k === '2') useSkill(2);
+    else if (k === '3') useSkill(3);
+    else if (k === 'f') setGuard(true);
+  });
+  window.addEventListener('keyup', function (e) {
+    if ((e.key || '').toLowerCase() === 'f') setGuard(false);
   });
   window.addEventListener('pointerdown', function (e) {
-    if (e.button === 0 && (!e.target.closest || !e.target.closest('button, .hud, .touchpad, .touchbtn'))) attack();
+    if (e.target.closest && e.target.closest('button, .hud, #combatActionHud, #adventureMap, .touchpad, .touchbtn')) return;
+    if (e.button === 0) attack();
+    else if (e.button === 2) setGuard(true);
   });
+  window.addEventListener('pointerup', function (e) {
+    if (e.button === 2) setGuard(false);
+  });
+  window.addEventListener('contextmenu', function (e) {
+    if (!e.target.closest || !e.target.closest('input, textarea')) e.preventDefault();
+  });
+
+  /* VFX tick (shockwaves, projectiles, enemy mixers) */
+  window.__updateEnemyMixers = function (dt) {
+    var d = Math.min(0.05, dt || 0.016);
+    for (var i = 0; i < mixers.length; i++) mixers[i].update(d);
+  };
+  window.__updateCombatVfx = function (dt) {
+    var d = Math.min(0.05, dt || 0.016);
+    var now = performance.now();
+    if (now > stPauseUntil && stamina < maxStamina) {
+      stamina = Math.min(maxStamina, stamina + (guarding ? 10 : 26) * d);
+    }
+    if (sanctuaryUntil > now) {
+      var pl = localPlayer();
+      if (!shieldMesh && pl) {
+        shieldMesh = new THREE.Mesh(
+          new THREE.TorusGeometry(0.95, 0.035, 8, 28),
+          new THREE.MeshBasicMaterial({ color: 0x4ef7d4, transparent: true, opacity: 0.72 })
+        );
+        shieldMesh.rotation.x = Math.PI / 2;
+        gardenRoot.add(shieldMesh);
+      }
+      if (shieldMesh && pl) {
+        shieldMesh.visible = true;
+        shieldMesh.position.set(pl.x, (window.__hillY ? window.__hillY(pl.x, pl.z) : 0) + 0.95, pl.z);
+        shieldMesh.rotation.z += d * 3.2;
+      }
+    } else if (shieldMesh) {
+      shieldMesh.visible = false;
+    }
+    for (var si = shockwaves.length - 1; si >= 0; si--) {
+      var sw = shockwaves[si];
+      sw.age += d;
+      var k = sw.age / sw.dur;
+      if (k >= 1) {
+        gardenRoot.remove(sw.mesh);
+        sw.mesh.geometry.dispose(); sw.mesh.material.dispose();
+        shockwaves.splice(si, 1);
+      } else {
+        sw.mesh.scale.setScalar(1 + k * sw.maxR);
+        sw.mesh.material.opacity = 0.9 * (1 - k);
+      }
+    }
+    for (var pi = projectiles.length - 1; pi >= 0; pi--) {
+      var pr = projectiles[pi];
+      pr.age += d;
+      pr.mesh.position.x += pr.vx * d;
+      pr.mesh.position.z += pr.vz * d;
+      if (pr.age > 3.2) {
+        gardenRoot.remove(pr.mesh); pr.mesh.geometry.dispose(); pr.mesh.material.dispose();
+        projectiles.splice(pi, 1);
+        continue;
+      }
+      var p = localPlayer();
+      if (!pr.reflected && p && Math.hypot(pr.mesh.position.x - p.x, pr.mesh.position.z - p.z) < 1.15) {
+        damagePlayer(pr.dmg, pr, true);
+        if (!pr.reflected) {
+          gardenRoot.remove(pr.mesh); pr.mesh.geometry.dispose(); pr.mesh.material.dispose();
+          projectiles.splice(pi, 1);
+        }
+      } else if (pr.reflected) {
+        enemies.forEach(function (e) {
+          if (e.hp > 0 && Math.hypot(pr.mesh.position.x - e.group.position.x, pr.mesh.position.z - e.group.position.z) < 1.35) {
+            applyDmgToEnemy(e, pr.dmg, null, true, false);
+            pr.age = 99;
+          }
+        });
+      }
+    }
+  };
 
   setInterval(function () {
     var dt = 0.08;
-    if (hurtFlash > 0) hurtFlash = Math.max(0, hurtFlash - dt);
+    var now = performance.now();
+    if (hurtFlash > 0) hurtFlash = Math.max(0, hurtFlash - dt * 1.4);
+    if (parryFlash > 0) parryFlash = Math.max(0, parryFlash - dt * 1.6);
     flashEl.style.opacity = hurtFlash.toFixed(2);
+    parryEl.style.opacity = parryFlash.toFixed(2);
     var p = localPlayer();
     if (!p) return;
+
     for (var i = 0; i < enemies.length; i++) {
       var e = enemies[i];
       if (e.hp <= 0) continue;
       if (e.flash > 0) {
         e.flash = Math.max(0, e.flash - dt);
-        e.group.scale.setScalar(1 + e.flash * 0.5);
+        e.group.scale.setScalar(1 + e.flash * 0.35);
       } else e.group.scale.setScalar(1);
+
       var d = dist2d(p, e.group.position);
       e.timer -= dt;
       var frac = Math.max(0, e.hp / e.maxHp);
-      var showBar = e.hp > 0 && d < 14;
+      var showBar = e.hp > 0 && d < 16;
       if (e.barBg) { e.barBg.visible = showBar; e.barFg.visible = showBar && frac > 0; }
       if (e.barFg && e.barFg.visible) {
-        e.barFg.scale.x = 1.1 * frac;
-        e.barFg.material.color.setHex(frac > 0.5 ? 0x7ee06a : (frac > 0.25 ? 0xffc14a : 0xff5a4a));
-        e.barFg.position.x = e.group.position.x - 0.55 + 0.55 * frac;
+        e.barFg.scale.x = 1.2 * frac;
+        e.barFg.material.color.setHex(now < e.staggerUntil ? 0x4ef7d4 : (e.info.armored && !e.armorBroken ? 0xf2a649 : (frac > 0.4 ? 0x7ee06a : 0xff5a4a)));
+        e.barFg.position.x = e.group.position.x;
         e.barFg.position.z = e.group.position.z;
         e.barFg.position.y = (window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0) + e.info.height + 0.55;
-        e.barBg.position.x = e.group.position.x;
-        e.barBg.position.z = e.group.position.z;
-        e.barBg.position.y = e.barFg.position.y;
+        e.barBg.position.set(e.group.position.x, e.barFg.position.y, e.group.position.z);
       }
+
+      if (now < e.staggerUntil) {
+        playEnemyAnim(e, 'idle');
+        if (e.alert) e.alert.visible = false;
+        continue;
+      }
+
       if (e.state === 'IDLE' || e.state === 'CHASE') {
-        if (d > 7.5) { e.state = 'IDLE'; if (e.alert) { e.alert.visible = false; } continue; }
-        if (e.state === 'IDLE' && e.alert) e.alert.visible = true;
+        if (d > 11.5) { e.state = 'IDLE'; playEnemyAnim(e, 'idle'); if (e.alert) e.alert.visible = false; continue; }
         e.state = 'CHASE';
-        if (e.alert) { e.alert.position.x = e.group.position.x; e.alert.position.z = e.group.position.z; e.alert.position.y = (window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0) + 0.06; e.alert.rotation.z += dt * 3; }
-        if (d > e.info.range) {
+        playEnemyAnim(e, 'walk');
+        if (e.alert) {
+          e.alert.visible = true;
+          e.alert.material.color.setHex(0xff7744);
+          e.alert.position.set(e.group.position.x, (window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0) + 0.07, e.group.position.z);
+        }
+        var engageRange = e.info.ranged ? 7.8 : e.info.range;
+        if (d > engageRange) {
           var dx = (p.x - e.group.position.x) / d, dz = (p.z - e.group.position.z) / d;
-          var sp = e.info.speed * 1.35;
+          var sp = e.info.speed * 1.4;
           e.group.position.x += dx * sp * dt;
           e.group.position.z += dz * sp * dt;
-          var gy = window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0;
-          e.group.position.y = gy;
+          e.group.position.y = window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0;
         }
         e.group.rotation.y = Math.atan2(p.x - e.group.position.x, p.z - e.group.position.z);
-        if (d <= e.info.range) { e.state = 'TELL'; e.timer = e.info.tell; if (e.alert) e.alert.material.color.setHex(0xff2211); }
+        if (d <= engageRange) {
+          e.state = 'TELL'; e.timer = e.info.tell;
+          playEnemyAnim(e, 'attack');
+          if (e.alert) e.alert.material.color.setHex(0xff1e11);
+        }
       } else if (e.state === 'TELL') {
-        e.group.scale.setScalar(1 + 0.08 * Math.sin(performance.now() * 0.03));
-        if (e.alert) { e.alert.position.x = e.group.position.x; e.alert.position.z = e.group.position.z; }
+        if (e.alert) {
+          e.alert.position.set(e.group.position.x, (window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0) + 0.07, e.group.position.z);
+          e.alert.scale.setScalar(0.85 + 0.25 * Math.sin(now * 0.025));
+        }
         if (e.timer <= 0) {
-          if (dist2d(p, e.group.position) <= e.info.range + 0.35) damagePlayer(e.info.damage);
+          if (e.info.ranged) {
+            var invD = 1 / (d || 1);
+            var pm = new THREE.Mesh(
+              new THREE.SphereGeometry(0.18, 10, 8),
+              new THREE.MeshBasicMaterial({ color: 0x7eff5a })
+            );
+            var gy = window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0;
+            pm.position.set(e.group.position.x, gy + 0.85, e.group.position.z);
+            gardenRoot.add(pm);
+            projectiles.push({ kind: 'proj', mesh: pm, vx: (p.x - e.group.position.x) * invD * 7.8, vz: (p.z - e.group.position.z) * invD * 7.8, dmg: e.info.damage, age: 0, reflected: false });
+          } else if (dist2d(p, e.group.position) <= (e.info.meleeRange || e.info.range) + 0.45) {
+            damagePlayer(e.info.damage, e, true);
+          }
           e.state = 'ACTIVE'; e.timer = e.info.active;
+          if (e.alert) e.alert.scale.setScalar(1);
         }
       } else if (e.state === 'ACTIVE') {
-        if (e.timer <= 0) { e.state = 'RECOVER'; e.timer = e.info.recover; if (e.alert) { e.alert.visible = false; e.alert.material.color.setHex(0xff4433); } }
+        if (e.timer <= 0) {
+          e.state = 'RECOVER'; e.timer = e.info.recover;
+          playEnemyAnim(e, 'idle');
+          if (e.alert) { e.alert.visible = false; e.alert.material.color.setHex(0xff7744); }
+        }
       } else if (e.state === 'RECOVER') {
         if (e.timer <= 0) e.state = 'CHASE';
       }
     }
+    refreshHud();
   }, 80);
 
   window.__combatState = function () {
     return {
-      hp: playerHp, kills: kills, attackCd: Math.max(0, 450 - (performance.now() - lastAttackAt)) / 1000,
+      hp: playerHp, stamina: Math.round(stamina), kills: kills,
+      attackCd: Math.max(0, 360 - (performance.now() - lastAttackAt)) / 1000,
+      skills: {
+        s1: Math.max(0, (skillCd.s1 - performance.now()) / 1000),
+        s2: Math.max(0, (skillCd.s2 - performance.now()) / 1000),
+        s3: Math.max(0, (skillCd.s3 - performance.now()) / 1000)
+      },
       enemies: enemies.map(function (e) { return { id: e.info.id, name: e.info.name, hp: e.hp, state: e.state, visible: e.group.visible, children: e.group.children.length, pos: e.group.position.toArray() }; })
     };
   };
-  window.__COMBAT = { enemies: enemies, attack: attack, hud: hud, damagePlayer: damagePlayer };
+  window.__COMBAT = {
+    enemies: enemies, attack: attack, useSkill: useSkill, dodge: dodge, setGuard: setGuard,
+    hud: bar, damagePlayer: damagePlayer
+  };
   refreshHud();
   return window.__COMBAT;
 };
 
-/* B-01 Người Gác Mạch: 3 phase, tell/active/recovery, core seam mở lúc recover. */
+/* B-01 Người Gác Mạch: 3 phase, vòng AoE cảnh báo đỏ (SWEEP 3.6m / SLAM 4.2m), thanh Choáng (Stagger), hỗ trợ Né/Phản Đòn/Kỹ Năng. */
 window.__initBoss = function (gardenRoot) {
   if (window.__BOSS) return window.__BOSS;
-  var hp = 12, phase = 1, state = 'IDLE', timer = 0, attackKind = 'SWEEP';
-  var defeated = false, lastHit = -1000;
+  var maxHp = 24, hp = 24, stagger = 0, phase = 1, state = 'IDLE', timer = 0, tellTotal = 1.1, attackKind = 'SWEEP';
+  var defeated = false, lastHit = -1000, staggerUntil = 0;
 
   var hud = document.createElement('div');
-  hud.style.cssText = 'position:fixed;left:16px;top:216px;z-index:56;padding:8px 12px;border-radius:10px;background:rgba(20,18,15,.76);border:1px solid rgba(226,192,122,.34);color:#f6efe0;font:600 12.5px/1.5 "Segoe UI",system-ui,sans-serif;pointer-events:none;display:none;backdrop-filter:blur(8px)';
+  hud.style.cssText = 'position:fixed;left:50%;top:58px;transform:translateX(-50%);z-index:56;width:min(380px,78vw);padding:9px 14px;border-radius:12px;background:rgba(18,14,12,.86);border:1px solid rgba(255,150,90,.42);color:#f6efe0;font:600 12.5px/1.45 "Segoe UI",system-ui,sans-serif;pointer-events:none;display:none;backdrop-filter:blur(10px)';
   document.body.appendChild(hud);
 
-  function refresh() {
-    var p = localPlayer();
-    var near = p && dist2d(p, { x: bx, z: bz }) < 28;
-    hud.style.display = near ? 'block' : 'none';
-    var core = state === 'RECOVER' ? ' <b style="color:#4ef7d4">CORE HỞ</b>' : '';
-    hud.innerHTML = 'Người Gác Mạch · HP <b>' + Math.max(0, hp) + '</b>/12<br>Phase <b>' + phase + '</b> · ' + state + core;
-  }
-
-  var group = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel('guardian01', { height: 3.4 }) : new THREE.Group();
   var bx = -38, bz = -36, by = window.__hillY ? window.__hillY(bx, bz) : 0;
+  var group = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel('guardian01', { height: 3.6 }) : new THREE.Group();
   group.position.set(bx, by, bz);
   gardenRoot.add(group);
+
+  /* Vòng cảnh báo đỏ dưới chân Boss mở rộng theo đòn SWEEP / SLAM */
+  var aoeOuter = new THREE.Mesh(
+    new THREE.RingGeometry(0.95, 1.0, 36),
+    new THREE.MeshBasicMaterial({ color: 0xff3b28, transparent: true, opacity: 0.78, side: THREE.DoubleSide, depthWrite: false })
+  );
+  aoeOuter.rotation.x = -Math.PI / 2;
+  aoeOuter.position.set(bx, by + 0.08, bz);
+  aoeOuter.visible = false;
+  gardenRoot.add(aoeOuter);
+
+  var aoeFill = new THREE.Mesh(
+    new THREE.CircleGeometry(1.0, 36),
+    new THREE.MeshBasicMaterial({ color: 0xff2a18, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false })
+  );
+  aoeFill.rotation.x = -Math.PI / 2;
+  aoeFill.position.set(bx, by + 0.07, bz);
+  aoeFill.visible = false;
+  gardenRoot.add(aoeFill);
 
   function localPlayer() {
     if (!window.__playerPos) return null;
@@ -24163,78 +24600,146 @@ window.__initBoss = function (gardenRoot) {
   }
   function dist2d(a, b) { return Math.hypot(a.x - b.x, a.z - b.z); }
 
-  function setPhase() {
-    phase = hp > 7 ? 1 : (hp > 3 ? 2 : 3);
+  function refresh() {
+    var p = localPlayer();
+    var near = !defeated && p && dist2d(p, group.position) < 28;
+    hud.style.display = near ? 'block' : 'none';
+    if (!near) return;
+    var core = (state === 'RECOVER' || performance.now() < staggerUntil) ? ' · <b style="color:#4ef7d4">CORE HỞ (x2 DMG)</b>' : '';
+    var pct = Math.max(0, Math.round((hp / maxHp) * 100));
+    var stg = Math.min(100, Math.round(stagger));
+    hud.innerHTML =
+      '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span><b>B-01 Người Gác Mạch</b> · Pha ' + phase + '/3</span><span>' + hp + '/' + maxHp + core + '</span></div>' +
+      '<div style="height:7px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;margin-bottom:3px"><div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#ff4a3d,#ffb84d)"></div></div>' +
+      '<div style="height:4px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden"><div style="height:100%;width:' + stg + '%;background:#4ef7d4"></div></div>';
   }
+
+  function setPhase() {
+    var oldP = phase;
+    phase = hp > maxHp * 0.6 ? 1 : (hp > maxHp * 0.28 ? 2 : 3);
+    if (phase > oldP && window.__toast) {
+      window.__toast('⚠ Người Gác Mạch bước sang Pha ' + phase + '!');
+    }
+  }
+
+  function damageBoss(rawDmg, staggerAdd) {
+    if (defeated) return;
+    var now = performance.now();
+    var vulnerable = (state === 'RECOVER' || now < staggerUntil);
+    var dmg = vulnerable ? Math.round(rawDmg * 2.0) : rawDmg;
+    hp -= dmg;
+    stagger += (staggerAdd || 16);
+    if (stagger >= 100) {
+      stagger = 0;
+      staggerUntil = now + 2600;
+      state = 'RECOVER';
+      timer = 2.6;
+      aoeOuter.visible = false;
+      aoeFill.visible = false;
+      if (window.__toast) window.__toast('✦ PHÁ THẾ! Core Người Gác Mạch mở hoàn toàn!');
+    }
+    setPhase();
+    if (hp <= 0) {
+      hp = 0; defeated = true; state = 'DEFEATED'; group.visible = false;
+      aoeOuter.visible = false; aoeFill.visible = false;
+      if (window.__addScore) window.__addScore(150);
+      try { localStorage.setItem('bossB01', '1'); } catch (e) {}
+      if (window.__toast) window.__toast('★ Đã đánh bại Boss B-01 Người Gác Mạch!');
+    }
+    refresh();
+  }
+
+  window.__onBossSkillHit = function (px, pz, range, dmg, isPierce, stag) {
+    if (defeated) return false;
+    var d = Math.hypot(px - group.position.x, pz - group.position.z);
+    if (d <= range + 1.2) {
+      damageBoss(dmg, isPierce ? (stag || 36) : (stag || 18));
+      return true;
+    }
+    return false;
+  };
+  window.__onBossParried = function (counterDmg) {
+    damageBoss(counterDmg, 48);
+  };
 
   function strike(kind) {
     var p = localPlayer();
     if (!p) return;
-    if (kind === 'SWEEP' && dist2d(p, group.position) <= 3.2) {
-      if (window.__COMBAT && window.__COMBAT.damagePlayer) window.__COMBAT.damagePlayer(14);
-    } else if (kind === 'SLAM' && dist2d(p, group.position) <= 2.5) {
-      if (window.__COMBAT && window.__COMBAT.damagePlayer) window.__COMBAT.damagePlayer(18);
+    var reach = kind === 'SLAM' ? 4.2 : 3.6;
+    if (dist2d(p, group.position) <= reach) {
+      var dmg = kind === 'SLAM' ? (phase >= 3 ? 22 : 18) : (phase >= 2 ? 16 : 13);
+      if (window.__COMBAT && window.__COMBAT.damagePlayer) window.__COMBAT.damagePlayer(dmg, window.__BOSS, true);
     }
   }
 
   function hit() {
+    /* Đòn J/Click đã được combat.js chuyển vào __onBossSkillHit, giữ hit() fallback an toàn */
+    if (window.__COMBAT) return;
     if (defeated) return;
     var now = performance.now();
-    if (now - lastHit < 450) return;
+    if (now - lastHit < 380) return;
     lastHit = now;
     var p = localPlayer();
-    if (!p || dist2d(p, group.position) > 3.4) return;
-    hp -= state === 'RECOVER' ? 2 : 1;
-    setPhase();
-    if (hp <= 0) {
-      hp = 0; defeated = true; state = 'DEFEATED'; group.visible = false;
-      if (window.__addScore) window.__addScore(100);
-      try { localStorage.setItem('bossB01', '1'); } catch (e) {}
-      if (window.__toast) window.__toast('B-01 đã bị đánh bại');
-    }
-    refresh();
+    if (!p || dist2d(p, group.position) > 3.8) return;
+    damageBoss(1, 15);
   }
 
-  window.addEventListener('keydown', function (e) {
-    if ((e.key || '').toLowerCase() === 'j') hit();
-  });
-  window.addEventListener('pointerdown', function (e) {
-    if (e.button === 0 && (!e.target.closest || !e.target.closest('button'))) hit();
-  });
-
   setInterval(function () {
-    var dt = 0.1;
+    var dt = 0.08;
     if (defeated) return;
     var p = localPlayer();
     if (!p) return;
+    var now = performance.now();
     var d = dist2d(p, group.position);
     timer -= dt;
+    if (now < staggerUntil) {
+      aoeOuter.visible = false; aoeFill.visible = false;
+      refresh();
+      return;
+    }
     if (state === 'IDLE' || state === 'CHASE') {
-      if (d > 14) { state = 'IDLE'; return; }
+      aoeOuter.visible = false; aoeFill.visible = false;
+      if (d > 16) { state = 'IDLE'; refresh(); return; }
       state = 'CHASE';
       group.rotation.y = Math.atan2(p.x - group.position.x, p.z - group.position.z);
-      if (d > 2.8) {
+      if (d > 2.9) {
         var dx = (p.x - group.position.x) / d, dz = (p.z - group.position.z) / d;
-        group.position.x += dx * 0.7 * dt;
-        group.position.z += dz * 0.7 * dt;
+        var spd = phase >= 3 ? 1.45 : (phase === 2 ? 1.1 : 0.85);
+        group.position.x += dx * spd * dt;
+        group.position.z += dz * spd * dt;
+        group.position.y = window.__hillY ? window.__hillY(group.position.x, group.position.z) : 0;
       } else {
-        attackKind = phase >= 2 && Math.random() < 0.5 ? 'SLAM' : 'SWEEP';
+        attackKind = phase >= 2 && Math.random() < 0.55 ? 'SLAM' : 'SWEEP';
         state = 'TELL';
-        timer = attackKind === 'SLAM' ? 1.3 : 1.1;
+        tellTotal = attackKind === 'SLAM' ? (phase >= 3 ? 0.95 : 1.15) : (phase >= 3 ? 0.85 : 1.0);
+        timer = tellTotal;
       }
     } else if (state === 'TELL') {
-      group.scale.setScalar(1 + 0.06 * Math.sin(performance.now() * 0.02));
-      if (timer <= 0) { strike(attackKind); state = 'ACTIVE'; timer = 0.25; group.scale.setScalar(1); }
+      var reachR = attackKind === 'SLAM' ? 4.2 : 3.6;
+      var prog = Math.max(0.05, Math.min(1, 1 - timer / (tellTotal || 1)));
+      var gyB = (window.__hillY ? window.__hillY(group.position.x, group.position.z) : 0) + 0.08;
+      aoeOuter.visible = true; aoeFill.visible = true;
+      aoeOuter.position.set(group.position.x, gyB, group.position.z);
+      aoeFill.position.set(group.position.x, gyB - 0.01, group.position.z);
+      aoeOuter.scale.setScalar(reachR);
+      aoeFill.scale.setScalar(reachR * prog);
+      group.scale.setScalar(1 + 0.05 * Math.sin(now * 0.03));
+      if (timer <= 0) {
+        strike(attackKind);
+        state = 'ACTIVE'; timer = 0.22;
+        group.scale.setScalar(1);
+        aoeOuter.visible = false; aoeFill.visible = false;
+      }
     } else if (state === 'ACTIVE') {
-      if (timer <= 0) { state = 'RECOVER'; timer = phase >= 3 ? 2.4 : 3.2; }
+      if (timer <= 0) { state = 'RECOVER'; timer = phase >= 3 ? 1.8 : 2.5; }
     } else if (state === 'RECOVER') {
       if (timer <= 0) state = 'CHASE';
     }
     refresh();
-  }, 100);
+  }, 80);
 
   window.__bossState = function () {
-    return { hp: hp, phase: phase, state: state, defeated: defeated, children: group.children.length, pos: group.position.toArray() };
+    return { hp: hp, maxHp: maxHp, phase: phase, stagger: Math.round(stagger), state: state, defeated: defeated, children: group.children.length, pos: group.position.toArray() };
   };
   window.__BOSS = { group: group, hit: hit };
   refresh();
@@ -26082,48 +26587,39 @@ if (!window.__GAME && consented) {
     var fgr = 10.0 + 16.0 * Math.pow(Math.random(), 0.8);
     var fgx = Math.cos(fga) * fgr;
     var fgz = Math.sin(fga) * fgr;
+    if (fgx > -6.8 && fgx < 7.2 && fgz > -29 && fgz < 10.5) { fgx = 14 + Math.cos(fga) * 6; fgz = -18 + Math.sin(fga) * 6; }
     var fgs = rand(0.5, 0.95) * Math.max(0.55, 1 - fgr * 0.045);
     farGrassData.push({ x: fgx, y: hillY(fgx, fgz) - 0.01, z: fgz, yaw: rand(0, 6.283), s: Math.max(0.14, fgs), sx: rand(0.8, 1.2), sy: rand(0.8, 1.35), phase: rand(0, 6.283), amp: rand(0.06, 0.12) });
     farGrassMesh.setColorAt(fgi, farTints[fgi % farTints.length]);
   }
   if (farGrassMesh.instanceColor) farGrassMesh.instanceColor.needsUpdate = true;
 
-  /* cỏ có bông: ngọn cao mảnh + 1 bông lúa mì nhỏ trên đỉnh */
-  var seedGeo = (function () {
-    var stemCopy = bladeGeo.clone();
-    var parts = [{ geo: stemCopy, matrix: new THREE.Matrix4().makeScale(0.55, 1.15, 1) }];
-    var spike = new THREE.ConeGeometry(0.016, 0.085, 6);
-    spike.translate(0, -0.02, 0);
-    var spc = new Float32Array(spike.attributes.position.count * 3);
-    for (var spj = 0; spj < spike.attributes.position.count; spj++) { spc[spj * 3] = 0.82; spc[spj * 3 + 1] = 0.6; spc[spj * 3 + 2] = 0.28; }
-    spike.setAttribute('color', new THREE.BufferAttribute(spc, 3));
-    parts.push({ geo: spike, matrix: new THREE.Matrix4().makeTranslation(0.01, 0.42, 0.01) });
-    return mergeGeos(parts);
-  })();
-  var SEED_N = isMobile || LOW ? 24 : 44;
-  var seedMesh = new THREE.InstancedMesh(seedGeo, bladeMat, SEED_N);
-  seedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  seedMesh.frustumCulled = false;
-  gardenRoot.add(seedMesh);
-  liteMeshes.push([seedMesh, 0.55]);
+  /* cỏ có bông + cỏ viền thiệp: chỉ dùng cho chế độ thiệp cưới, KHÔNG mọc trên sân game */
+  var SEED_N = window.__GAME ? 0 : (isMobile || LOW ? 24 : 44);
+  var seedGeo = bladeGeo;
+  var seedMesh = new THREE.InstancedMesh(seedGeo, bladeMat, Math.max(1, SEED_N));
   var seedData = [];
-  var seedTints = [new THREE.Color('#f2e3b8'), new THREE.Color('#e4d2a0'), new THREE.Color('#d9cba6'), new THREE.Color('#efe6c8')];
-  for (var sdi = 0; sdi < SEED_N; sdi++) {
-    var anch2 = grassAnchor[(Math.random() * grassAnchor.length) | 0];
-    var sa2 = rand(0, 6.283), sr2 = rand(0.1, 0.75);
-    var sdx = anch2[0] + Math.cos(sa2) * sr2;
-    var sdz = anch2[1] + Math.sin(sa2) * sr2 * 0.75;
-    seedData.push({ x: sdx, y: hillY(sdx, sdz) - 0.01, z: sdz, yaw: rand(0, 6.283), s: rand(0.4, 0.72), sx: rand(0.8, 1.2), sy: rand(0.7, 1.05), phase: rand(0, 6.283), amp: rand(0.08, 0.15) });
-    seedMesh.setColorAt(sdi, seedTints[sdi % seedTints.length]);
-  }
-  if (seedMesh.instanceColor) seedMesh.instanceColor.needsUpdate = true;
-
-  /* nhánh cỏ viền khung: ghi thẳng vào grassData để sống qua tick */
-  for (var fbi = 0; fbi < 12; fbi++) {
-    var fbx = fbi < 7 ? rand(-6.4, -4.6) : rand(-0.6, 2.2);
-    var fbz = rand(1.5, 2.6);
-    grassData[GRASS_BASE + fbi * 3] = { x: fbx, y: hillY(fbx, fbz) - 0.01, z: fbz, yaw: rand(0, 6.283), s: rand(0.95, 1.3), sx: rand(0.85, 1.2), sy: rand(1.0, 1.3), phase: rand(0, 6.283), amp: rand(0.09, 0.16) };
-    grassMesh.setColorAt(GRASS_N - 1 - fbi, grassTints[(fbi + 1) % grassTints.length]);
+  if (!window.__GAME) {
+    seedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    seedMesh.frustumCulled = false;
+    gardenRoot.add(seedMesh);
+    liteMeshes.push([seedMesh, 0.55]);
+    var seedTints = [new THREE.Color('#f2e3b8'), new THREE.Color('#e4d2a0'), new THREE.Color('#d9cba6'), new THREE.Color('#efe6c8')];
+    for (var sdi = 0; sdi < SEED_N; sdi++) {
+      var anch2 = grassAnchor[(Math.random() * grassAnchor.length) | 0];
+      var sa2 = rand(0, 6.283), sr2 = rand(0.1, 0.75);
+      var sdx = anch2[0] + Math.cos(sa2) * sr2;
+      var sdz = anch2[1] + Math.sin(sa2) * sr2 * 0.75;
+      seedData.push({ x: sdx, y: hillY(sdx, sdz) - 0.01, z: sdz, yaw: rand(0, 6.283), s: rand(0.4, 0.72), sx: rand(0.8, 1.2), sy: rand(0.7, 1.05), phase: rand(0, 6.283), amp: rand(0.08, 0.15) });
+      seedMesh.setColorAt(sdi, seedTints[sdi % seedTints.length]);
+    }
+    if (seedMesh.instanceColor) seedMesh.instanceColor.needsUpdate = true;
+    for (var fbi = 0; fbi < 12; fbi++) {
+      var fbx = fbi < 7 ? rand(-6.4, -4.6) : rand(-0.6, 2.2);
+      var fbz = rand(1.5, 2.6);
+      grassData[GRASS_BASE + fbi * 3] = { x: fbx, y: hillY(fbx, fbz) - 0.01, z: fbz, yaw: rand(0, 6.283), s: rand(0.95, 1.3), sx: rand(0.85, 1.2), sy: rand(1.0, 1.3), phase: rand(0, 6.283), amp: rand(0.09, 0.16) };
+      grassMesh.setColorAt(GRASS_N - 1 - fbi, grassTints[(fbi + 1) % grassTints.length]);
+    }
   }
   grassMesh.instanceMatrix.needsUpdate = true;
   if (grassMesh.instanceColor) grassMesh.instanceColor.needsUpdate = true;
@@ -27357,6 +27853,8 @@ if (!window.__GAME && consented) {
 
     if (window.__playerTick) window.__playerTick();
     if (window.__updateNpcMixers) window.__updateNpcMixers(dtRaw);
+    if (window.__updateEnemyMixers) window.__updateEnemyMixers(dtRaw);
+    if (window.__updateCombatVfx) window.__updateCombatVfx(dtRaw);
     if (window.__DAIVIET_MODELS && window.__DAIVIET_MODELS.update) window.__DAIVIET_MODELS.update(dtRaw);
     if (window.__waterUniforms) window.__waterUniforms.uTime.value = t;
     if (window.__creekTex) window.__creekTex.offset.y -= dtRaw * 0.14;
@@ -27687,6 +28185,13 @@ if (!window.__GAME && consented) {
           gardenRoot.add(rdL);
         }
       }
+      /* Cặp liễu rủ CC0 soi bóng bên bờ Hồ Gương */
+      [[-4.8, 21.8, 7.6, 0.8], [13.2, 20.4, 8.2, 2.5]].forEach(function (wl) {
+        var wm = window.__REAL_ASSETS.makeModel('willow', { height: wl[2] });
+        wm.position.set(wl[0], hillY(wl[0], wl[1]) - 0.15, wl[1]);
+        wm.rotation.y = wl[3];
+        gardenRoot.add(wm);
+      });
     }
     var ripples = [];
     window.__lakeRipples = ripples;
@@ -28495,17 +29000,22 @@ if (!window.__GAME && consented) {
     window.__creekMesh = creekW;
     var DM = window.__DAIVIET_MODELS;
     if (DM) {
-      var brY = hillY(-7.5, -5.5) - 0.1;
+      var brY = hillY(-7.5, -5.5) - 0.35;
       var brVN = DM.makeCauNgoiBridge(0.48);
       brVN.position.set(-7.5, brY, -5.5);
       brVN.rotation.y = 0.45;
       gardenRoot.add(brVN);
 
-      /* Mố trụ đá rêu cắm sâu xuống đất hai đầu Cầu Ngói để không bao giờ bị hở đáy khi nhìn từ Hồ Gương */
-      var pierMat = new THREE.MeshStandardMaterial({ color: 0x626056, roughness: 0.94, flatShading: true });
+      /* Bệ đá rêu liền khối & hai mố trụ cắm sâu xuống sườn đồi dưới Cầu Ngói */
+      var pierMat = new THREE.MeshStandardMaterial({ color: 0x5c5b50, roughness: 0.94, flatShading: true });
+      var spanBase = new THREE.Mesh(new THREE.BoxGeometry(7.8, 5.2, 2.6), pierMat);
+      spanBase.position.set(-7.5, brY - 2.45, -5.5);
+      spanBase.rotation.y = 0.45;
+      spanBase.receiveShadow = true;
+      gardenRoot.add(spanBase);
       [-1, 1].forEach(function (side) {
-        var pier = new THREE.Mesh(new THREE.BoxGeometry(2.6, 5.2, 2.6), pierMat);
-        pier.position.set(-7.5 + Math.cos(0.45) * side * 2.55, brY - 2.4, -5.5 - Math.sin(0.45) * side * 2.55);
+        var pier = new THREE.Mesh(new THREE.BoxGeometry(2.8, 5.6, 2.8), pierMat);
+        pier.position.set(-7.5 + Math.cos(0.45) * side * 2.85, brY - 2.5, -5.5 - Math.sin(0.45) * side * 2.85);
         pier.rotation.y = 0.45;
         pier.castShadow = true;
         pier.receiveShadow = true;
@@ -29077,7 +29587,7 @@ if (!window.__GAME && consented) {
       var inOcean = region === 'ocean' || coastD < -0.5;
       var isDryRock = region === 'r03' || region === 'r05' || region === 'r06' || region === 'r07';
       function inCourtyard(cx, cz) {
-        return (Math.abs(cx) < 5.6 && cz > -29 && cz < 10.0) || (cx > -3.5 && cx < 6.8 && cz > 0.0 && cz < 10.0);
+        return (Math.abs(cx) < 6.2 && cz > -29 && cz < 10.5) || (cx > -4.2 && cx < 7.2 && cz > -0.5 && cz < 10.5);
       }
       /* cỏ instanced: mật độ theo 8 hệ sinh thái Đại Việt; ngoài biển và trên sân đá không mọc cỏ */
       var grassDensity = inOcean ? 0 : (region === 'r06' ? 0.12 : (region === 'r03' || region === 'r05' ? 0.28 : (region === 'r02' || region === 'r04' ? 0.88 : 1)));
