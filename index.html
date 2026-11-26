@@ -27828,7 +27828,9 @@ if (!window.__GAME && consented) {
     }
     var dF2 = window.__dayF === undefined ? 1 : window.__dayF;
     if (window.__cabinWin) window.__cabinWin.emissiveIntensity = 0.15 + (1 - dF2) * 1.35;
-    if (window.__lakeSurf) window.__lakeSurf.material.color.setHSL(0.52, 0.62, 0.16 + 0.08 * dF2);
+    if (window.__lakeSurf && window.__lakeSurf.material && window.__lakeSurf.material.color) {
+      window.__lakeSurf.material.color.setHSL(0.52, 0.62, 0.16 + 0.08 * dF2);
+    }
   }
 
   /* ---- BÔNG LAU (cottonweed): cụm bông trắng để gió thổi — chỉ spawn gần hang/xa sân ---- */
