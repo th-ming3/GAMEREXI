@@ -73,7 +73,7 @@ def wrap(js):
 
 
 # ---- 1) data script: config + textures (base64 tu manifest)
-config = read('src/core/config.js').strip() + '\n' + read('src/game/region-model.js').strip()
+config = read('src/core/config.js').strip() + '\n' + read('src/game/world-map-data.js').strip() + '\n' + read('src/game/region-model.js').strip()
 textures = json.loads(read('assets/textures.json'))
 if WEB:
     tex_idx = 0
@@ -191,8 +191,8 @@ def build(shell_path, data, scripts):
 if WEB:
     game_html = build('src/shells/game.html', data_tag, vendor + app_game)
     write_dist('game.html', game_html)
+    write_dist('index.html', game_html)   # root = GAME (nguoi choi vao la choi)
     invite = build('src/shells/invite.html', data_tag, vendor + app_invite)
-    write_dist('index.html', invite)
     write_dist('invite.html', invite)
     write_dist('done.html', invite)
     write_dist('manifest.webmanifest', read('src/shells/manifest.webmanifest'))

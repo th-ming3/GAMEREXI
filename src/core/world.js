@@ -3291,7 +3291,7 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
      huỷ (dispose) khi xa, cull ngoài frustum + tầm nhìn → bộ nhớ/draw-call không tăng dù map rộng cỡ nào */
   (function buildChunkSystem() {
     if (!window.__GAME) return;
-    var CHSZ = 10, GEN_R = 56, KILL_R = 66, VIEW_R = 48, CENTER_R = 18;
+    var CHSZ = 14, GEN_R = 92, KILL_R = 112, VIEW_R = 84, CENTER_R = 18;
     var chunkMap = {}, chunkList = [], genQueue = [], lastGenCX = NaN, lastGenCZ = NaN;
     /* ---- ĐƯỜNG ĐẤT: hàm world-space xác định — mọi chunk vẽ khớp liền mạch ---- */
     function pathZ(x) { return 15.5 + 5.2 * Math.sin(x * 0.085) + 3.1 * Math.sin(x * 0.041 + 2.0) - 12.5 * Math.exp(-(x*x)/70); }
@@ -3528,13 +3528,17 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
     })();
     var stoneMatC = new THREE.MeshStandardMaterial({ color: 0x6f6a5e, roughness: 0.98, flatShading: false });
     var stoneMatC2 = new THREE.MeshStandardMaterial({ color: 0x5d574b, roughness: 0.95, flatShading: false });
-    var canyonStoneA = new THREE.MeshStandardMaterial({ color: 0x835238, roughness: 0.96, flatShading: false });
-    var canyonStoneB = new THREE.MeshStandardMaterial({ color: 0x634131, roughness: 0.98, flatShading: false });
+    var canyonStoneA = new THREE.MeshStandardMaterial({ color: 0xa64e2e, roughness: 0.96, flatShading: false });
+    var canyonStoneB = new THREE.MeshStandardMaterial({ color: 0x7a3824, roughness: 0.98, flatShading: false });
     var forestStoneA = new THREE.MeshStandardMaterial({ color: 0x4c5b4c, roughness: 0.99, flatShading: false });
     var borderStoneA = new THREE.MeshStandardMaterial({ color: 0x666963, roughness: 0.98, flatShading: false });
+    var obsidianStone = new THREE.MeshStandardMaterial({ color: 0x242126, roughness: 0.92, flatShading: false });
+    var snowStone = new THREE.MeshStandardMaterial({ color: 0xbec9d1, roughness: 0.88, flatShading: false });
     function regionStone(region, alternate) {
-      if (region === 'canyon') return alternate ? canyonStoneB : canyonStoneA;
-      if (region === 'forest') return alternate ? stoneMatC2 : forestStoneA;
+      if (region === 'r03' || region === 'canyon') return alternate ? canyonStoneB : canyonStoneA;
+      if (region === 'r02' || region === 'r04' || region === 'forest') return alternate ? stoneMatC2 : forestStoneA;
+      if (region === 'r06') return obsidianStone;
+      if (region === 'r05') return alternate ? borderStoneA : snowStone;
       if (region === 'border') return alternate ? stoneMatC2 : borderStoneA;
       return alternate ? stoneMatC2 : stoneMatC;
     }
@@ -3784,30 +3788,35 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
       var tile = new THREE.Mesh(gg, groundMat);
       tile.receiveShadow = !LOW;
       grp.add(tile);
-      /* cỏ instanced: mật độ theo hệ sinh thái, hẻm đá và núi biên thưa hơn */
-      var grassDensity = region === 'canyon' ? 0.34 : (region === 'border' ? 0.24 : (region === 'forest' ? 0.86 : (region === 'lake' ? 0.58 : 1)));
-      var nB2 = Math.max(14, Math.round((LOW ? 42 : 70) * grassDensity));
-      var grassI = new THREE.InstancedMesh(bladeGeo, bladeMat, nB2);
+      var coastD = (window.__REGION && window.__REGION.coastDist) ? window.__REGION.coastDist(midX, midZ) : 99;
+      var inOcean = region === 'ocean' || coastD < -0.5;
+      var isDryRock = region === 'r03' || region === 'r05' || region === 'r06' || region === 'r07';
+      /* cỏ instanced: mật độ theo 8 hệ sinh thái Đại Việt; ngoài biển không mọc cỏ */
+      var grassDensity = inOcean ? 0 : (region === 'r06' ? 0.12 : (region === 'r03' || region === 'r05' ? 0.28 : (region === 'r02' || region === 'r04' ? 0.88 : 1)));
+      var nB2 = inOcean ? 0 : Math.max(10, Math.round((LOW ? 36 : 64) * grassDensity));
+      var grassI = new THREE.InstancedMesh(bladeGeo, bladeMat, Math.max(1, nB2));
       var blades = [];
       for (var bi = 0; bi < nB2; bi++) {
         var gx2 = bx + rng() * CHSZ, gz2 = bz + rng() * CHSZ;
-        for (var gr2 = 0; gr2 < 12 && (onPathW(gx2, gz2, 1.3) || lakeDepth(gx2, gz2) > 0.07); gr2++) { gx2 = bx + rng() * CHSZ; gz2 = bz + rng() * CHSZ; }
+        for (var gr2 = 0; gr2 < 10 && (onPathW(gx2, gz2, 1.3) || lakeDepth(gx2, gz2) > 0.07); gr2++) { gx2 = bx + rng() * CHSZ; gz2 = bz + rng() * CHSZ; }
         if (lakeDepth(gx2, gz2) > 0.07 || Math.hypot(gx2,gz2)<10.0) continue;
+        if (window.__REGION && window.__REGION.coastDist && window.__REGION.coastDist(gx2, gz2) < 1.8) continue;
         var tall = rng() < 0.12;
         blades.push({ x: gx2, y: hillY(gx2, gz2) - 0.01, z: gz2, yaw: rng() * 6.283, s: tall ? 1.35 + rng() * 0.5 : 0.55 + rng() * 0.7, sx: 0.75 + rng() * 0.55, sy: 0.62 + rng() * 0.6, phase: rng() * 6.283, amp: 0.07 + rng() * 0.11 });
       }
       grassI.userData.blades = blades;
       if (window.__REAL_ASSETS) window.__REAL_ASSETS.replaceInstanced('grass', grassI, blades.length);
-      grp.add(grassI);
+      if (blades.length > 0) grp.add(grassI);
       /* hoa dại (đăng ký để nhiệm vụ hái hoa) + đá xác định theo seed */
       var arrF2 = [];
-      var flowerBase = region === 'meadow' ? 4 : (region === 'lake' ? 2 : (region === 'forest' ? 2 : 0));
-      var flowerRange = region === 'meadow' ? 7 : (region === 'canyon' || region === 'border' ? 1 : 3);
+      var flowerBase = inOcean ? 0 : (region === 'r01' || region === 'r08' ? 4 : (region === 'r02' || region === 'r04' ? 2 : 0));
+      var flowerRange = inOcean ? 0 : (region === 'r01' ? 7 : (isDryRock ? 1 : 3));
       var nf2 = flowerBase + (rng() * flowerRange | 0);
       for (var fi = 0; fi < nf2; fi++) {
         var fx = bx + rng() * CHSZ, fz = bz + rng() * CHSZ;
-        for (var fr2 = 0; fr2 < 12 && (onPathW(fx, fz, 1.15) || nearDen(fx, fz, 3.2) || Math.hypot(fx-0.4,fz-6.8)<2.3 || lakeDepth(fx, fz) > 0.1); fr2++) { fx = bx + rng() * CHSZ; fz = bz + rng() * CHSZ; }
+        for (var fr2 = 0; fr2 < 10 && (onPathW(fx, fz, 1.15) || nearDen(fx, fz, 3.2) || Math.hypot(fx-0.4,fz-6.8)<2.3 || lakeDepth(fx, fz) > 0.1); fr2++) { fx = bx + rng() * CHSZ; fz = bz + rng() * CHSZ; }
         if (lakeDepth(fx, fz) > 0.1) continue;
+        if (window.__REGION && window.__REGION.coastDist && window.__REGION.coastDist(fx, fz) < 2.5) continue;
         var fy = hillY(fx, fz);
         var wfg = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel('flower', 0.42) : new THREE.Group();
         wfg.position.set(fx, fy - 0.01, fz);
@@ -3815,9 +3824,9 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
         grp.add(wfg);
         arrF2.push({ h: wfg, s: wfg });
       }
-      /* cây: rừng dày và cao, hẻm đá chỉ có cây chịu hạn thưa */
-      var treeChance = region === 'forest' ? 0.92 : (region === 'meadow' ? 0.55 : (region === 'lake' ? 0.16 : 0.06));
-      var nTr = rng() < treeChance ? (region === 'forest' && rng() < 0.35 ? 2 : 1) : 0;
+      /* cây: phân bố theo 8 khu vực Đại Việt */
+      var treeChance = inOcean ? 0 : (region === 'r02' || region === 'r04' ? 0.92 : (region === 'r01' ? 0.58 : (region === 'r05' ? 0.42 : (region === 'r07' ? 0.35 : 0.10))));
+      var nTr = rng() < treeChance ? ((region === 'r02' || region === 'r04') && rng() < 0.42 ? 2 : 1) : 0;
       var treeAdded = 0, treesArr = [];
       for (var ti2 = 0; ti2 < nTr; ti2++) {
         var tx2 = bx + rng() * CHSZ, tz2 = bz + rng() * CHSZ;
@@ -3825,10 +3834,12 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
         if (onPathW(tx2, tz2, 2.0) || nearDen(tx2, tz2, 3.6) || lakeDepth(tx2, tz2) > 0.08
           || Math.hypot(tx2 - 26, tz2 - 9) < 5.5 || Math.hypot(tx2 + 10.5, tz2 + 27) < 4.5 || Math.hypot(tx2 - 7, tz2 + 20) < 4.5
           || Math.hypot(tx2-.4,tz2-6.8)<11 || (ppTree&&Math.hypot(tx2-ppTree.x,tz2-ppTree.z)<10)) continue;
+        if (window.__REGION && window.__REGION.coastDist && window.__REGION.coastDist(tx2, tz2) < 3.0) continue;
         var ty2 = hillY(tx2, tz2);
-        var tsc = region === 'forest' ? 2.15 + rng() * 1.15 : (region === 'canyon' ? 0.85 + rng() * 0.55 : 1.35 + rng() * 0.85);
-        var treeKind = region === 'forest' ? (rng() < 0.32 ? rng() * 0.22 : 0.68 + rng() * 0.32)
-          : (region === 'canyon' ? rng() * 0.18 : (region === 'lake' && rng() < 0.45 ? 0.25 + rng() * 0.12 : rng()));
+        if (ty2 < -0.25) continue;
+        var tsc = region === 'r02' ? 2.25 + rng() * 1.2 : (region === 'r05' ? 1.5 + rng() * 0.9 : (region === 'r03' || region === 'r06' ? 0.9 + rng() * 0.5 : 1.35 + rng() * 0.85));
+        var treeKind = region === 'r05' ? rng() * 0.22
+          : (region === 'r02' ? 0.4 + rng() * 0.6 : (region === 'r04' ? 0.55 + rng() * 0.45 : rng()));
         var treeName = treeKind < 0.24 ? 'pine' : (treeKind < 0.39 ? 'blossom' : (treeKind < 0.55 ? 'broadleaf' : (treeKind < 0.7 ? 'kTreeDetailed' : (treeKind < 0.85 ? 'kTreeDefault' : (treeKind < 0.94 ? 'kTreeFat' : 'kTreeCone')))));
         var treeG = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel(treeName, { height: tsc * 4.4 }) : new THREE.Group();
         treeG.userData.isTree3D = true;
@@ -3845,25 +3856,29 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
         shC.position.set(tx2, ty2 + 0.015, tz2);
         grp.add(shC);
       }
-      /* props thật theo vùng — mỗi chunk có 1-3 vật trang trí GLB */
+      /* props thật theo 8 khu vực Đại Việt */
       var props = [];
-      if (region === 'meadow') props = [['bench', 0.4, 0.55], ['sign', 0.3, 0.5], ['bush', 0.85, 0.8], ['fern', 0.7, 0.6], ['campfire', 0.1, 1.2]];
-      else if (region === 'forest') props = [['log', 0.75, 0.9], ['kLog', 0.5, 1.1], ['shroom', 0.65, 0.5], ['kShroom', 0.5, 0.7], ['fern', 0.9, 0.7], ['thorn', 0.45, 0.55], ['bush', 0.55, 0.7], ['kBush', 0.6, 0.9]];
-      else if (region === 'lake') props = [['pondStone', 1.1, 0.5], ['pondStone2', 0.85, 0.45], ['cattailClump', 0.95, 0.75], ['reedClump', 0.75, 0.6]];
-      else if (region === 'canyon') props = [['cliff', 0.32, 2.4], ['kCliff', 0.5, 2.0], ['kopje', 0.28, 2.0], ['erratic', 0.5, 0.9], ['kRockA', 0.6, 1.2], ['kRockC', 0.5, 1.0], ['thorn', 0.55, 0.5]];
-      else if (region === 'border') props = [['pillar', 0.28, 1.5], ['runeStone', 0.24, 0.8], ['erratic', 0.4, 0.8]];
-      var maxDepth = region === 'lake' ? 0.4 : 0.1;
-      for (var pi = 0; pi < props.length; pi++) {
+      if (region === 'r01') props = [['bench', 0.35, 0.55], ['sign', 0.3, 0.5], ['bush', 0.8, 0.8], ['fern', 0.65, 0.6], ['campfire', 0.1, 1.2]];
+      else if (region === 'r02') props = [['log', 0.7, 0.9], ['kLog', 0.5, 1.1], ['shroom', 0.6, 0.5], ['fern', 0.85, 0.7], ['kBush', 0.6, 0.9], ['kCliff', 0.35, 2.2]];
+      else if (region === 'r03') props = [['cliff', 0.35, 2.4], ['kCliff', 0.5, 2.0], ['kopje', 0.32, 2.0], ['kRockA', 0.65, 1.2], ['thorn', 0.5, 0.5], ['pillar', 0.25, 1.6]];
+      else if (region === 'r04') props = [['pondStone', 0.9, 0.5], ['cattailClump', 0.95, 0.75], ['reedClump', 0.8, 0.6], ['ruins', 0.15, 2.2], ['log', 0.4, 0.9]];
+      else if (region === 'r05') props = [['kRockC', 0.55, 1.2], ['erratic', 0.5, 0.9], ['pillar', 0.28, 1.5], ['runeStone', 0.25, 0.8]];
+      else if (region === 'r06') props = [['kRockA', 0.7, 1.4], ['kCliff', 0.45, 2.2], ['erratic', 0.6, 1.1], ['campfire', 0.25, 1.3]];
+      else if (region === 'r07') props = [['kCliff', 0.45, 2.2], ['kopje', 0.35, 2.0], ['fern', 0.7, 0.65], ['shroom', 0.6, 0.5], ['pondStone2', 0.6, 0.5]];
+      else if (region === 'r08') props = [['pillar', 0.35, 1.6], ['runeStone', 0.35, 0.9], ['bush', 0.6, 0.7]];
+      var maxDepth = region === 'r04' ? 0.5 : 0.1;
+      for (var pi = 0; pi < props.length && !inOcean; pi++) {
         if (rng() > props[pi][1]) continue;
         var px2 = bx + rng() * CHSZ, pz2 = bz + rng() * CHSZ;
         if (onPathW(px2, pz2, 1.7) || nearDen(px2, pz2, 3.4) || lakeDepth(px2, pz2) > maxDepth) continue;
+        if (window.__REGION && window.__REGION.coastDist && window.__REGION.coastDist(px2, pz2) < 1.5) continue;
         if (Math.hypot(px2 - 0.4, pz2 - 6.8) < 3.2 || Math.hypot(px2 - 26, pz2 - 9) < 5.2 || Math.hypot(px2 + 10.5, pz2 + 27) < 5 || Math.hypot(px2 - 7, pz2 + 20) < 5) continue;
         var pm = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel(props[pi][0], props[pi][2]) : new THREE.Group();
         pm.position.set(px2, hillY(px2, pz2) - 0.03, pz2);
         pm.rotation.y = rng() * 6.283;
         grp.add(pm);
       }
-      var ns2 = region === 'canyon' ? 4 + (rng() * 5 | 0) : (region === 'border' ? 3 + (rng() * 4 | 0) : (region === 'meadow' ? 3 + (rng() * 4 | 0) : (rng() * 3 | 0)));
+      var ns2 = inOcean ? 0 : (isDryRock ? 4 + (rng() * 5 | 0) : (region === 'r01' ? 3 + (rng() * 4 | 0) : (rng() * 3 | 0)));
       for (var si = 0; si < ns2; si++) {
         var sx2 = bx + rng() * CHSZ, sz2 = bz + rng() * CHSZ;
         for (var sr2 = 0; sr2 < 5 && (onPathW(sx2, sz2, 1.5) || nearDen(sx2, sz2, 3.2) || lakeDepth(sx2, sz2) > 0.12); sr2++) { sx2 = bx + rng() * CHSZ; sz2 = bz + rng() * CHSZ; }
@@ -4114,8 +4129,8 @@ var posE = egb.geometry.attributes.position, baseE = egretGeoBase;
         }
         genQueue.sort(function (a2, b2) { return a2.d - b2.d; });
       }
-      var budget = LOW ? 2 : 4;
-      while (genQueue.length && budget > 0 && chunkList.length < 48) {
+      var budget = LOW ? 3 : 5;
+      while (genQueue.length && budget > 0 && chunkList.length < 76) {
         var nextChunk = genQueue.shift();
         if (!chunkMap[nextChunk.cx + '|' + nextChunk.cz]) buildChunk(nextChunk.cx, nextChunk.cz);
         budget--;

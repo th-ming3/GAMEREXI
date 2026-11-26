@@ -1,4 +1,4 @@
-/* Tầng địa hình: một nguồn cao độ/màu đất cho base terrain và mọi chunk. */
+/* Tầng địa hình: một nguồn cao độ/màu đất cho base terrain và mọi chunk toàn lục địa Đại Việt. */
 window.__createTerrain = function (context) {
   var gardenRoot = context.gardenRoot;
   var LAKE = context.LAKE, LAKE_DEPTH = context.LAKE_DEPTH;
@@ -22,28 +22,33 @@ window.__createTerrain = function (context) {
   }
   window.__creekDepth = creekDepth;
 
+  /* Độ cao đảo bay Khu 08 (Tiên Giới Đảo Bay) khi nhân vật đứng trên đảo bay */
+  function skyIsleY(x, z) {
+    if (!window.__REGION || !window.__REGION.skyIsleDist) return null;
+    var sd = window.__REGION.skyIsleDist(x, z);
+    if (sd < -0.5) return null;
+    return 20.0 + 0.65 * Math.sin(x * 0.14) * Math.cos(z * 0.14) + Math.min(2.2, sd * 0.28);
+  }
+
   function hillY(x, z) {
-    var h = 0.42 * Math.sin(x * 0.45 + 1.3) * Math.cos(z * 0.5)
-          + 0.22 * Math.sin(x * 1.7 + z * 1.3)
-          + 0.3 * Math.sin(x * 0.9 - z * 1.1 + 2.2)
-          + smooth(-z, 2.5, 9) * 0.75;
     var rC = Math.sqrt(x * x + z * z);
-    var wild = smooth(rC, 7, 24);
+    var spawnMask = 1 - smooth(rC, 18, 32);
     var fl = 1;
-    var SPOTS = hillY._fl || (hillY._fl = [[0.4, 6.8, 8], [26, 9, 7], [-27.5, -9.5, 5.5], [-18, 6, 5.5], [-30, -12, 6.5], [-10.5, -27, 6.5], [7, -20, 6.5], [4.5, 17, 9.2]]);
+    var SPOTS = hillY._fl || (hillY._fl = [[0.4, 6.8, 8], [26, 9, 7], [4.5, 17, 9.2]]);
     for (var fi = 0; fi < SPOTS.length; fi++) {
       var dxS = x - SPOTS[fi][0], dzS = z - SPOTS[fi][1];
       fl = Math.min(fl, smooth(Math.sqrt(dxS * dxS + dzS * dzS), SPOTS[fi][2] * 0.5, SPOTS[fi][2]));
     }
     fl = Math.min(fl, 1 - Math.min(1, lakeDepth(x, z) * 2.2));
-    h -= creekDepth(x, z) * 1.0 * fl;
-    if (wild > 0.002) {
-      var extra = 2.4 * Math.sin(x * 0.1 + 2.1) * Math.cos(z * 0.12 + 0.7)
-        + 0.8 * Math.sin(x * 0.21 + z * 0.17 + 1.3)
-        + 0.55 * Math.sin(x * 0.33 - z * 0.27 + 0.5) + 0.6;
-      h -= lakeDepth(x, z) * LAKE_DEPTH;
-      var feature = window.__REGION ? window.__REGION.heightAt(x, z) : extra;
-      h += feature * fl;
+
+    var base = window.__REGION ? window.__REGION.heightAt(x, z) : 0;
+    var micro = (0.14 * Math.sin(x * 0.45 + 1.3) * Math.cos(z * 0.5)
+      + 0.08 * Math.sin(x * 1.4 + z * 1.1)) * fl;
+    var h = base + micro;
+
+    if (spawnMask > 0.002) {
+      h -= creekDepth(x, z) * 0.9 * fl * spawnMask;
+      h -= lakeDepth(x, z) * LAKE_DEPTH * spawnMask;
     }
     return h;
   }
@@ -62,7 +67,7 @@ window.__createTerrain = function (context) {
     return target;
   }
 
-  /* Lưới dày để tránh các tam giác khổng lồ gây nếp/zigzag trên mặt đất. */
+  /* Lưới trung tâm Kinh Kỳ (bán kính 30m quanh gốc spawn) */
   function buildGroundGeometry() {
     var step = 0.65, min = -30, max = 30;
     var positions = [], colors = [], uvs = [], indices = [], lookup = {};
@@ -100,7 +105,51 @@ window.__createTerrain = function (context) {
     return geo;
   }
 
+  /* Mặt biển Đông Hải & hệ thống đảo bay Tiên Giới (Khu 08) */
+  function buildWorldWaterAndSky() {
+    var seaY = window.__REGION ? window.__REGION.SEA_LEVEL : -0.55;
+    var seaGeo = new THREE.PlaneGeometry(760, 560);
+    seaGeo.rotateX(-Math.PI / 2);
+    var seaMat = new THREE.MeshStandardMaterial({
+      color: 0x2c7d8f, roughness: 0.22, metalness: 0.15, transparent: true, opacity: 0.84
+    });
+    var seaMesh = new THREE.Mesh(seaGeo, seaMat);
+    seaMesh.position.set(130, seaY, -20);
+    seaMesh.receiveShadow = true;
+    gardenRoot.add(seaMesh);
+
+    if (window.__REGION && window.__REGION.DATA && window.__REGION.DATA.skyPolys) {
+      var skyTopMat = new THREE.MeshStandardMaterial({ color: 0x99b86c, roughness: 0.85 });
+      var skyRockMat = new THREE.MeshStandardMaterial({ color: 0x6b6f6a, roughness: 0.92, flatShading: true });
+      window.__REGION.DATA.skyPolys.forEach(function (pts) {
+        if (pts.length < 3) return;
+        var shape = new THREE.Shape();
+        shape.moveTo(pts[0][0], -pts[0][1]);
+        for (var i = 1; i < pts.length; i++) shape.lineTo(pts[i][0], -pts[i][1]);
+        shape.closePath();
+        var topGeo = new THREE.ExtrudeGeometry(shape, { depth: 1.6, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.6, bevelSegments: 2 });
+        topGeo.rotateX(-Math.PI / 2);
+        var topMesh = new THREE.Mesh(topGeo, skyTopMat);
+        topMesh.position.y = 19.2;
+        gardenRoot.add(topMesh);
+
+        var cx = 0, cz = 0;
+        pts.forEach(function (p) { cx += p[0]; cz += p[1]; });
+        cx /= pts.length; cz /= pts.length;
+        var rad = 0;
+        pts.forEach(function (p) { rad = Math.max(rad, Math.hypot(p[0] - cx, p[1] - cz)); });
+        var coneGeo = new THREE.ConeGeometry(Math.max(2, rad * 0.78), Math.max(4, rad * 0.95), 7);
+        coneGeo.rotateX(Math.PI);
+        var coneMesh = new THREE.Mesh(coneGeo, skyRockMat);
+        coneMesh.position.set(cx, 19.2 - Math.max(2, rad * 0.48), cz);
+        gardenRoot.add(coneMesh);
+      });
+    }
+  }
+  buildWorldWaterAndSky();
+
   window.__hillY = hillY;
   window.__hillYWorld = hillYWorld;
+  window.__skyIsleY = skyIsleY;
   return { hillY: hillY, hillYWorld: hillYWorld, terrainColor: terrainColor, groundGeo: buildGroundGeometry() };
 };
