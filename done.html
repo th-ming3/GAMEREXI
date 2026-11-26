@@ -20749,6 +20749,114 @@ window.__createTerrain = function (context) {
     return geo;
   }
 
+  var SPLAT_UNIFORMS = window.__TERRAIN_SPLAT = {
+    uSplatTime: { value: 0 },
+    uSplatDay: { value: 1.0 }
+  };
+
+  window.__patchTerrainShader = function (material) {
+    if (!material || (material.userData && material.userData.splatPatched)) return material;
+    material.userData = material.userData || {};
+    material.userData.splatPatched = true;
+    material.onBeforeCompile = function (shader) {
+      shader.uniforms.uSplatTime = SPLAT_UNIFORMS.uSplatTime;
+      shader.uniforms.uSplatDay = SPLAT_UNIFORMS.uSplatDay;
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vTerrainLPos;\nvarying vec3 vTerrainWNorm;')
+        .replace('#include <begin_vertex>', [
+          '#include <begin_vertex>',
+          'vTerrainLPos = transformed;',
+          'vTerrainWNorm = normalize(mat3(modelMatrix) * objectNormal);'
+        ].join('\n'));
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', [
+          '#include <common>',
+          'uniform float uSplatTime;',
+          'uniform float uSplatDay;',
+          'varying vec3 vTerrainLPos;',
+          'varying vec3 vTerrainWNorm;',
+          'float tHash(vec2 p) {',
+          '  p = fract(p * vec2(123.34, 456.21));',
+          '  p += dot(p, p + 45.32);',
+          '  return fract(p.x * p.y);',
+          '}',
+          'float tNoise(vec2 p) {',
+          '  vec2 i = floor(p); vec2 f = fract(p);',
+          '  f = f * f * (3.0 - 2.0 * f);',
+          '  float a = tHash(i); float b = tHash(i + vec2(1.0, 0.0));',
+          '  float c = tHash(i + vec2(0.0, 1.0)); float d = tHash(i + vec2(1.0, 1.0));',
+          '  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);',
+          '}',
+          'float tFbm(vec2 p) {',
+          '  float v = 0.0; float a = 0.5;',
+          '  for (int k = 0; k < 3; k++) { v += a * tNoise(p); p *= 2.07; a *= 0.5; }',
+          '  return v;',
+          '}',
+          'float sdBox2D(vec2 p, vec2 b) {',
+          '  vec2 d = abs(p) - b;',
+          '  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);',
+          '}',
+          'float sdSeg2D(vec2 p, vec2 a, vec2 b) {',
+          '  vec2 pa = p - a, ba = b - a;',
+          '  float h = clamp(dot(pa, ba) / max(dot(ba, ba), 0.0001), 0.0, 1.0);',
+          '  return length(pa - ba * h);',
+          '}'
+        ].join('\n'))
+        .replace('#include <map_fragment>', [
+          '#include <map_fragment>',
+          'vec2 tp = vTerrainLPos.xz;',
+          'float nMacro = tFbm(tp * 0.075);',
+          'float nMid = tFbm(tp * 0.55);',
+          'float nMicro = tNoise(tp * 4.8);',
+          'float nBlade = tNoise(tp * 13.5);',
+          'vec3 lushDark = vec3(0.16, 0.34, 0.11);',
+          'vec3 lushMid = vec3(0.32, 0.54, 0.16);',
+          'vec3 sunTip = vec3(0.49, 0.62, 0.21);',
+          'vec3 meadow = mix(lushDark, lushMid, smoothstep(0.22, 0.78, nMacro));',
+          'meadow = mix(meadow, sunTip, smoothstep(0.45, 0.88, nMid) * 0.55);',
+          'meadow *= 0.84 + 0.28 * nMicro + 0.10 * nBlade;',
+          'float distCenter = length(tp);',
+          'float regionMix = smoothstep(55.0, 140.0, distCenter);',
+          'vec3 biomeCol = diffuseColor.rgb;',
+          'diffuseColor.rgb = mix(meadow, biomeCol * (0.72 + 0.44 * nMicro), regionMix * 0.82);',
+          'float dPlaza = sdBox2D(tp - vec2(1.4, 3.8), vec2(3.5, 3.1));',
+          'float dAve = sdBox2D(tp - vec2(0.0, -11.2), vec2(2.35, 13.6));',
+          'float dBridge = sdSeg2D(tp, vec2(-1.6, -5.2), vec2(-6.5, -5.4)) - 1.15;',
+          'float dBanyan = sdSeg2D(tp, vec2(2.0, -4.5), vec2(12.8, -16.8)) - 1.05;',
+          'float dVillage = sdSeg2D(tp, vec2(-9.5, -4.0), vec2(-22.5, 12.2)) - 1.05;',
+          'float dStone = min(min(dPlaza, dAve), min(dBridge, min(dBanyan, dVillage)));',
+          'float warp = (tFbm(tp * 0.65) - 0.5) * 0.72;',
+          'float stoneMask = 1.0 - smoothstep(-0.18, 0.32, dStone + warp);',
+          'if (stoneMask > 0.01) {',
+          '  vec2 stGrid = tp * vec2(1.45, 1.95);',
+          '  float row = floor(stGrid.y);',
+          '  stGrid.x += mod(row, 2.0) * 0.5;',
+          '  vec2 stCell = fract(stGrid);',
+          '  vec2 stId = floor(stGrid);',
+          '  float mortar = smoothstep(0.04, 0.09, stCell.x) * smoothstep(0.04, 0.09, 1.0 - stCell.x) * smoothstep(0.04, 0.09, stCell.y) * smoothstep(0.04, 0.09, 1.0 - stCell.y);',
+          '  float tileVar = tHash(stId);',
+          '  vec3 slate = mix(vec3(0.32, 0.33, 0.29), vec3(0.45, 0.44, 0.38), tileVar) * (0.85 + 0.24 * nMicro);',
+          '  vec3 mossGap = vec3(0.18, 0.31, 0.13);',
+          '  vec3 cobble = mix(mossGap, slate, mortar);',
+          '  cobble = mix(cobble, vec3(0.20, 0.36, 0.14), smoothstep(0.55, 0.85, nMid) * 0.35);',
+          '  diffuseColor.rgb = mix(diffuseColor.rgb, cobble, stoneMask * 0.94);',
+          '}',
+          'float cliff = smoothstep(0.90, 0.68, abs(vTerrainWNorm.y));',
+          'if (cliff > 0.01) {',
+          '  float strata = tNoise(vec2(tp.x * 0.6, vTerrainLPos.y * 2.8 + tp.y * 0.4));',
+          '  vec3 rockCol = mix(vec3(0.24, 0.26, 0.22), vec3(0.42, 0.40, 0.35), strata);',
+          '  diffuseColor.rgb = mix(diffuseColor.rgb, rockCol, cliff * 0.88);',
+          '}',
+          'float wetShore = 1.0 - smoothstep(-0.3, 0.65, vTerrainLPos.y);',
+          'diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.54, 0.60, 0.52), wetShore * 0.65 * (1.0 - regionMix));',
+          'float cloud = smoothstep(0.38, 0.78, tFbm(tp * 0.024 + vec2(uSplatTime * 0.018, uSplatTime * 0.011)));',
+          'diffuseColor.rgb *= mix(1.06, 0.72, cloud * 0.82 * uSplatDay);'
+        ].join('\n'));
+    };
+    material.customProgramCacheKey = function () { return 'daiviet-terrain-splat-v2'; };
+    return material;
+  };
+
   /* Lưới nền toàn lục địa Đại Việt 7800x4680m (step=26m sắc nét + mịn FPS, có UV texture địa hình) */
   function buildContinentBackdrop() {
     var b = (window.__WORLD_MAP_DATA && window.__WORLD_MAP_DATA.bounds) || { minX: -1794.0, maxX: 6006.0, minZ: -2644.0, maxZ: 2036.0 };
@@ -20808,7 +20916,7 @@ window.__createTerrain = function (context) {
     }
     var dTex = new THREE.CanvasTexture(cvs);
     dTex.wrapS = dTex.wrapT = THREE.RepeatWrapping;
-    var mat = new THREE.MeshStandardMaterial({ vertexColors: true, map: dTex, roughness: 0.94, metalness: 0.02 });
+    var mat = window.__patchTerrainShader(new THREE.MeshStandardMaterial({ vertexColors: true, map: dTex, roughness: 0.94, metalness: 0.02 }));
     var mesh = new THREE.Mesh(geo, mat);
     mesh.receiveShadow = true;
     gardenRoot.add(mesh);
@@ -23705,22 +23813,22 @@ window.__initNPCs = function (gardenRoot) {
   if (window.__NPC_SYSTEM) return window.__NPC_SYSTEM;
   var DATA = [
     {
-      id: 'tam', name: 'Tâm', role: 'Kỹ sư hiện trường', src: 'models/npc-tam.glb', x: -2.2, z: 2.2, yaw: 1.05, plaza: true, height: 1.74, hat: false, tint: 0xc2b294,
+      id: 'tam', name: 'Tâm', role: 'Kỹ sư hiện trường', src: 'models/npc-tam.glb', x: -2.2, z: 2.2, yaw: 1.05, plaza: true, height: 1.74, hat: false, tint: 0x8a795d,
       first: 'Đồng hồ đang nói mực nước giảm. Bờ hồ lại bảo điều ngược lại. Mình cần kiểm tra ba dấu trước khi chạm van.',
       late: 'Tôi đọc nó như lệnh cần sửa. Nó là dấu vết của một lần người ta phải chọn ai được an toàn trước.'
     },
     {
-      id: 'ba_man', name: 'Bà Mận', role: 'Giữ ký ức lũ', src: 'models/npc-hoa.glb', x: 4.3, z: 4.9, yaw: -1.15, plaza: true, height: 1.64, hat: true, tint: 0xb89678,
+      id: 'ba_man', name: 'Bà Mận', role: 'Giữ ký ức lũ', src: 'models/npc-hoa.glb', x: 4.3, z: 4.9, yaw: -1.15, plaza: true, height: 1.64, hat: true, tint: 0x9e7d62,
       first: 'Trước khi đổi dòng, mình cần chắc đường sơ tán vẫn mở. Lũ không chỉ là con số trên đồng hồ.',
       late: 'Đi vạch nước này cùng tôi. Nếu mình đánh dấu được đường an toàn thứ hai, tôi sẽ yên tâm hơn.'
     },
     {
-      id: 'hoa', name: 'Hòa', role: 'Ngư dân bến Hồ Gương', src: 'models/npc-hoa.glb', x: 11.2, z: 12.6, yaw: 2.1, plaza: false, height: 1.68, hat: true, tint: 0xa4b092,
+      id: 'hoa', name: 'Hòa', role: 'Ngư dân bến Hồ Gương', src: 'models/npc-hoa.glb', x: 11.2, z: 12.6, yaw: 2.1, plaza: false, height: 1.68, hat: true, tint: 0x869474,
       first: 'Nếu mở nước mà cá không về thì ai trả lại cái bến này? Tôi cần thấy dấu cá trước đã.',
       late: 'Tôi đã chép lại lịch cá. Giờ mình có thể cùng giữ lịch bến cho những người tới sau.'
     },
     {
-      id: 'lam', name: 'Lâm', role: 'Người ghi chép sinh cảnh', src: 'models/npc-lam.glb', x: 3.9, z: -11.5, yaw: -1.35, plaza: false, height: 1.72, hat: false, tint: 0x9ea88e,
+      id: 'lam', name: 'Lâm', role: 'Người ghi chép sinh cảnh', src: 'models/npc-lam.glb', x: 3.9, z: -11.5, yaw: -1.35, plaza: false, height: 1.72, hat: false, tint: 0x7b886b,
       first: 'Tôi ghi dấu vết, không kết luận thay người dân. Cái cò và dấu chân đang nói khác cái đồng hồ.',
       late: 'Cuốn ghi chép cần cả lời người dân lẫn dấu tự nhiên. Nhà cửa cũng là một phần của sinh cảnh.'
     }
@@ -23970,14 +24078,14 @@ window.__initCombat = function (gardenRoot) {
   var lockedTarget = null; /* eObj hoặc 'BOSS' */
 
   var enemyData = [
-    { id: 'EN-01', name: 'Xà Tinh Đầm', kind: 'snake', weak: 'Phản đòn (F)', asset: 'enemySnake', x: -16.5, z: -12.0, height: 1.05, hp: 5, speed: 1.55, range: 1.85, tell: 0.56, active: 0.22, recover: 0.78, damage: 9 },
-    { id: 'EN-02', name: 'Cóc Độc Hồ', kind: 'frog', weak: 'Phản cầu / Né (C)', asset: 'enemyFrog', x: 14.5, z: 19.5, height: 1.0, hp: 4, speed: 0.85, range: 9.0, meleeRange: 2.0, tell: 0.85, active: 0.2, recover: 1.05, damage: 11, ranged: true },
-    { id: 'EN-03', name: 'Vạc Bùn Giáp', kind: 'boulder', weak: '[1] Phá Giáp · Thủy Nộ', asset: 'enemyBoulder', x: -24.0, z: -20.0, height: 1.45, hp: 9, speed: 0.72, range: 2.35, tell: 1.02, active: 0.26, recover: 1.15, damage: 15, armored: true },
-    { id: 'EN-04', name: 'Nhện Rừng Rậm', kind: 'spider', weak: '[2] Toàn Phong (Gió)', asset: 'enemySpider', x: 22.0, z: -16.0, height: 1.05, hp: 5, speed: 1.48, range: 1.9, tell: 0.62, active: 0.2, recover: 0.85, damage: 10 },
-    { id: 'EN-05', name: 'Xà Tinh Ven Bờ', kind: 'snake', weak: 'Phản đòn (F)', asset: 'enemySnake', x: -24.5, z: 10.5, height: 1.1, hp: 5, speed: 1.5, range: 1.85, tell: 0.56, active: 0.2, recover: 0.78, damage: 9 },
-    { id: 'EN-06', name: 'Vạc Bùn Cổ Đạo', kind: 'boulder', weak: '[1] Phá Giáp · Thủy Nộ', asset: 'enemyBoulder', x: 18.5, z: -26.0, height: 1.5, hp: 9, speed: 0.7, range: 2.35, tell: 1.02, active: 0.25, recover: 1.15, damage: 15, armored: true },
-    { id: 'EN-07', name: 'Nhện Ám Mạch', kind: 'spider', weak: '[2] Toàn Phong (Gió)', asset: 'enemySpider', x: 25.0, z: 22.0, height: 1.1, hp: 6, speed: 1.45, range: 1.9, tell: 0.6, active: 0.2, recover: 0.85, damage: 11 },
-    { id: 'EN-08', name: 'Cóc Độc Rừng Bắc', kind: 'frog', weak: 'Phản cầu / Né (C)', asset: 'enemyFrog', x: -10.5, z: -34.0, height: 1.05, hp: 5, speed: 0.85, range: 9.0, meleeRange: 2.0, tell: 0.82, active: 0.2, recover: 1.0, damage: 12, ranged: true }
+    { id: 'EN-01', name: 'Xà Tinh Đầm', kind: 'snake', weak: 'Phản đòn (F)', asset: 'enemySnake', x: -16.5, z: -12.0, height: 1.15, hp: 12, speed: 1.65, range: 1.95, tell: 0.56, active: 0.22, recover: 0.78, damage: 10 },
+    { id: 'EN-02', name: 'Cóc Độc Hồ', kind: 'frog', weak: 'Phản cầu / Né (C)', asset: 'enemyFrog', x: 14.5, z: 19.5, height: 1.1, hp: 10, speed: 0.90, range: 9.0, meleeRange: 2.0, tell: 0.85, active: 0.2, recover: 1.05, damage: 12, ranged: true },
+    { id: 'EN-03', name: 'Vạc Bùn Giáp', kind: 'boulder', weak: '[1] Phá Giáp · Thủy Nộ', asset: 'enemyBoulder', x: -24.0, z: -20.0, height: 1.55, hp: 22, speed: 0.76, range: 2.35, tell: 1.02, active: 0.26, recover: 1.15, damage: 16, armored: true },
+    { id: 'EN-04', name: 'Nhện Rừng Rậm', kind: 'spider', weak: '[2] Toàn Phong (Gió)', asset: 'enemySpider', x: 22.0, z: -16.0, height: 1.15, hp: 12, speed: 1.55, range: 1.95, tell: 0.62, active: 0.2, recover: 0.85, damage: 11 },
+    { id: 'EN-05', name: 'Xà Tinh Ven Bờ', kind: 'snake', weak: 'Phản đòn (F)', asset: 'enemySnake', x: -24.5, z: 10.5, height: 1.15, hp: 12, speed: 1.6, range: 1.95, tell: 0.56, active: 0.2, recover: 0.78, damage: 10 },
+    { id: 'EN-06', name: 'Vạc Bùn Cổ Đạo', kind: 'boulder', weak: '[1] Phá Giáp · Thủy Nộ', asset: 'enemyBoulder', x: 18.5, z: -26.0, height: 1.6, hp: 22, speed: 0.75, range: 2.35, tell: 1.02, active: 0.25, recover: 1.15, damage: 16, armored: true },
+    { id: 'EN-07', name: 'Nhện Ám Mạch', kind: 'spider', weak: '[2] Toàn Phong (Gió)', asset: 'enemySpider', x: 25.0, z: 22.0, height: 1.15, hp: 14, speed: 1.55, range: 1.95, tell: 0.6, active: 0.2, recover: 0.85, damage: 12 },
+    { id: 'EN-08', name: 'Cóc Độc Rừng Bắc', kind: 'frog', weak: 'Phản cầu / Né (C)', asset: 'enemyFrog', x: -10.5, z: -34.0, height: 1.1, hp: 12, speed: 0.90, range: 9.0, meleeRange: 2.0, tell: 0.82, active: 0.2, recover: 1.0, damage: 12, ranged: true }
   ];
 
   /* Thanh Hành Động chiến thuật + Huy hiệu Mục Tiêu Lock-on */
@@ -24001,6 +24109,69 @@ window.__initCombat = function (gardenRoot) {
       '<button type="button" data-sk="lock" id="btnLock" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(255,220,120,.38);background:rgba(46,38,24,.68);color:#ffe49b;cursor:pointer;font:inherit"><b>Tab</b> Khóa</button>' +
     '</div>';
   document.body.appendChild(bar);
+
+  /* Vệt chém Vầng Trăng Anime (Crescent Slash Arc + Spark Particles) */
+  var slashArcs = [], sparks = [];
+  var crescentTex = (function () {
+    var c = document.createElement('canvas'); c.width = 256; c.height = 64;
+    var g = c.getContext('2d');
+    var grd = g.createLinearGradient(0, 0, 256, 0);
+    grd.addColorStop(0.0, 'rgba(255,255,255,0)');
+    grd.addColorStop(0.28, 'rgba(180,255,235,0.65)');
+    grd.addColorStop(0.72, 'rgba(255,255,255,1.0)');
+    grd.addColorStop(0.95, 'rgba(255,240,180,0.92)');
+    grd.addColorStop(1.0, 'rgba(255,255,255,0)');
+    g.fillStyle = grd;
+    g.beginPath();
+    g.moveTo(0, 64);
+    g.quadraticCurveTo(136, 0, 256, 36);
+    g.quadraticCurveTo(148, 34, 0, 64);
+    g.fill();
+    return new THREE.CanvasTexture(c);
+  })();
+
+  function spawnSlashArc(lx, ly, lz, yaw, tiltZ, colorHex, radius, arcRad, dur) {
+    var segs = 20, span = arcRad || Math.PI * 0.92;
+    var rIn = (radius || 2.1) * 0.42, rOut = radius || 2.1;
+    var pos = [], uvs = [], idx = [];
+    for (var i = 0; i <= segs; i++) {
+      var u = i / segs;
+      var a = -span * 0.5 + u * span;
+      var ca = Math.cos(a), sa = Math.sin(a);
+      var taper = Math.sin(u * Math.PI);
+      var rrIn = rOut - (rOut - rIn) * taper;
+      pos.push(ca * rrIn, 0, sa * rrIn, ca * rOut, 0, sa * rOut);
+      uvs.push(u, 0, u, 1);
+      if (i > 0) { var b = (i - 1) * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.setIndex(idx);
+    var mat = new THREE.MeshBasicMaterial({
+      map: crescentTex, color: colorHex || 0x56f5d0, transparent: true, opacity: 0.96,
+      blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false
+    });
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(lx, ly + 0.95, lz);
+    mesh.rotation.order = 'YXZ';
+    mesh.rotation.set(0.1, (yaw || 0) - Math.PI * 0.5, tiltZ || 0);
+    gardenRoot.add(mesh);
+    slashArcs.push({ mesh: mesh, age: 0, dur: dur || 0.24, spin: span > Math.PI * 1.5 });
+  }
+
+  function spawnHitSparks(lx, ly, lz, colorHex, count) {
+    var n = count || 12;
+    var pGeo = new THREE.BoxGeometry(0.06, 0.06, 0.24);
+    for (var i = 0; i < n; i++) {
+      var sm = new THREE.Mesh(pGeo, new THREE.MeshBasicMaterial({ color: colorHex || 0xffe27a, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
+      sm.position.set(lx, ly + 0.85, lz);
+      var a = Math.random() * 6.283, sp = 3.5 + Math.random() * 4.5, vy = 2.0 + Math.random() * 3.5;
+      sm.rotation.set(Math.random(), a, 0);
+      gardenRoot.add(sm);
+      sparks.push({ mesh: sm, vx: Math.cos(a) * sp, vy: vy, vz: Math.sin(a) * sp, age: 0, dur: 0.34 });
+    }
+  }
 
   /* Vòng Lock-on phát sáng trên mục tiêu */
   var lockReticle = new THREE.Mesh(
@@ -24266,6 +24437,8 @@ window.__initCombat = function (gardenRoot) {
     }
     e.hp -= dmg;
     e.flash = 0.28;
+    var eyH = window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0;
+    spawnHitSparks(e.group.position.x, eyH, e.group.position.z, isAoe ? 0x58f2ff : (isPierce ? 0x4ef7d4 : 0xffe27a), isPierce || isAoe ? 16 : 9);
     if (knockDir) {
       e.group.position.x += knockDir.x * 1.25;
       e.group.position.z += knockDir.z * 1.25;
@@ -24400,9 +24573,13 @@ window.__initCombat = function (gardenRoot) {
     if (window.__heroineAttack) window.__heroineAttack(comboStep, 0);
     var p = localPlayer();
     if (!p) return;
-    var mult = comboStep === 3 ? 2.0 : (comboStep === 2 ? 1.3 : 1.0);
+    var pyAtk = window.__hillY ? window.__hillY(p.x, p.z) : 0;
+    var faceYaw = window.__playerYaw ? window.__playerYaw() : 0;
+    var tilt = comboStep === 3 ? 1.35 : (comboStep === 2 ? -0.45 : 0.32);
+    spawnSlashArc(p.x, pyAtk, p.z, faceYaw, tilt, comboStep === 3 ? 0xffe27a : 0x56f5d0, comboStep === 3 ? 2.6 : 2.15, Math.PI * 0.92, 0.22);
+    var mult = comboStep === 3 ? 2.2 : (comboStep === 2 ? 1.35 : 1.0);
     var buff = sanctuaryUntil > now ? 1.45 : 1.0;
-    var dmg = Math.round((1 + (window.__dmgBonus || 0)) * mult * buff);
+    var dmg = Math.round((1.5 + (window.__dmgBonus || 0)) * mult * buff);
     var hitAny = false;
     enemies.forEach(function (e) {
       if (e.hp <= 0) return;
@@ -24416,6 +24593,7 @@ window.__initCombat = function (gardenRoot) {
     if (window.__onBossSkillHit) {
       if (window.__onBossSkillHit(p.x, p.z, 3.8, dmg, false, comboStep === 3 ? 24 : 12)) hitAny = true;
     }
+    if (hitAny && comboStep === 3) stamina = Math.min(maxStamina, stamina + 18);
     if (hitAny && window.__sfx) window.__sfx.chime();
     if (hitAny && comboStep === 3) triggerHitStop(55);
     if (comboStep === 3) {
@@ -24453,6 +24631,7 @@ window.__initCombat = function (gardenRoot) {
       invulnUntil = Math.max(invulnUntil, now + 260);
       floatText('XUYÊN THỦY THƯƠNG!', '#4ef7d4', true);
       spawnShockwave(p.x, py, p.z, 0x4ef7d4, 3.6, 0.36);
+      spawnSlashArc(p.x, py, p.z, window.__playerYaw ? window.__playerYaw() : 0, 1.45, 0x4ef7d4, 2.9, Math.PI * 0.55, 0.25);
       var dmg1 = Math.round((3.2 + (window.__dmgBonus || 0)) * buff);
       var hit1 = false;
       enemies.forEach(function (e) {
@@ -24470,6 +24649,7 @@ window.__initCombat = function (gardenRoot) {
       /* Liên Hoàn Toàn Phong: AOE 4.8m ngắt đòn quái + Kích hoạt THỦY NỘ nếu quái đang ƯỚT SŨNG */
       floatText('LIÊN HOÀN TOÀN PHONG!', '#ffe27a', true);
       spawnShockwave(p.x, py, p.z, 0xffe27a, 5.2, 0.45);
+      spawnSlashArc(p.x, py, p.z, window.__playerYaw ? window.__playerYaw() : 0, 0.08, 0xffe27a, 3.4, Math.PI * 1.85, 0.30);
       window.__shakeT = now; window.__shakeAmt = 0.12;
       var dmg2 = Math.round((2.6 + (window.__dmgBonus || 0)) * buff);
       enemies.forEach(function (e) {
@@ -24567,6 +24747,35 @@ window.__initCombat = function (gardenRoot) {
       } else {
         sw.mesh.scale.setScalar(1 + k * sw.maxR);
         sw.mesh.material.opacity = 0.9 * (1 - k);
+      }
+    }
+    for (var ai2 = slashArcs.length - 1; ai2 >= 0; ai2--) {
+      var sa = slashArcs[ai2];
+      sa.age += d;
+      var ak = sa.age / sa.dur;
+      if (ak >= 1) {
+        gardenRoot.remove(sa.mesh); sa.mesh.geometry.dispose(); sa.mesh.material.dispose();
+        slashArcs.splice(ai2, 1);
+      } else {
+        sa.mesh.rotation.y += d * (sa.spin ? 18.0 : 5.5);
+        sa.mesh.scale.setScalar(0.92 + ak * 0.28);
+        sa.mesh.material.opacity = 0.96 * (1 - ak * ak);
+      }
+    }
+    for (var ski = sparks.length - 1; ski >= 0; ski--) {
+      var spk = sparks[ski];
+      spk.age += d;
+      var sk2 = spk.age / spk.dur;
+      if (sk2 >= 1) {
+        gardenRoot.remove(spk.mesh); spk.mesh.material.dispose();
+        sparks.splice(ski, 1);
+      } else {
+        spk.vy -= 12.0 * d;
+        spk.mesh.position.x += spk.vx * d;
+        spk.mesh.position.y += spk.vy * d;
+        spk.mesh.position.z += spk.vz * d;
+        spk.mesh.scale.setScalar(1 - sk2);
+        spk.mesh.material.opacity = 1 - sk2;
       }
     }
     /* Vệt chém 3D Slash Ribbon theo đầu Ngọc Thương (tự xóa nếu teleport hoặc ngắt nhịp) */
@@ -24780,6 +24989,24 @@ window.__initBoss = function (gardenRoot) {
   var group = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel('guardian01', { height: 3.6 }) : new THREE.Group();
   group.position.set(bx, by, bz);
   gardenRoot.add(group);
+
+  /* Đấu trường Đá Cổ B-01: 6 trụ đá rêu & ấn ngọc trấn mạch */
+  var arenaMat = new THREE.MeshStandardMaterial({ color: 0x4f5248, roughness: 0.92, flatShading: true });
+  var runeMat = new THREE.MeshBasicMaterial({ color: 0x2de8bd, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false });
+  var arenaRing = new THREE.Mesh(new THREE.RingGeometry(8.8, 9.3, 48), runeMat);
+  arenaRing.rotation.x = -Math.PI / 2;
+  arenaRing.position.set(bx, by + 0.06, bz);
+  gardenRoot.add(arenaRing);
+  for (var ai = 0; ai < 6; ai++) {
+    var aa = (ai / 6) * Math.PI * 2 + 0.35;
+    var ax = bx + Math.cos(aa) * 9.6, az = bz + Math.sin(aa) * 9.6;
+    var ay = window.__hillY ? window.__hillY(ax, az) : by;
+    var pil = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.58, 3.2 + (ai % 2) * 1.1, 6), arenaMat);
+    pil.position.set(ax, ay + 1.4, az);
+    pil.rotation.set((ai % 2 ? 0.08 : -0.06), aa, 0.05);
+    pil.castShadow = true; pil.receiveShadow = true;
+    gardenRoot.add(pil);
+  }
 
   /* Vòng cảnh báo đỏ dưới chân Boss mở rộng theo đòn SWEEP / SLAM */
   var aoeOuter = new THREE.Mesh(
@@ -26465,7 +26692,7 @@ if (!window.__GAME && consented) {
     gardenRoot.worldToLocal(ppLv);
     return ppLv;
   }
-  var groundMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, color: 0xffffff, map: groundNoise });
+  var groundMat = window.__patchTerrainShader ? window.__patchTerrainShader(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, color: 0xffffff, map: groundNoise })) : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, color: 0xffffff, map: groundNoise });
   var ground = new THREE.Mesh(groundGeo, groundMat);
   window.__baseGround = ground; /* probe: verify the base lawn really leaves the pond opening */
   ground.receiveShadow = true;
@@ -26827,17 +27054,21 @@ if (!window.__GAME && consented) {
         'uniform vec3 uPlayerPos;',
         'varying float vHeight;',
         'varying float vHue;',
+        'varying float vCloud;',
         '#include <fog_pars_vertex>',
+        'float gHash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }',
+        'float gNoise(vec2 p) { vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(gHash(i), gHash(i + vec2(1.0, 0.0)), f.x), mix(gHash(i + vec2(0.0, 1.0)), gHash(i + vec2(1.0, 1.0)), f.x), f.y); }',
         'void main() {',
         '  float hFrac = clamp(position.y / 0.56, 0.0, 1.0);',
         '  vHeight = hFrac;',
         '  vHue = aBend.y;',
+        '  vCloud = smoothstep(0.38, 0.78, gNoise(aOffset.xz * 0.024 + vec2(uTime * 0.018, uTime * 0.011)));',
         '  float c = cos(aOriRot.x); float s = sin(aOriRot.x);',
         '  vec3 local = vec3(position.x * c - position.z * s, position.y * aOriRot.y, position.x * s + position.z * c);',
-        '  float gust = sin(uTime * 1.9 + aOffset.x * 0.25 + aOffset.z * 0.19) * 0.14 + cos(uTime * 3.2 + aBend.x + aOffset.x * 0.6) * 0.06;',
+        '  float gust = sin(uTime * 2.0 + aOffset.x * 0.25 + aOffset.z * 0.19) * 0.15 + cos(uTime * 3.2 + aBend.x + aOffset.x * 0.6) * 0.07;',
         '  vec2 toBlade = aOffset.xz - uPlayerPos.xz;',
         '  float pDist = length(toBlade) + 0.0001;',
-        '  float push = (1.0 - smoothstep(0.18, 1.15, pDist)) * 0.42;',
+        '  float push = (1.0 - smoothstep(0.18, 1.25, pDist)) * 0.44;',
         '  vec2 pushDir = toBlade / pDist;',
         '  float bend = hFrac * hFrac;',
         '  local.x += (gust + pushDir.x * push) * bend;',
@@ -26854,13 +27085,15 @@ if (!window.__GAME && consented) {
         'uniform float uDay;',
         'varying float vHeight;',
         'varying float vHue;',
+        'varying float vCloud;',
         '#include <fog_pars_fragment>',
         'void main() {',
-        '  vec3 rootCol = vec3(0.28, 0.43, 0.16);',
-        '  vec3 tipA = vec3(0.46, 0.65, 0.22);',
-        '  vec3 tipB = vec3(0.68, 0.76, 0.28);',
+        '  vec3 rootCol = vec3(0.16, 0.34, 0.11);',
+        '  vec3 tipA = vec3(0.36, 0.58, 0.17);',
+        '  vec3 tipB = vec3(0.58, 0.69, 0.22);',
         '  vec3 col = mix(rootCol, mix(tipA, tipB, vHue), smoothstep(0.05, 0.92, vHeight));',
-        '  col *= mix(0.28, 1.04, uDay);',
+        '  col *= mix(1.06, 0.72, vCloud * 0.82 * uDay);',
+        '  col *= mix(0.28, 1.02, uDay);',
         '  gl_FragColor = vec4(col, 1.0);',
         '  #include <fog_fragment>',
         '}'
@@ -27808,7 +28041,12 @@ if (!window.__GAME && consented) {
       window.__gpuGrassUniforms.uDay.value = window.__dayF !== undefined ? window.__dayF : 1.0;
       if (ppT) window.__gpuGrassUniforms.uPlayerPos.value.set(ppT.x, ppT.y || 0, ppT.z);
     }
+    if (window.__TERRAIN_SPLAT) {
+      window.__TERRAIN_SPLAT.uSplatTime.value = t;
+      window.__TERRAIN_SPLAT.uSplatDay.value = window.__dayF !== undefined ? window.__dayF : 1.0;
+    }
     if (window.__updateLeavesAndMist) window.__updateLeavesAndMist(t, dt);
+    if (window.__updateVillageLiving) window.__updateVillageLiving(t);
 
     /* đàn cò: uốn lưới cánh theo nhịp sin — cánh gập lên/xuống liên tục (đêm cò nghỉ: ẩn + đứng yên) */
     var nightG = window.__isNight === true;
@@ -28411,30 +28649,47 @@ if (!window.__GAME && consented) {
         'uniform float uTime;',
         'uniform vec3 uSunDir;',
         'uniform float uRadial;',
+        'float wHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+        'float wVoronoi(vec2 x) {',
+        '  vec2 n = floor(x); vec2 f = fract(x);',
+        '  float md = 8.0;',
+        '  for (int j = -1; j <= 1; j++) {',
+        '    for (int i = -1; i <= 1; i++) {',
+        '      vec2 g = vec2(float(i), float(j));',
+        '      vec2 o = vec2(wHash(n + g), wHash(n + g + vec2(17.0, 31.0)));',
+        '      o = 0.5 + 0.5 * sin(uTime * 1.4 + 6.2831 * o);',
+        '      vec2 r = g + o - f;',
+        '      float d = dot(r, r);',
+        '      md = min(md, d);',
+        '    }',
+        '  }',
+        '  return sqrt(md);',
+        '}',
         'void main() {',
         '  vec2 p = vWorldPos.xz;',
-        '  float w1 = sin(p.x * 1.9 + uTime * 1.7) * cos(p.y * 2.1 - uTime * 1.3);',
-        '  float w2 = sin(p.x * 4.3 - uTime * 2.4 + p.y * 3.1) * 0.5;',
-        '  vec3 n = normalize(vec3((w1 + w2) * 0.11, 1.0, (w2 - w1) * 0.11));',
+        '  float w1 = sin(p.x * 1.8 + uTime * 1.6) * cos(p.y * 2.0 - uTime * 1.2);',
+        '  float w2 = sin(p.x * 4.2 - uTime * 2.2 + p.y * 3.0) * 0.5;',
+        '  vec3 n = normalize(vec3((w1 + w2) * 0.12, 1.0, (w2 - w1) * 0.12));',
         '  vec3 viewDir = normalize(cameraPosition - vWorldPos);',
-        '  float fresnel = pow(1.0 - max(dot(n, viewDir), 0.0), 3.0);',
-        '  vec3 deepJade = vec3(0.06, 0.34, 0.42);',
-        '  vec3 shallowTeal = vec3(0.16, 0.56, 0.62);',
-        '  vec3 skyCol = vec3(0.56, 0.82, 0.96);',
-        '  vec3 col = mix(deepJade, shallowTeal, clamp(0.5 + w1 * 0.3, 0.0, 1.0));',
-        '  col = mix(col, skyCol, clamp(fresnel * 0.85, 0.05, 0.78));',
+        '  float fresnel = pow(1.0 - max(dot(n, viewDir), 0.0), 2.8);',
+        '  float caus1 = wVoronoi(p * 0.65 + vec2(uTime * 0.08, -uTime * 0.05));',
+        '  float caus2 = wVoronoi(p * 0.95 - vec2(uTime * 0.06, uTime * 0.09));',
+        '  float caustics = pow(clamp(1.0 - min(caus1, caus2) * 1.15, 0.0, 1.0), 3.0);',
+        '  float rDist = uRadial > 0.5 ? length(vUv - vec2(0.5)) * 2.0 : abs(vUv.x - 0.5) * 2.0;',
+        '  vec3 deepJade = vec3(0.03, 0.25, 0.34);',
+        '  vec3 shallowTurq = vec3(0.14, 0.58, 0.62);',
+        '  vec3 skyCol = vec3(0.52, 0.80, 0.95);',
+        '  vec3 col = mix(deepJade, shallowTurq, clamp(smoothstep(0.15, 0.92, rDist) + w1 * 0.12, 0.0, 1.0));',
+        '  col += vec3(0.32, 0.86, 0.82) * caustics * (0.48 + 0.35 * rDist);',
+        '  col = mix(col, skyCol, clamp(fresnel * 0.78, 0.04, 0.72));',
         '  vec3 halfV = normalize(uSunDir + viewDir);',
-        '  float spec = pow(max(dot(n, halfV), 0.0), 72.0);',
-        '  col += vec3(1.0, 0.96, 0.85) * spec * 0.72;',
-        '  float edgeAlpha = 0.84;',
-        '  if (uRadial > 0.5) {',
-        '    float r = length(vUv - vec2(0.5)) * 2.0;',
-        '    edgeAlpha = mix(0.86, 0.0, smoothstep(0.76, 1.0, r));',
-        '  } else {',
-        '    float ex = abs(vUv.x - 0.5) * 2.0;',
-        '    edgeAlpha = mix(0.84, 0.0, smoothstep(0.58, 1.0, ex));',
-        '  }',
-        '  gl_FragColor = vec4(col, edgeAlpha);',
+        '  float spec = pow(max(dot(n, halfV), 0.0), 96.0);',
+        '  col += vec3(1.0, 0.97, 0.88) * spec * 0.92;',
+        '  float waveNoise = sin(p.x * 3.1 + p.y * 2.7 + uTime * 2.1) * 0.06;',
+        '  float foamBand = smoothstep(0.76, 0.86, rDist + waveNoise) * (1.0 - smoothstep(0.92, 1.0, rDist));',
+        '  col = mix(col, vec3(0.90, 0.98, 0.97), foamBand * 0.82);',
+        '  float edgeAlpha = uRadial > 0.5 ? mix(0.88, 0.0, smoothstep(0.86, 1.0, rDist)) : mix(0.86, 0.0, smoothstep(0.68, 1.0, rDist));',
+        '  gl_FragColor = vec4(col, max(edgeAlpha, foamBand * 0.75));',
         '}'
       ].join('\n'),
       transparent: true,
@@ -28622,7 +28877,7 @@ if (!window.__GAME && consented) {
     bfx.beginPath(); bfx.moveTo(12, 30); bfx.lineTo(4, 44); bfx.lineTo(12, 40); bfx.lineTo(20, 44); bfx.closePath(); bfx.fill();
     bfx.beginPath(); bfx.ellipse(12, 6, 5, 5, 0, 0, 6.283); bfx.fill();
     var bfTex = new THREE.CanvasTexture(bfC);
-    for (var fi6 = 0; fi6 < 2; fi6++) {
+    for (var fi6 = 0; fi6 < 0; fi6++) {
       var fm6 = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.44), new THREE.MeshBasicMaterial({ map: bfTex, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide, depthWrite: false, color: 0x9aa88a }));
       fm6.userData = { r2: 1.9 + fi6 * 1.0, sp: 0.4 + fi6 * 0.16, off: fi6 * 2.4 };
       fm6.rotation.x = -Math.PI / 2;
@@ -29162,94 +29417,141 @@ if (!window.__GAME && consented) {
     window.__landmarks = { cabin: CAB, rocks: RK, tomb: TOMB, lake: LAKE, den: window.__denPos, well: { x: -10.5, z: -27 }, bigTree: { x: 7, z: -20 } };
   })();
 
-  /* Sân lát đá cổ Kinh Kỳ + trục đường chính dẫn tới Cổng Tam Quan + suối ngọc tự nhiên chảy dưới Cầu Ngói */
+  /* Sân lát đá rêu vẽ trực tiếp trên shader địa hình + Lầu Thạch Đăng Đại Việt + Phướn đỏ + Đom đóm + Ruộng bậc thang */
   (function buildSpawnCourtyard() {
-    var pc = document.createElement('canvas');
-    pc.width = pc.height = 512;
-    var pg = pc.getContext('2d');
-    pg.fillStyle = '#4c543e';
-    pg.fillRect(0, 0, 512, 512);
-    var rows = 8, rh = 512 / rows;
-    for (var r = 0; r < rows; r++) {
-      var x = -(r % 2) * 32;
-      while (x < 512) {
-        var bw = 54 + ((r * 19 + Math.floor(x + 64) * 7) % 34);
-        var tint = ((r * 23 + Math.floor(x + 64) * 11) % 22) - 11;
-        pg.fillStyle = 'rgb(' + (114 + tint) + ',' + (112 + tint) + ',' + (101 + (tint >> 1)) + ')';
-        pg.fillRect(x + 2, r * rh + 2, bw - 4, rh - 4);
-        if ((r + Math.floor(x / 50)) % 3 === 0) {
-          pg.fillStyle = 'rgba(72,102,46,0.28)';
-          pg.fillRect(x + 2, r * rh + 2, 12, rh - 4);
-        }
-        x += bw;
-      }
-    }
-    var stoneTex = new THREE.CanvasTexture(pc);
-    stoneTex.wrapS = stoneTex.wrapT = THREE.RepeatWrapping;
-    stoneTex.anisotropy = 8;
-    var plazaMat = new THREE.MeshStandardMaterial({ map: stoneTex, roughness: 0.92, metalness: 0.04, vertexColors: true });
-
-    function addTerrainSlab(cx, cz, w, l, rotY, repU, repV) {
-      var segX = 6, segZ = Math.max(6, Math.round(l / 1.8));
-      var geo = new THREE.PlaneGeometry(w, l, segX, segZ);
-      geo.rotateX(-Math.PI / 2);
-      var pa = geo.attributes.position, ua = geo.attributes.uv;
-      var cols = new Float32Array(pa.count * 3);
-      var cr = Math.cos(rotY), sr = Math.sin(rotY);
-      var hw = w * 0.5, hl = l * 0.5;
-      for (var vi = 0; vi < pa.count; vi++) {
-        var lx = pa.getX(vi), lz = pa.getZ(vi);
-        var ex = Math.abs(lx) / (hw || 1), ez = Math.abs(lz) / (hl || 1);
-        var border = Math.max(ex, ez);
-        var sink = border > 0.84 ? -0.10 * ((border - 0.84) / 0.16) : 0.0;
-        var mossMix = border > 0.75 ? (border - 0.75) / 0.25 : 0.0;
-        var wx = cx + lx * cr + lz * sr;
-        var wz = cz - lx * sr + lz * cr;
-        pa.setXYZ(vi, wx, hillY(wx, wz) + 0.075 + sink, wz);
-        ua.setXY(vi, ua.getX(vi) * repU, ua.getY(vi) * repV);
-        cols[vi * 3] = 1.0 - mossMix * 0.42;
-        cols[vi * 3 + 1] = 1.0 - mossMix * 0.22;
-        cols[vi * 3 + 2] = 1.0 - mossMix * 0.52;
-      }
-      geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
-      geo.computeVertexNormals();
-      var mesh = new THREE.Mesh(geo, plazaMat);
-      mesh.receiveShadow = true;
-      gardenRoot.add(mesh);
-    }
-
-    /* Quảng trường đá rêu Kinh Kỳ + đại lộ hướng thẳng Cổng Tam Quan (0, -26) */
-    addTerrainSlab(0, -11.0, 5.0, 26.5, 0, 2.4, 11);
-    addTerrainSlab(1.8, 3.8, 7.0, 6.4, 0, 3.2, 3.0);
-    addTerrainSlab(-4.2, -5.2, 2.4, 4.4, 1.35, 1.2, 2.2);
-    addTerrainSlab(7.2, -10.0, 2.4, 13.5, -0.58, 1.2, 6.0);
-
     if (window.__REAL_ASSETS) {
       [[-3.1, 1.0], [5.4, 1.2], [-2.9, -9.0], [3.0, -9.0], [5.3, 6.2], [-1.8, 6.6]].forEach(function (fp, fi) {
-        var fMesh = window.__REAL_ASSETS.makeModel(fi % 2 === 0 ? 'fern' : 'bush', 0.85);
+        var fMesh = window.__REAL_ASSETS.makeModel(fi % 2 === 0 ? 'fern' : 'bush', 0.88);
         fMesh.position.set(fp[0], hillY(fp[0], fp[1]) - 0.02, fp[1]);
         fMesh.rotation.y = fi * 1.1;
         gardenRoot.add(fMesh);
       });
     }
 
-    /* Tứ trụ thạch đăng cổ dọc trục hành lễ trước Cổng Tam Quan */
-    var postStone = new THREE.MeshStandardMaterial({ color: 0x7c796c, roughness: 0.88, flatShading: true });
-    var postGlow = new THREE.MeshStandardMaterial({ color: 0xffd170, emissive: 0xffa834, emissiveIntensity: 1.4, roughness: 0.2 });
-    [[-3.6, -4.5], [3.6, -4.5], [-3.6, -15.5], [3.6, -15.5]].forEach(function (lp) {
+    /* Tứ trụ Lầu Đèn Gỗ Son Đá Rêu Đại Việt + vầng sáng ấm dọc trục hành lễ */
+    var postStone = new THREE.MeshStandardMaterial({ color: 0x626356, roughness: 0.90, flatShading: true });
+    var postWood = new THREE.MeshStandardMaterial({ color: 0x7d2318, roughness: 0.62 });
+    var postGold = new THREE.MeshStandardMaterial({ color: 0xdca732, roughness: 0.35, metalness: 0.45 });
+    var postGlow = new THREE.MeshStandardMaterial({ color: 0xffe28a, emissive: 0xffa634, emissiveIntensity: 1.8, roughness: 0.2 });
+    var haloTex = (function () {
+      var hc = document.createElement('canvas'); hc.width = hc.height = 64;
+      var hg = hc.getContext('2d');
+      var hgr = hg.createRadialGradient(32, 32, 2, 32, 32, 30);
+      hgr.addColorStop(0, 'rgba(255, 224, 130, 0.72)');
+      hgr.addColorStop(0.45, 'rgba(255, 172, 62, 0.22)');
+      hgr.addColorStop(1, 'rgba(255, 160, 40, 0)');
+      hg.fillStyle = hgr; hg.fillRect(0, 0, 64, 64);
+      return new THREE.CanvasTexture(hc);
+    })();
+    var haloMat = new THREE.SpriteMaterial({ map: haloTex, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false });
+
+    [[-3.3, -3.5], [3.3, -3.5], [-3.3, -15.5], [3.3, -15.5]].forEach(function (lp) {
       var ly = hillY(lp[0], lp[1]);
       var stg = new THREE.Group();
       stg.position.set(lp[0], ly, lp[1]);
-      var sb = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.36, 0.3, 8), postStone);
-      sb.position.y = 0.15; sb.castShadow = true; stg.add(sb);
-      var sp = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 1.35, 7), postStone);
-      sp.position.y = 0.95; sp.castShadow = true; stg.add(sp);
-      var sl = new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), postGlow);
-      sl.position.y = 1.72; stg.add(sl);
-      var sc = new THREE.Mesh(new THREE.ConeGeometry(0.38, 0.24, 8), postStone);
-      sc.position.y = 2.02; sc.castShadow = true; stg.add(sc);
+      var sb = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.24, 0.68), postStone);
+      sb.position.y = 0.12; sb.castShadow = true; stg.add(sb);
+      var sp = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.15, 1.38, 8), postStone);
+      sp.position.y = 0.92; sp.castShadow = true; stg.add(sp);
+      var frame = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.08, 0.40), postWood);
+      frame.position.y = 1.62; stg.add(frame);
+      var lanternCore = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.28, 6), postGlow);
+      lanternCore.position.y = 1.80; stg.add(lanternCore);
+      [-0.14, 0.14].forEach(function (ox) { [-0.14, 0.14].forEach(function (oz) {
+        var bar = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.30, 0.04), postWood);
+        bar.position.set(ox, 1.80, oz); stg.add(bar);
+      }); });
+      var cap = new THREE.Mesh(new THREE.ConeGeometry(0.38, 0.22, 4), postWood);
+      cap.rotation.y = Math.PI / 4; cap.position.y = 2.06; cap.castShadow = true; stg.add(cap);
+      var fin = new THREE.Mesh(new THREE.OctahedronGeometry(0.07, 0), postGold);
+      fin.position.y = 2.20; stg.add(fin);
+      var halo = new THREE.Sprite(haloMat);
+      halo.scale.set(1.65, 1.65, 1); halo.position.y = 1.82; stg.add(halo);
       gardenRoot.add(stg);
     });
+
+    /* Cặp cờ phướn Đại Việt tung bay hai bên cổng dẫn đường */
+    var bannerMat = new THREE.MeshStandardMaterial({ color: 0xb8241c, roughness: 0.72, side: THREE.DoubleSide });
+    var banners = [];
+    [[-4.2, 0.5], [4.2, 0.5]].forEach(function (bp, bi) {
+      var by = hillY(bp[0], bp[1]);
+      var bg = new THREE.Group();
+      bg.position.set(bp[0], by, bp[1]);
+      var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, 4.0, 6), postWood);
+      pole.position.y = 2.0; pole.castShadow = true; bg.add(pole);
+      var arm = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.05, 0.05), postGold);
+      arm.position.set(bi === 0 ? 0.32 : -0.32, 3.88, 0); bg.add(arm);
+      var cloth = new THREE.Mesh(new THREE.PlaneGeometry(0.52, 2.25, 1, 6), bannerMat);
+      cloth.position.set(bi === 0 ? 0.32 : -0.32, 2.72, 0); bg.add(cloth);
+      gardenRoot.add(bg);
+      banners.push(cloth);
+    });
+
+    /* Ruộng bậc thang xanh mướt đặc trưng làng quê Việt Nam cạnh Nhà Ba Gian (-16.5, 11) */
+    var paddyWaterMat = new THREE.MeshStandardMaterial({ color: 0x3f888c, roughness: 0.16, metalness: 0.25, transparent: true, opacity: 0.78 });
+    var dikeMat = new THREE.MeshStandardMaterial({ color: 0x56693a, roughness: 0.94 });
+    [0, 1, 2].forEach(function (ti) {
+      var rx = -15.8 - ti * 1.4, rz = 10.5 + ti * 3.1;
+      var ry = hillY(rx, rz) + 0.08;
+      var rim = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.32, 2.85), dikeMat);
+      rim.position.set(rx, ry - 0.12, rz); rim.rotation.y = 0.28; rim.receiveShadow = true;
+      gardenRoot.add(rim);
+      var pw = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 2.45), paddyWaterMat);
+      pw.rotation.x = -Math.PI / 2; pw.rotation.z = 0.28;
+      pw.position.set(rx, ry + 0.05, rz);
+      gardenRoot.add(pw);
+    });
+
+    /* 14 Đóa Hoa Sen hồng & Lá Sen nổi trên mặt Hồ Gương */
+    var padMat = new THREE.MeshStandardMaterial({ color: 0x3b7a34, roughness: 0.78, side: THREE.DoubleSide });
+    var lotusMat = new THREE.MeshStandardMaterial({ color: 0xf4a4bd, emissive: 0x802a46, emissiveIntensity: 0.2, roughness: 0.55 });
+    var lotuses = [];
+    for (var li = 0; li < 14; li++) {
+      var la = (li / 14) * Math.PI * 2 + 0.3;
+      var lr = 0.35 + (li % 3) * 0.18;
+      var lx = LAKE.x + Math.cos(la) * LAKE.rx * lr;
+      var lz = LAKE.z + Math.sin(la) * LAKE.rz * lr;
+      var lg = new THREE.Group();
+      var pad = new THREE.Mesh(new THREE.CircleGeometry(0.32 + (li % 3) * 0.06, 12, 0.2, Math.PI * 1.85), padMat);
+      pad.rotation.x = -Math.PI / 2; lg.add(pad);
+      if (li % 2 === 0) {
+        var fl = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.14, 6), lotusMat);
+        fl.rotation.x = Math.PI; fl.position.y = 0.07; lg.add(fl);
+      }
+      lg.position.set(lx, (window.__lakeWaterY ? window.__lakeWaterY() : 0.18) + 0.02, lz);
+      lg.rotation.y = li * 1.4;
+      gardenRoot.add(lg);
+      lotuses.push({ g: lg, ph: li * 0.9 });
+    }
+
+    /* Đom đóm vàng quanh Hồ Gương & Cây Đa */
+    var ffN = isMobile || LOW ? 24 : 56;
+    var ffPos = new Float32Array(ffN * 3);
+    for (var fi = 0; fi < ffN; fi++) {
+      var fx = (fi % 2 === 0 ? LAKE.x : 14) + rand(-8, 8);
+      var fz = (fi % 2 === 0 ? LAKE.z : -17) + rand(-8, 8);
+      ffPos[fi * 3] = fx; ffPos[fi * 3 + 1] = hillY(fx, fz) + rand(0.6, 2.8); ffPos[fi * 3 + 2] = fz;
+    }
+    var ffGeo = new THREE.BufferGeometry();
+    ffGeo.setAttribute('position', new THREE.BufferAttribute(ffPos, 3));
+    var ffMesh = new THREE.Points(ffGeo, new THREE.PointsMaterial({ color: 0xffe488, size: 0.14, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
+    gardenRoot.add(ffMesh);
+
+    window.__updateVillageLiving = function (timeSec) {
+      for (var i = 0; i < banners.length; i++) {
+        banners[i].rotation.x = Math.sin(timeSec * 2.2 + i) * 0.12;
+        banners[i].rotation.z = Math.cos(timeSec * 1.7 + i) * 0.08;
+      }
+      var wy = window.__lakeWaterY ? window.__lakeWaterY() : 0.18;
+      for (var j = 0; j < lotuses.length; j++) {
+        lotuses[j].g.position.y = wy + 0.02 + Math.sin(timeSec * 1.6 + lotuses[j].ph) * 0.015;
+      }
+      var pa = ffGeo.attributes.position;
+      for (var k = 0; k < ffN; k++) {
+        pa.setY(k, pa.getY(k) + Math.sin(timeSec * 1.8 + k) * 0.0025);
+      }
+      pa.needsUpdate = true;
+    };
   })();
 
   /* Suối ngọc tự nhiên uốn lượn phía Tây sân đá, chui dưới Cầu Ngói xuống Hồ Gương */
@@ -29392,7 +29694,7 @@ if (!window.__GAME && consented) {
      huỷ (dispose) khi xa, cull ngoài frustum + tầm nhìn → bộ nhớ/draw-call không tăng dù map rộng cỡ nào */
   (function buildChunkSystem() {
     if (!window.__GAME) return;
-    var CHSZ = 14, GEN_R = LOW ? 52 : 66, KILL_R = LOW ? 66 : 82, VIEW_R = LOW ? 48 : 60, CENTER_R = 18;
+    var CHSZ = 16, GEN_R = LOW ? 38 : 50, KILL_R = LOW ? 48 : 62, VIEW_R = LOW ? 34 : 46, CENTER_R = 18;
     var chunkMap = {}, chunkList = [], genQueue = [], lastGenCX = NaN, lastGenCZ = NaN;
     /* ---- ĐƯỜNG ĐẤT: hàm world-space xác định — mọi chunk vẽ khớp liền mạch ---- */
     function pathZ(x) { return 15.5 + 5.2 * Math.sin(x * 0.085) + 3.1 * Math.sin(x * 0.041 + 2.0) - 12.5 * Math.exp(-(x * x) / 70); }
