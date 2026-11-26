@@ -23989,7 +23989,7 @@ window.__initWaterState = function (gardenRoot) {
   refreshHud();
 
   var hint = document.createElement('div');
-  hint.style.cssText = 'position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:79;padding:6px 13px;border-radius:999px;background:rgba(20,18,15,.84);border:1px solid rgba(226,192,122,.4);color:#ffd89a;font:600 12.5px "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;opacity:0;transition:opacity .15s;pointer-events:none;backdrop-filter:blur(8px)';
+  hint.style.cssText = 'position:fixed;left:50%;bottom:116px;transform:translateX(-50%);z-index:79;padding:6px 13px;border-radius:999px;background:rgba(20,18,15,.84);border:1px solid rgba(226,192,122,.4);color:#ffd89a;font:600 12.5px "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;opacity:0;transition:opacity .15s;pointer-events:none;backdrop-filter:blur(8px)';
   document.body.appendChild(hint);
 
   var valveGroup = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel('valve', { height: 1.4 }) : new THREE.Group();
@@ -24038,7 +24038,7 @@ window.__initWaterState = function (gardenRoot) {
   }, 180);
 
   applyWater();
-  window.__WATER_SYSTEM = { tryToggle: tryToggle, refresh: refreshHud, group: valveGroup };
+  window.__WATER_SYSTEM = { tryToggle: tryToggle, refresh: refreshHud, group: valveGroup, state: function () { return state; } };
   return window.__WATER_SYSTEM;
 };
 
@@ -24054,6 +24054,33 @@ window.__initCombat = function (gardenRoot) {
   var enemies = [], projectiles = [], shockwaves = [], mixers = [];
   var shieldMesh = null;
   var lockedTarget = null; /* eObj hoặc 'BOSS' */
+  var rpg = { essence: 20, herbs: 2, weaponLv: 1, talismans: { thuyLong: false, hoMenh: false, tocHanh: false } };
+  try {
+    var savedRpg = JSON.parse(localStorage.getItem('canhdongRpg'));
+    if (savedRpg && typeof savedRpg.weaponLv === 'number') {
+      rpg.essence = Math.max(0, savedRpg.essence || 0);
+      rpg.herbs = Math.max(0, savedRpg.herbs || 0);
+      rpg.weaponLv = Math.max(1, Math.min(5, savedRpg.weaponLv || 1));
+      if (savedRpg.talismans) rpg.talismans = savedRpg.talismans;
+    }
+  } catch (eR) {}
+  function saveRpg() { try { localStorage.setItem('canhdongRpg', JSON.stringify(rpg)); } catch (eR) {} }
+  function getRpgStats() {
+    var tl = rpg.talismans || {};
+    return {
+      weaponLv: rpg.weaponLv,
+      dmgBonus: (rpg.weaponLv - 1) * 1.2 + (window.__dmgBonus || 0),
+      maxHp: 100 + (tl.hoMenh ? 35 : 0),
+      defMult: tl.hoMenh ? 0.80 : 1.0,
+      spdMult: tl.tocHanh ? 1.16 : 1.0,
+      stCostMult: tl.tocHanh ? 0.75 : 1.0,
+      thuyNoMult: tl.thuyLong ? 1.35 : 1.0,
+      parryStam: tl.thuyLong ? 36 : 28
+    };
+  }
+  window.__RPG_STATS = getRpgStats;
+  maxHp = getRpgStats().maxHp;
+  playerHp = maxHp;
 
   var enemyData = [
     { id: 'EN-01', name: 'Xà Tinh Đầm', kind: 'snake', weak: 'Phản đòn (F)', asset: 'enemySnake', x: -16.5, z: -12.0, height: 1.15, hp: 12, speed: 1.65, range: 1.95, tell: 0.56, active: 0.22, recover: 0.78, damage: 10 },
@@ -24073,20 +24100,111 @@ window.__initCombat = function (gardenRoot) {
   bar.innerHTML =
     '<div id="cLockPill" style="display:none;width:100%;padding:3px 9px;border-radius:8px;background:rgba(28,46,40,.85);border:1px solid rgba(78,247,212,.45);color:#aefce8;font-size:11px;justify-content:space-between;align-items:center"><span id="cLockName"></span><span id="cLockInfo"></span></div>' +
     '<div style="display:flex;align-items:center;gap:12px;width:100%;justify-content:space-between">' +
-      '<div style="flex:1;min-width:120px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Máu</span><span id="cHpTxt">100/100</span></div><div style="height:6px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden"><div id="cHpFill" style="height:100%;width:100%;background:linear-gradient(90deg,#e04b3f,#44c986);transition:width .12s"></div></div></div>' +
-      '<div style="flex:1;min-width:120px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Thể lực</span><span id="cStTxt">100</span></div><div style="height:6px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden"><div id="cStFill" style="height:100%;width:100%;background:linear-gradient(90deg,#d99a32,#ffe178);transition:width .08s"></div></div></div>' +
-      '<div id="cEnemyTxt" style="font-size:11px;color:#e8d3a3;white-space:nowrap">Kẻ địch: 8</div>' +
+    '<div style="flex:1;min-width:120px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Máu</span><span id="cHpTxt">100/100</span></div><div style="height:6px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden"><div id="cHpFill" style="height:100%;width:100%;background:linear-gradient(90deg,#e04b3f,#44c986);transition:width .12s"></div></div></div>' +
+    '<div style="flex:1;min-width:120px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Thể lực</span><span id="cStTxt">100</span></div><div style="height:6px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden"><div id="cStFill" style="height:100%;width:100%;background:linear-gradient(90deg,#d99a32,#ffe178);transition:width .08s"></div></div></div>' +
+    '<div id="cEnemyTxt" style="font-size:11px;color:#e8d3a3;white-space:nowrap">Kẻ địch: 8</div>' +
     '</div>' +
     '<div style="display:flex;gap:4px;flex-wrap:nowrap;justify-content:center;white-space:nowrap">' +
-      '<button type="button" data-sk="atk" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font:inherit"><b>J</b> Đánh</button>' +
-      '<button type="button" data-sk="1" id="btnS1" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(78,247,212,.45);background:rgba(22,109,84,.45);color:#dffcf3;cursor:pointer;font:inherit"><b>1</b> Xuyên Thủy <span id="cdS1"></span></button>' +
-      '<button type="button" data-sk="2" id="btnS2" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(230,190,99,.45);background:rgba(120,86,28,.45);color:#fff0c9;cursor:pointer;font:inherit"><b>2</b> Toàn Phong <span id="cdS2"></span></button>' +
-      '<button type="button" data-sk="3" id="btnS3" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(110,224,255,.45);background:rgba(24,84,112,.45);color:#dcf7ff;cursor:pointer;font:inherit"><b>3</b> Kết Giới <span id="cdS3"></span></button>' +
-      '<button type="button" data-sk="parry" id="btnParry" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(255,215,110,.38);background:rgba(50,42,26,.65);color:#ffd89a;cursor:pointer;font:inherit"><b>F</b> Đỡ/Phản</button>' +
-      '<button type="button" data-sk="dodge" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(170,235,255,.35);background:rgba(32,52,60,.65);color:#d0f4ff;cursor:pointer;font:inherit"><b>C</b> Né</button>' +
-      '<button type="button" data-sk="lock" id="btnLock" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(255,220,120,.38);background:rgba(46,38,24,.68);color:#ffe49b;cursor:pointer;font:inherit"><b>Tab</b> Khóa</button>' +
+    '<button type="button" data-sk="atk" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font:inherit"><b>J</b> Đánh</button>' +
+    '<button type="button" data-sk="1" id="btnS1" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(78,247,212,.45);background:rgba(22,109,84,.45);color:#dffcf3;cursor:pointer;font:inherit"><b>1</b> Xuyên Thủy <span id="cdS1"></span></button>' +
+    '<button type="button" data-sk="2" id="btnS2" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(230,190,99,.45);background:rgba(120,86,28,.45);color:#fff0c9;cursor:pointer;font:inherit"><b>2</b> Toàn Phong <span id="cdS2"></span></button>' +
+    '<button type="button" data-sk="3" id="btnS3" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(110,224,255,.45);background:rgba(24,84,112,.45);color:#dcf7ff;cursor:pointer;font:inherit"><b>3</b> Kết Giới <span id="cdS3"></span></button>' +
+    '<button type="button" data-sk="4" id="btnHerb" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(115,245,145,.45);background:rgba(28,88,44,.5);color:#d7ffe0;cursor:pointer;font:inherit"><b>4</b> Dược <span id="nHerb">x2</span></button>' +
+    '<button type="button" data-sk="parry" id="btnParry" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(255,215,110,.38);background:rgba(50,42,26,.65);color:#ffd89a;cursor:pointer;font:inherit"><b>F</b> Đỡ/Phản</button>' +
+    '<button type="button" data-sk="dodge" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(170,235,255,.35);background:rgba(32,52,60,.65);color:#d0f4ff;cursor:pointer;font:inherit"><b>C</b> Né</button>' +
+    '<button type="button" data-sk="lock" id="btnLock" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(255,220,120,.38);background:rgba(46,38,24,.68);color:#ffe49b;cursor:pointer;font:inherit"><b>Tab</b> Khóa</button>' +
+    '<button type="button" data-sk="bag" id="btnBag" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(235,190,115,.45);background:rgba(68,48,24,.7);color:#ffe4ad;cursor:pointer;font:inherit"><b>I</b> Túi (<span id="nEss">20</span>)</button>' +
     '</div>';
   document.body.appendChild(bar);
+
+  /* Modal Hành Trang — Rèn Ngọc Thương & Chế Ngọc Bội [I] */
+  var bagModal = document.createElement('div');
+  bagModal.id = 'rpgBagModal';
+  bagModal.style.cssText = 'position:fixed;inset:0;z-index:135;display:none;align-items:center;justify-content:center;background:rgba(10,14,12,.72);backdrop-filter:blur(8px);font:14px/1.55 "Segoe UI",system-ui,sans-serif;color:#f6efe0';
+  document.body.appendChild(bagModal);
+
+  function renderBagModal() {
+    var st = getRpgStats();
+    var wCost = rpg.weaponLv * 15;
+    var tl = rpg.talismans || {};
+    var items = [
+      { k: 'thuyLong', name: 'Ngọc Bội Thủy Long', desc: '+35% sát thương Thủy Nộ & hồi thêm Thể lực khi Phản Đòn', cost: 25 },
+      { k: 'hoMenh', name: 'Bùa Hộ Mệnh Kinh Kỳ', desc: '+35 Máu tối đa (135 HP) & -20% sát thương nhận vào', cost: 25 },
+      { k: 'tocHanh', name: 'Ấn Tốc Hành Gió', desc: '+16% tốc độ di chuyển & giảm 25% tiêu hao Thể lực', cost: 25 }
+    ];
+    bagModal.innerHTML =
+      '<div style="width:min(540px,90vw);padding:20px 24px;border-radius:16px;background:rgba(22,19,16,.95);border:1px solid rgba(226,192,122,.45);box-shadow:0 22px 60px rgba(0,0,0,.6)">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+          '<div style="font:700 18px inherit;color:#ffd89a">HÀNH TRANG & RÈN NGỌC THƯƠNG</div>' +
+          '<button type="button" id="closeBagBtn" style="padding:4px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;cursor:pointer">Đóng (I)</button>' +
+        '</div>' +
+        '<div style="margin-bottom:12px;padding:8px 12px;border-radius:10px;background:rgba(42,36,24,.65);display:flex;justify-content:space-between">' +
+          '<span>✦ Linh Thạch: <b style="color:#4ef7d4">' + rpg.essence + '</b></span>' +
+          '<span>❀ Thảo Dược: <b style="color:#7effa2">' + rpg.herbs + '</b></span>' +
+          '<span>⚔ Đòn cộng thêm: <b style="color:#ffd89a">+' + st.dmgBonus.toFixed(1) + '</b></span>' +
+        '</div>' +
+        '<div style="padding:10px 12px;border-radius:10px;border:1px solid rgba(78,247,212,.3);background:rgba(20,52,44,.42);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">' +
+          '<div><b>Ngọc Thương Cấp ' + rpg.weaponLv + '/5</b><div style="font-size:12px;opacity:.8">Tăng sát thương cơ bản và kỹ năng (+1.2 mỗi cấp)</div></div>' +
+          (rpg.weaponLv < 5
+            ? '<button type="button" id="upWeaponBtn" style="padding:6px 12px;border-radius:8px;border:1px solid #4ef7d4;background:rgba(22,110,86,.65);color:#dffcf3;cursor:pointer;font-weight:700">Rèn (' + wCost + ' ✦)</button>'
+            : '<span style="color:#ffd89a;font-weight:700">TỐI ĐA</span>') +
+        '</div>' +
+        '<div style="padding:10px 12px;border-radius:10px;border:1px solid rgba(115,245,145,.3);background:rgba(26,64,34,.38);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">' +
+          '<div><b>Bình Thảo Dược Hồi Sinh</b><div style="font-size:12px;opacity:.8">Phím [4] hồi nhanh +45 Máu giữa trận</div></div>' +
+          '<button type="button" id="buyHerbBtn" style="padding:6px 12px;border-radius:8px;border:1px solid #7effa2;background:rgba(32,94,48,.65);color:#d7ffe0;cursor:pointer;font-weight:700">+1 (10 ✦)</button>' +
+        '</div>' +
+        '<div style="font-weight:700;color:#ffe2a6;margin-bottom:6px">Ngọc Bội Pháp Bảo</div>' +
+        items.map(function (it) {
+          var owned = !!tl[it.k];
+          return '<div style="padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">' +
+            '<div><b>' + it.name + '</b><div style="font-size:12px;opacity:.78">' + it.desc + '</div></div>' +
+            (owned ? '<span style="color:#4ef7d4;font-weight:700">ĐANG ĐEO</span>'
+              : '<button type="button" data-talis="' + it.k + '" style="padding:5px 11px;border-radius:8px;border:1px solid #ffd89a;background:rgba(120,86,28,.55);color:#fff0c9;cursor:pointer;font-weight:700">Chế (' + it.cost + ' ✦)</button>') +
+          '</div>';
+        }).join('') +
+      '</div>';
+    document.getElementById('closeBagBtn').onclick = toggleBag;
+    var uwb = document.getElementById('upWeaponBtn');
+    if (uwb) uwb.onclick = function () {
+      if (rpg.essence < wCost) { floatText('Thiếu Linh Thạch!', '#ffb37a', false); return; }
+      rpg.essence -= wCost; rpg.weaponLv++; saveRpg();
+      if (window.__sfx && window.__sfx.parry) window.__sfx.parry();
+      renderBagModal(); refreshHud();
+    };
+    document.getElementById('buyHerbBtn').onclick = function () {
+      if (rpg.essence < 10) { floatText('Thiếu Linh Thạch!', '#ffb37a', false); return; }
+      rpg.essence -= 10; rpg.herbs++; saveRpg();
+      if (window.__sfx) window.__sfx.chime();
+      renderBagModal(); refreshHud();
+    };
+    [].forEach.call(bagModal.querySelectorAll('[data-talis]'), function (tb) {
+      tb.onclick = function () {
+        var tk = tb.getAttribute('data-talis');
+        if (rpg.essence < 25) { floatText('Thiếu Linh Thạch!', '#ffb37a', false); return; }
+        rpg.essence -= 25; rpg.talismans[tk] = true;
+        maxHp = getRpgStats().maxHp;
+        if (tk === 'hoMenh') playerHp = Math.min(maxHp, playerHp + 35);
+        saveRpg();
+        if (window.__sfx && window.__sfx.parry) window.__sfx.parry();
+        renderBagModal(); refreshHud();
+      };
+    });
+  }
+  function toggleBag() {
+    var open = bagModal.style.display === 'flex';
+    bagModal.style.display = open ? 'none' : 'flex';
+    if (!open) renderBagModal();
+  }
+  function useHerb() {
+    if (rpg.herbs <= 0) { floatText('Hết Thảo Dược!', '#ffb37a', false); return; }
+    if (playerHp >= maxHp) { floatText('Máu đã đầy!', '#d8d0be', false); return; }
+    rpg.herbs--; playerHp = Math.min(maxHp, playerHp + 45); saveRpg();
+    floatText('+45 MÁU (Thảo Dược)', '#7effa2', true);
+    var pH = localPlayer();
+    if (pH) spawnShockwave(pH.x, window.__hillY ? window.__hillY(pH.x, pH.z) : 0, pH.z, 0x7effa2, 2.5, 0.35);
+    if (window.__sfx) window.__sfx.chime();
+    refreshHud();
+  }
 
   /* Vệt chém Vầng Trăng Anime (Crescent Slash Arc + Spark Particles) */
   var slashArcs = [], sparks = [];
@@ -24279,22 +24397,22 @@ window.__initCombat = function (gardenRoot) {
     var useAnim = info.asset !== 'enemyBoulder' && window.__REAL_ASSETS && window.__REAL_ASSETS.makeAnimatedModel;
     var group = useAnim
       ? window.__REAL_ASSETS.makeAnimatedModel(info.asset, { height: info.height }, function (model, anims) {
-          if (!anims || !anims.length) return;
-          var mx = new THREE.AnimationMixer(model);
-          var acts = {};
-          anims.forEach(function (cl) {
-            var nm = cl.name.toLowerCase();
-            if (nm.indexOf('idle') >= 0) acts.idle = mx.clipAction(cl);
-            else if (nm.indexOf('walk') >= 0 || nm.indexOf('jump') >= 0) acts.walk = mx.clipAction(cl);
-            else if (nm.indexOf('attack') >= 0) acts.attack = mx.clipAction(cl);
-            else if (nm.indexOf('death') >= 0) acts.death = mx.clipAction(cl);
-          });
-          if (!acts.idle) acts.idle = mx.clipAction(anims[0]);
-          if (!acts.walk) acts.walk = acts.idle;
-          acts.idle.play();
-          eObj.mixer = mx; eObj.actions = acts; eObj.curAnim = acts.idle;
-          mixers.push(mx);
-        })
+        if (!anims || !anims.length) return;
+        var mx = new THREE.AnimationMixer(model);
+        var acts = {};
+        anims.forEach(function (cl) {
+          var nm = cl.name.toLowerCase();
+          if (nm.indexOf('idle') >= 0) acts.idle = mx.clipAction(cl);
+          else if (nm.indexOf('walk') >= 0 || nm.indexOf('jump') >= 0) acts.walk = mx.clipAction(cl);
+          else if (nm.indexOf('attack') >= 0) acts.attack = mx.clipAction(cl);
+          else if (nm.indexOf('death') >= 0) acts.death = mx.clipAction(cl);
+        });
+        if (!acts.idle) acts.idle = mx.clipAction(anims[0]);
+        if (!acts.walk) acts.walk = acts.idle;
+        acts.idle.play();
+        eObj.mixer = mx; eObj.actions = acts; eObj.curAnim = acts.idle;
+        mixers.push(mx);
+      })
       : (window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel(info.asset, { height: info.height }) : new THREE.Group());
 
     var y = window.__hillY ? window.__hillY(info.x, info.z) : 0;
@@ -24302,16 +24420,26 @@ window.__initCombat = function (gardenRoot) {
     gardenRoot.add(group);
     eObj.group = group;
 
-    var alertR = info.armored ? 2.35 : 0.72;
+    var alertR = info.armored ? 2.35 : (info.ranged ? 1.55 : Math.min(2.3, info.range || 1.9));
     var alert = new THREE.Mesh(
       new THREE.RingGeometry(alertR * 0.85, alertR, 28),
-      new THREE.MeshBasicMaterial({ color: info.armored ? 0xff4422 : 0xff7744, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false })
+      new THREE.MeshBasicMaterial({ color: info.armored ? 0xff4422 : 0xff7744, transparent: true, opacity: 0.78, side: THREE.DoubleSide, depthWrite: false })
     );
     alert.rotation.x = -Math.PI / 2;
     alert.position.set(info.x, y + 0.07, info.z);
     alert.visible = false;
     gardenRoot.add(alert);
     eObj.alert = alert;
+
+    var tellFill = new THREE.Mesh(
+      new THREE.CircleGeometry(alertR * 0.85, 28),
+      new THREE.MeshBasicMaterial({ color: 0xff2818, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false })
+    );
+    tellFill.rotation.x = -Math.PI / 2;
+    tellFill.position.set(info.x, y + 0.06, info.z);
+    tellFill.visible = false;
+    gardenRoot.add(tellFill);
+    eObj.tellFill = tellFill;
 
     var barBg = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x16120c, transparent: true, opacity: 0.88, depthWrite: false }));
     barBg.scale.set(1.25, 0.14, 1);
@@ -24351,6 +24479,10 @@ window.__initCombat = function (gardenRoot) {
     });
     var bp = document.getElementById('btnParry');
     if (bp) bp.style.boxShadow = guarding ? '0 0 12px rgba(255,215,100,.8)' : 'none';
+    var nh = document.getElementById('nHerb');
+    var ne = document.getElementById('nEss');
+    if (nh) nh.textContent = 'x' + rpg.herbs;
+    if (ne) ne.textContent = String(rpg.essence);
     var lp = document.getElementById('cLockPill');
     var ln = document.getElementById('cLockName');
     var li = document.getElementById('cLockInfo');
@@ -24397,12 +24529,13 @@ window.__initCombat = function (gardenRoot) {
         tag = ' (Giáp)';
       }
     } else if (isAoe && now < (e.wetUntil || 0)) {
-      dmg = Math.round(rawDmg * 1.8);
+      dmg = Math.round(rawDmg * 1.8 * getRpgStats().thuyNoMult);
       msgCol = '#58f2ff';
       tag = ' THỦY NỘ x1.8!';
       e.wetUntil = 0;
       e.staggerUntil = Math.max(e.staggerUntil || 0, now + 1500);
       spawnShockwave(e.group.position.x, window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0, e.group.position.z, 0x3be8ff, 3.2, 0.36);
+      if (window.__sfx && window.__sfx.hydroBoom) window.__sfx.hydroBoom();
       triggerHitStop(65);
     } else if (e.info.kind === 'spider' && isAoe) {
       dmg = Math.round(rawDmg * 1.5);
@@ -24428,8 +24561,12 @@ window.__initCombat = function (gardenRoot) {
       e.hp = 0; e.state = 'DEAD'; e.group.visible = false;
       if (lockedTarget === e) lockedTarget = null;
       if (e.alert) e.alert.visible = false;
+      if (e.tellFill) e.tellFill.visible = false;
       if (e.barBg) e.barBg.visible = false;
       if (e.barFg) e.barFg.visible = false;
+      rpg.essence += 12;
+      if (kills % 2 === 1) rpg.herbs++;
+      saveRpg();
       if (window.__addScore) window.__addScore(15);
       triggerHitStop(68);
     } else if (e.state === 'TELL' && (isAoe || isPierce)) {
@@ -24449,11 +24586,13 @@ window.__initCombat = function (gardenRoot) {
     }
     if (allowParry !== false && now < parryWindowUntil) {
       parryFlash = 0.72;
-      stamina = Math.min(maxStamina, stamina + 28);
+      stamina = Math.min(maxStamina, stamina + getRpgStats().parryStam);
       floatText('PHẢN ĐÒN HOÀN HẢO!', '#ffe57a', true);
       var p = localPlayer();
       if (p) spawnShockwave(p.x, window.__hillY ? window.__hillY(p.x, p.z) : 0, p.z, 0xffe066, 3.8, 0.38);
-      if (window.__sfx) window.__sfx.chime();
+      if (window.__sfx && window.__sfx.parry) window.__sfx.parry();
+      else if (window.__sfx) window.__sfx.chime();
+      triggerHitStop(65);
       if (attacker) {
         if (attacker.kind === 'proj') {
           attacker.vx *= -1.8; attacker.vz *= -1.8; attacker.reflected = true;
@@ -24468,11 +24607,11 @@ window.__initCombat = function (gardenRoot) {
       refreshHud();
       return;
     }
-    var finalDmg = amount;
+    var finalDmg = Math.max(1, Math.round(amount * getRpgStats().defMult));
     if (guarding && stamina >= 10) {
       stamina = Math.max(0, stamina - 12);
       stPauseUntil = now + 450;
-      finalDmg = Math.max(1, Math.round(amount * 0.3));
+      finalDmg = Math.max(1, Math.round(finalDmg * 0.3));
       floatText('ĐỠ -' + finalDmg, '#b8e8ff', false);
     } else {
       if (sanctuaryUntil > now) finalDmg = Math.max(1, Math.round(finalDmg * 0.65));
@@ -24493,8 +24632,9 @@ window.__initCombat = function (gardenRoot) {
 
   function dodge() {
     var now = performance.now();
-    if (stamina < 20) { floatText('Hết thể lực!', '#ffb37a', false); return false; }
-    stamina -= 20;
+    var dCost = Math.round(20 * getRpgStats().stCostMult);
+    if (stamina < dCost) { floatText('Hết thể lực!', '#ffb37a', false); return false; }
+    stamina -= dCost;
     stPauseUntil = now + 450;
     invulnUntil = now + 420;
     if (window.__heroineDodge) window.__heroineDodge();
@@ -24557,7 +24697,8 @@ window.__initCombat = function (gardenRoot) {
     spawnSlashArc(p.x, pyAtk, p.z, faceYaw, tilt, comboStep === 3 ? 0xffe27a : 0x56f5d0, comboStep === 3 ? 2.6 : 2.15, Math.PI * 0.92, 0.22);
     var mult = comboStep === 3 ? 2.2 : (comboStep === 2 ? 1.35 : 1.0);
     var buff = sanctuaryUntil > now ? 1.45 : 1.0;
-    var dmg = Math.round((1.5 + (window.__dmgBonus || 0)) * mult * buff);
+    var dmg = Math.round((1.5 + getRpgStats().dmgBonus) * mult * buff);
+    if (window.__sfx && window.__sfx.slash) window.__sfx.slash(comboStep === 3 ? 0.85 : (0.95 + comboStep * 0.12));
     var hitAny = false;
     enemies.forEach(function (e) {
       if (e.hp <= 0) return;
@@ -24571,6 +24712,7 @@ window.__initCombat = function (gardenRoot) {
     if (window.__onBossSkillHit) {
       if (window.__onBossSkillHit(p.x, p.z, 3.8, dmg, false, comboStep === 3 ? 24 : 12)) hitAny = true;
     }
+    if (window.__CAMPAIGN_STRIKE && window.__CAMPAIGN_STRIKE(dmg, false, false)) hitAny = true;
     if (hitAny && comboStep === 3) stamina = Math.min(maxStamina, stamina + 18);
     if (hitAny && window.__sfx) window.__sfx.chime();
     if (hitAny && comboStep === 3) triggerHitStop(55);
@@ -24585,7 +24727,7 @@ window.__initCombat = function (gardenRoot) {
     var now = performance.now();
     var key = 's' + id;
     if (now < skillCd[key]) { floatText('Chờ hồi chiêu!', '#d8d0be', false); return; }
-    var cost = id === 1 ? 20 : (id === 2 ? 28 : 30);
+    var cost = Math.round((id === 1 ? 20 : (id === 2 ? 28 : 30)) * getRpgStats().stCostMult);
     if (stamina < cost) { floatText('Không đủ thể lực!', '#ffb37a', false); return; }
     var p = localPlayer();
     if (!p) return;
@@ -24610,7 +24752,7 @@ window.__initCombat = function (gardenRoot) {
       floatText('XUYÊN THỦY THƯƠNG!', '#4ef7d4', true);
       spawnShockwave(p.x, py, p.z, 0x4ef7d4, 3.6, 0.36);
       spawnSlashArc(p.x, py, p.z, window.__playerYaw ? window.__playerYaw() : 0, 1.45, 0x4ef7d4, 2.9, Math.PI * 0.55, 0.25);
-      var dmg1 = Math.round((3.2 + (window.__dmgBonus || 0)) * buff);
+      var dmg1 = Math.round((3.2 + getRpgStats().dmgBonus) * buff);
       var hit1 = false;
       enemies.forEach(function (e) {
         if (e.hp <= 0) return;
@@ -24622,14 +24764,17 @@ window.__initCombat = function (gardenRoot) {
         }
       });
       if (window.__onBossSkillHit && window.__onBossSkillHit(p.x, p.z, 4.6, dmg1, true, 36)) hit1 = true;
+      if (window.__CAMPAIGN_STRIKE && window.__CAMPAIGN_STRIKE(dmg1, true, false)) hit1 = true;
+      if (window.__sfx && window.__sfx.slash) window.__sfx.slash(1.25);
       if (hit1) triggerHitStop(55);
     } else if (id === 2) {
       /* Liên Hoàn Toàn Phong: AOE 4.8m ngắt đòn quái + Kích hoạt THỦY NỘ nếu quái đang ƯỚT SŨNG */
       floatText('LIÊN HOÀN TOÀN PHONG!', '#ffe27a', true);
       spawnShockwave(p.x, py, p.z, 0xffe27a, 5.2, 0.45);
       spawnSlashArc(p.x, py, p.z, window.__playerYaw ? window.__playerYaw() : 0, 0.08, 0xffe27a, 3.4, Math.PI * 1.85, 0.30);
+      if (window.__sfx && window.__sfx.slash) window.__sfx.slash(0.75);
       window.__shakeT = now; window.__shakeAmt = 0.12;
-      var dmg2 = Math.round((2.6 + (window.__dmgBonus || 0)) * buff);
+      var dmg2 = Math.round((2.6 + getRpgStats().dmgBonus) * buff);
       enemies.forEach(function (e) {
         if (e.hp <= 0) return;
         var d = dist2d(p, e.group.position);
@@ -24639,6 +24784,7 @@ window.__initCombat = function (gardenRoot) {
         }
       });
       if (window.__onBossSkillHit) window.__onBossSkillHit(p.x, p.z, 5.0, dmg2, false, 28);
+      if (window.__CAMPAIGN_STRIKE) window.__CAMPAIGN_STRIKE(dmg2, false, true);
     } else if (id === 3) {
       /* Thần Ngọc Kết Giới: hồi +30 HP + khiên ngọc 6s */
       playerHp = Math.min(maxHp, playerHp + 30);
@@ -24657,6 +24803,8 @@ window.__initCombat = function (gardenRoot) {
       else if (sk === '1' || sk === '2' || sk === '3') useSkill(Number(sk));
       else if (sk === 'dodge') dodge();
       else if (sk === 'parry') { setGuard(true); setTimeout(function () { setGuard(false); }, 360); }
+      else if (sk === '4') useHerb();
+      else if (sk === 'bag') toggleBag();
       else if (sk === 'lock') toggleLockOn();
     });
   });
@@ -24667,6 +24815,8 @@ window.__initCombat = function (gardenRoot) {
     else if (k === '1') useSkill(1);
     else if (k === '2') useSkill(2);
     else if (k === '3') useSkill(3);
+    else if (k === '4') useHerb();
+    else if (k === 'i') toggleBag();
     else if (k === 'f') setGuard(true);
     else if (k === 'v' || e.key === 'Tab') { e.preventDefault(); toggleLockOn(); }
   });
@@ -24756,17 +24906,14 @@ window.__initCombat = function (gardenRoot) {
         spk.mesh.material.opacity = 1 - sk2;
       }
     }
-    /* Vệt chém 3D Slash Ribbon theo đầu Ngọc Thương (tự xóa nếu teleport hoặc ngắt nhịp) */
+    /* Vệt chém 3D Slash Ribbon theo đầu Ngọc Thương */
     var seg = window.__getSpearSegment ? window.__getSpearSegment() : null;
-    if (seg && trailPts.length > 0 && seg.tip.distanceTo(trailPts[0].tip) > 3.2) {
-      trailPts.length = 0;
-    }
     if (seg && seg.active) {
       trailPts.unshift({ base: seg.base.clone(), tip: seg.tip.clone(), age: 0 });
       if (trailPts.length > TRAIL_N) trailPts.pop();
     } else {
       for (var ti = trailPts.length - 1; ti >= 0; ti--) {
-        trailPts[ti].age += d * 7.5;
+        trailPts[ti].age += d * 4.5;
         if (trailPts[ti].age >= 1) trailPts.splice(ti, 1);
       }
     }
@@ -24869,10 +25016,12 @@ window.__initCombat = function (gardenRoot) {
       if (now < e.staggerUntil) {
         playEnemyAnim(e, 'idle');
         if (e.alert) e.alert.visible = false;
+        if (e.tellFill) e.tellFill.visible = false;
         continue;
       }
 
       if (e.state === 'IDLE' || e.state === 'CHASE') {
+        if (e.tellFill) e.tellFill.visible = false;
         if (d > 11.5) { e.state = 'IDLE'; playEnemyAnim(e, 'idle'); if (e.alert) e.alert.visible = false; continue; }
         e.state = 'CHASE';
         playEnemyAnim(e, 'walk');
@@ -24896,11 +25045,18 @@ window.__initCombat = function (gardenRoot) {
           if (e.alert) e.alert.material.color.setHex(0xff1e11);
         }
       } else if (e.state === 'TELL') {
+        var gyA = (window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0) + 0.07;
         if (e.alert) {
-          e.alert.position.set(e.group.position.x, (window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0) + 0.07, e.group.position.z);
-          e.alert.scale.setScalar(0.85 + 0.25 * Math.sin(now * 0.025));
+          e.alert.position.set(e.group.position.x, gyA, e.group.position.z);
+          e.alert.scale.setScalar(0.95 + 0.14 * Math.sin(now * 0.025));
+        }
+        if (e.tellFill) {
+          e.tellFill.visible = true;
+          e.tellFill.position.set(e.group.position.x, gyA - 0.01, e.group.position.z);
+          e.tellFill.scale.setScalar(Math.max(0.08, Math.min(1, 1 - e.timer / (e.info.tell || 1))));
         }
         if (e.timer <= 0) {
+          if (e.tellFill) e.tellFill.visible = false;
           if (e.info.ranged) {
             var invD = 1 / (d || 1);
             var pm = new THREE.Mesh(
@@ -25056,7 +25212,7 @@ window.__initBoss = function (gardenRoot) {
       hp = 0; defeated = true; state = 'DEFEATED'; group.visible = false;
       aoeOuter.visible = false; aoeFill.visible = false;
       if (window.__addScore) window.__addScore(150);
-      try { localStorage.setItem('bossB01', '1'); } catch (e) {}
+      try { localStorage.setItem('bossB01', '1'); } catch (e) { }
       if (window.__toast) window.__toast('★ Đã đánh bại Boss B-01 Người Gác Mạch!');
     }
     refresh();
@@ -25413,11 +25569,12 @@ window.__initCampaign = function (gardenRoot) {
     toast(g.name + ' bị đánh bại' + (g.reward ? ' (+' + g.reward + ')' : ''));
   }
 
-  function playerStrike() {
+  function playerStrike(customDmg, isPierce, isAoe) {
     var now = performance.now();
-    if (now - atkCd < 450) return;
-    var p = localPlayer(); if (!p) return;
-    var best = null, bd = 3.4;
+    if (!customDmg && now - atkCd < 450) return false;
+    var p = localPlayer(); if (!p) return false;
+    var range = isAoe ? 5.0 : (isPierce ? 4.6 : 3.6);
+    var best = null, bd = range;
     guardians.forEach(function (g) {
       if (g.defeated) return;
       var d = d2(p, g.group.position.x, g.group.position.z);
@@ -25428,16 +25585,20 @@ window.__initCampaign = function (gardenRoot) {
       var d = d2(p, f.group.position.x, f.group.position.z);
       if (d < bd) { bd = d; best = { t: 'f', o: f }; }
     });
-    if (!best) return;
+    if (!best) return false;
     atkCd = now;
+    var baseDmg = Math.max(1, Math.round(customDmg || 1));
     if (best.t === 'g') {
-      best.o.hp -= best.o.state === 'RECOVER' ? 2 : 1;
+      best.o.hp -= best.o.state === 'RECOVER' ? baseDmg * 2 : baseDmg;
+      toast(best.o.name + ': ' + Math.max(0, best.o.hp) + '/' + best.o.maxHp + ' HP');
       if (best.o.hp <= 0) killGuardian(best.o);
     } else {
-      best.o.hp -= 1;
+      best.o.hp -= baseDmg;
       if (best.o.hp <= 0) { best.o.alive = false; best.o.group.visible = false; }
     }
+    return true;
   }
+  window.__CAMPAIGN_STRIKE = playerStrike;
 
   function completeObj() {
     var quest = q(); if (!quest) return;
@@ -25554,12 +25715,41 @@ window.__initCampaign = function (gardenRoot) {
     return true;
   };
 
+  /* Đã hợp nhất đòn đánh qua window.__CAMPAIGN_STRIKE trong combat.js; mở Nhật Ký 28 Nhiệm Vụ bằng phím N hoặc click bảng nhiệm vụ */
+  var chronicle = document.createElement('div');
+  chronicle.id = 'questChronicleModal';
+  chronicle.style.cssText = 'position:fixed;inset:0;z-index:135;display:none;align-items:center;justify-content:center;background:rgba(10,14,12,.72);backdrop-filter:blur(8px);font:13.5px/1.55 "Segoe UI",system-ui,sans-serif;color:#f6efe0';
+  document.body.appendChild(chronicle);
+
+  function toggleChronicle() {
+    var open = chronicle.style.display === 'flex';
+    if (open) { chronicle.style.display = 'none'; return; }
+    var cur = q();
+    chronicle.innerHTML =
+      '<div style="width:min(620px,92vw);max-height:82vh;display:flex;flex-direction:column;padding:20px 24px;border-radius:16px;background:rgba(22,19,16,.95);border:1px solid rgba(226,192,122,.45);box-shadow:0 22px 60px rgba(0,0,0,.6)">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
+          '<div style="font:700 18px inherit;color:#ffd89a">NHẬT KÝ HÀNH TRÌNH ĐẠI VIỆT (' + (CS.idx + 1) + '/' + QUESTS.length + ')</div>' +
+          '<button type="button" id="closeChronBtn" style="padding:4px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;cursor:pointer">Đóng (N)</button>' +
+        '</div>' +
+        '<div style="padding:10px 12px;border-radius:10px;background:rgba(36,54,44,.55);border:1px solid rgba(78,247,212,.35);margin-bottom:12px">' +
+          '<b>Đang thực hiện:</b> ' + cur.ch + ' · ' + cur.id + ' — <span style="color:#ffd89a">' + cur.name + '</span><br>' +
+          '<span style="opacity:.85">Mục tiêu: ' + cur.objs[oi()].text + '</span>' +
+        '</div>' +
+        '<div style="overflow-y:auto;padding-right:6px;display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
+          QUESTS.map(function (qu, qi) {
+            var done = qi < CS.idx, active = qi === CS.idx;
+            return '<div style="padding:7px 10px;border-radius:8px;border:1px solid ' + (active ? '#4ef7d4' : 'rgba(255,255,255,.1)') + ';background:' + (done ? 'rgba(60,110,68,.24)' : (active ? 'rgba(28,64,56,.48)' : 'rgba(255,255,255,.03)')) + ';opacity:' + (qi > CS.idx ? '0.62' : '1') + '">' +
+              '<div><b>' + (done ? '✔ ' : (active ? '▶ ' : '• ')) + qu.id + '</b> <span style="opacity:.7">(' + qu.ch + ')</span></div>' +
+              '<div style="font-size:12px;color:#ffe2a6">' + qu.name + '</div>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+    chronicle.style.display = 'flex';
+    document.getElementById('closeChronBtn').onclick = toggleChronicle;
+  }
   window.addEventListener('keydown', function (e) {
-    var k = (e.key || '').toLowerCase();
-    if (k === 'j') playerStrike();
-  });
-  window.addEventListener('pointerdown', function (e) {
-    if (e.button === 0 && (!e.target.closest || !e.target.closest('button'))) playerStrike();
+    if ((e.key || '').toLowerCase() === 'n') toggleChronicle();
   });
 
   var CAM = {};
@@ -25579,7 +25769,9 @@ window.__initCampaign = function (gardenRoot) {
   window.__CAMPAIGN = CAM;
 
   var hud = document.createElement('div');
-  hud.style.cssText = 'position:fixed;right:16px;top:246px;z-index:52;width:220px;padding:8px 12px;border-radius:10px;background:rgba(20,18,15,.74);border:1px solid rgba(226,192,122,.34);color:#f6efe0;font:600 12px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;pointer-events:none;backdrop-filter:blur(8px)';
+  hud.title = 'Bấm để mở Nhật Ký 28 Nhiệm Vụ (N)';
+  hud.style.cssText = 'position:fixed;right:16px;top:246px;z-index:52;width:220px;padding:8px 12px;border-radius:10px;background:rgba(20,18,15,.74);border:1px solid rgba(226,192,122,.34);color:#f6efe0;font:600 12px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;cursor:pointer;backdrop-filter:blur(8px)';
+  hud.addEventListener('click', function (ev) { ev.stopPropagation(); toggleChronicle(); });
   document.body.appendChild(hud);
 
   var arrow = document.createElement('div');
@@ -25693,6 +25885,7 @@ window.__initCampaign = function (gardenRoot) {
 window.__initMenu = function () {
   if (window.__MENU) return window.__MENU;
   window.__MENU_OPEN = true;
+  window.__TITLE_OPEN = false;
 
   var fontUI = '"Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif';
   var css = 'position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 35%, rgba(28,44,34,.88), rgba(12,16,14,.96));color:#f4ead7;font-family:' + fontUI + ';text-align:center';
@@ -25728,31 +25921,29 @@ window.__initMenu = function () {
   loadRetry.addEventListener('click', function () { location.reload(); });
 
   var title = document.createElement('div');
-  title.style.cssText = css + ';display:none';
-  title.innerHTML = '<div style="font:700 60px ' + fontUI + ';letter-spacing:.12em;text-shadow:0 4px 24px rgba(0,0,0,.5)">CÁNH ĐỒNG</div>' +
-    '<div style="margin-top:6px;font:500 16.5px ' + fontUI + ';opacity:.85">Vùng nước bị lãng quên — Đại Việt Open World</div>';
+  title.style.cssText = 'position:fixed;inset:0;z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 42%, rgba(12,18,14,.18), rgba(8,12,10,.68));backdrop-filter:blur(2px);color:#f4ead7;font-family:' + fontUI + ';text-align:center';
+  title.innerHTML = '<div style="font:700 62px ' + fontUI + ';letter-spacing:.14em;color:#fff7e2;text-shadow:0 6px 28px rgba(0,0,0,.72),0 0 28px rgba(255,210,110,.35)">CÁNH ĐỒNG</div>' +
+    '<div style="margin-top:6px;font:600 16.5px ' + fontUI + ';color:#ffe2a6;text-shadow:0 2px 10px rgba(0,0,0,.65)">Vùng nước bị lãng quên — Đại Việt Open World Action RPG</div>';
   var hasSave = false;
   try { hasSave = !!localStorage.getItem('worldSave'); } catch (e) {}
   var playBtn = btn(hasSave ? 'Tiếp tục hành trình' : 'Bắt đầu', startGame, true);
   title.appendChild(playBtn);
-  title.appendChild(btn('Hướng dẫn', function () { title.style.display = 'none'; howto.style.display = 'flex'; }, false));
+  title.appendChild(btn('Hướng dẫn & Hệ thống', function () { title.style.display = 'none'; howto.style.display = 'flex'; }, false));
   var foot = document.createElement('div');
-  foot.style.cssText = 'position:absolute;bottom:18px;font:12px ' + fontUI + ';opacity:.5';
-  foot.textContent = 'WASD đi · Shift chạy · Space nhảy · E tương tác · J đánh · X lặn (ở hồ) · B bay · M bản đồ · H về nhà · Esc menu';
+  foot.style.cssText = 'position:absolute;bottom:18px;padding:6px 16px;border-radius:999px;background:rgba(14,16,14,.58);font:12px ' + fontUI + ';color:#e8dec7';
+  foot.textContent = 'WASD đi · J/1/2/3 Chiến đấu · 4 Thảo dược · F Đỡ/Phản · C Né · Tab Khóa · I Hành trang · N Nhật ký · M Bản đồ · X Lặn · B Bay';
   title.appendChild(foot);
   document.body.appendChild(title);
 
   var howto = document.createElement('div');
   howto.style.cssText = css + ';display:none';
-  howto.innerHTML = '<div style="font:700 26px ' + fontUI + ';margin-bottom:12px">Hướng dẫn</div>' +
-    '<div style="font:14.5px/1.9 ' + fontUI + ';opacity:.9;max-width:520px;text-align:left">' +
-    '• <b>WASD</b> di chuyển, <b>Shift</b> chạy nhanh, <b>Space</b> nhảy, <b>C</b> lướt<br>' +
-    '• <b>E</b> nói chuyện / tương tác (NPC, van nước, cột mốc, cửa nhà)<br>' +
-    '• <b>J</b> hoặc click trái để đánh quái<br>' +
-    '• <b>X</b> lặn khi đang ở trong hồ · <b>B</b> bay · <b>H</b> về điểm xuất phát<br>' +
-    '• <b>M</b> phóng to bản đồ · <b>Esc</b> mở menu<br>' +
-    '• Làm theo <b>mũi tên đỏ</b> và cột sáng để hoàn thành 28 nhiệm vụ<br>' +
-    '• Nhặt <b>mảnh sáng vàng</b> — đủ 5 mảnh để lên level đòn tay</div>';
+  howto.innerHTML = '<div style="font:700 26px ' + fontUI + ';margin-bottom:12px;color:#ffd89a">Cẩm Nang Hiệp Khách — Cánh Đồng</div>' +
+    '<div style="font:14px/1.85 ' + fontUI + ';opacity:.94;max-width:560px;text-align:left;background:rgba(20,18,15,.72);padding:16px 22px;border-radius:14px;border:1px solid rgba(226,192,122,.28)">' +
+    '• <b>WASD</b> di chuyển · <b>Shift</b> chạy nhanh · <b>Space</b> nhảy · <b>C</b> né (I-frames)<br>' +
+    '• <b>J / Click</b> combo 3 nhịp (nhịp 3 hồi +18 Thể lực) · <b>F / Chuột phải</b> Đỡ &amp; Phản Đòn hoàn hảo<br>' +
+    '• <b>Tab / V</b> khóa mục tiêu · <b>1</b> Xuyên Thủy (gây <b>ƯỚT SŨNG</b> &amp; Phá Giáp) · <b>2</b> Toàn Phong (kích nổ <b>THỦY NỘ x1.8</b> lên mục tiêu ướt) · <b>3</b> Kết Giới · <b>4</b> Thảo Dược<br>' +
+    '• <b>I</b> mở Hành Trang Rèn Ngọc Thương &amp; Đeo Ngọc Bội · <b>N</b> xem Nhật Ký 28 Nhiệm Vụ<br>' +
+    '• <b>E</b> tương tác NPC / Van nước Hồ Gương / Mốc · <b>X</b> lặn hồ · <b>B</b> bay · <b>M</b> bản đồ lớn · <b>H</b> về sân</div>';
   var hb = btn('Quay lại', function () { howto.style.display = 'none'; title.style.display = 'flex'; }, true);
   howto.appendChild(hb);
   document.body.appendChild(howto);
@@ -25773,6 +25964,7 @@ window.__initMenu = function () {
     title.style.display = 'none';
     load.style.display = 'none';
     window.__MENU_OPEN = false;
+    window.__TITLE_OPEN = false;
     if (window.__sfx) window.__sfx.chime();
   }
   window.__MENU_START = startGame;
@@ -25781,6 +25973,7 @@ window.__initMenu = function () {
     if (window.__MENU_OPEN && pause.style.display === 'flex') { pause.style.display = 'none'; window.__MENU_OPEN = false; return; }
     pause.style.display = 'flex';
     window.__MENU_OPEN = true;
+  window.__TITLE_OPEN = false;
   }
   window.addEventListener('keydown', function (e) {
     if ((e.key || '') === 'Escape') {
@@ -25792,6 +25985,7 @@ window.__initMenu = function () {
 
   window.__showEnding = function (policy) {
     window.__MENU_OPEN = true;
+  window.__TITLE_OPEN = false;
     var policyText = {
       LOW_PROTECT: 'THẤP — giữ bờ an toàn, thượng nguồn chậm hồi phục',
       HIGH_ACCESS: 'CAO — mở dòng cho sinh cảnh, cần cảnh báo ngập thường trực',
@@ -25818,6 +26012,7 @@ window.__initMenu = function () {
       clearInterval(bootIv);
       load.style.display = 'none';
       title.style.display = 'flex';
+      window.__TITLE_OPEN = true;
       return;
     }
     /* Kẹt quá lâu: mở lối thoát — không bao giờ giữ người chơi ở màn hình tải */
@@ -28506,6 +28701,45 @@ if (!window.__GAME && consented) {
             o5.start(ts5); o5.stop(ts5 + 0.16);
           });
         },
+        slash: function (pitch) {
+          if (!ctx || muted) return;
+          var sS = ctx.createBufferSource(); sS.buffer = bf2;
+          var fS = ctx.createBiquadFilter(); fS.type = 'bandpass'; fS.Q.value = 1.6;
+          var fp = 720 * (pitch || 1);
+          fS.frequency.setValueAtTime(fp * 1.4, ctx.currentTime);
+          fS.frequency.exponentialRampToValueAtTime(fp * 0.4, ctx.currentTime + 0.14);
+          var gS = ctx.createGain();
+          gS.gain.setValueAtTime(0.0001, ctx.currentTime);
+          gS.gain.exponentialRampToValueAtTime(0.11, ctx.currentTime + 0.02);
+          gS.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.16);
+          sS.connect(fS); fS.connect(gS); gS.connect(master);
+          sS.start(); sS.stop(ctx.currentTime + 0.18);
+        },
+        parry: function () {
+          if (!ctx || muted) return;
+          [1174, 1760, 2349].forEach(function (fP, idxP) {
+            var oP = ctx.createOscillator(), gP = ctx.createGain();
+            oP.type = idxP === 0 ? 'triangle' : 'sine'; oP.frequency.value = fP;
+            var tsP = ctx.currentTime + idxP * 0.015;
+            gP.gain.setValueAtTime(0.0001, tsP);
+            gP.gain.exponentialRampToValueAtTime(0.09, tsP + 0.01);
+            gP.gain.exponentialRampToValueAtTime(0.0001, tsP + 0.34);
+            oP.connect(gP); gP.connect(master);
+            oP.start(tsP); oP.stop(tsP + 0.36);
+          });
+        },
+        hydroBoom: function () {
+          if (!ctx || muted) return;
+          var oH = ctx.createOscillator(), gH = ctx.createGain();
+          oH.type = 'sine';
+          oH.frequency.setValueAtTime(165, ctx.currentTime);
+          oH.frequency.exponentialRampToValueAtTime(48, ctx.currentTime + 0.28);
+          gH.gain.setValueAtTime(0.0001, ctx.currentTime);
+          gH.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.02);
+          gH.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.32);
+          oH.connect(gH); gH.connect(master);
+          oH.start(); oH.stop(ctx.currentTime + 0.34);
+        },
         buzz: function () {
           if (!ctx || muted) return;
           var o6 = ctx.createOscillator(), g6 = ctx.createGain(), f6 = ctx.createBiquadFilter();
@@ -28533,6 +28767,25 @@ if (!window.__GAME && consented) {
           s6.start(); s6.stop(ctx.currentTime + 0.45);
         }
       };
+      /* Giai điệu Ngũ Cung nhẹ nhàng (Đàn Tranh tổng hợp mềm mại theo môi trường) */
+      var scale = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
+      var noteStep = 0;
+      function playDanTranh() {
+        if (!ctx || muted) { setTimeout(playDanTranh, 2600); return; }
+        var freq = scale[(noteStep * 3 + ((Math.random() * 3) | 0)) % scale.length];
+        noteStep++;
+        var oD = ctx.createOscillator(), gD = ctx.createGain(), fD = ctx.createBiquadFilter();
+        oD.type = 'triangle'; oD.frequency.value = freq;
+        fD.type = 'lowpass'; fD.frequency.value = 1600;
+        var tD = ctx.currentTime;
+        gD.gain.setValueAtTime(0.0001, tD);
+        gD.gain.exponentialRampToValueAtTime(0.024, tD + 0.02);
+        gD.gain.exponentialRampToValueAtTime(0.0001, tD + 1.45);
+        oD.connect(fD); fD.connect(gD); gD.connect(master);
+        oD.start(tD); oD.stop(tD + 1.5);
+        setTimeout(playDanTranh, 1600 + Math.random() * 1800);
+      }
+      setTimeout(playDanTranh, 1500);
       setTimeout(chirp, 3200);
       window.__amb = { started: true, isMuted: function () { return muted; } };
     }
@@ -31957,7 +32210,15 @@ window.__createHeroine = function () {
   /* ---- vòng điều khiển đồng bộ rAF: WASD + bơi lặn toàn bản đồ + animation + camera ---- */
   var pvLq = new THREE.Vector3();
   function stepPlayer() {
-    if (window.__MENU_OPEN) return;
+    if (window.__MENU_OPEN) {
+      if (window.__TITLE_OPEN && window.CAM && window.TARGET) {
+        orbitYaw += 0.0022;
+        var oDist = 5.4, oH = 2.05;
+        window.CAM.set(pPos.x - Math.sin(orbitYaw) * oDist, hillY2(pPos.x, pPos.z) + oH, pPos.z - Math.cos(orbitYaw) * oDist);
+        window.TARGET.set(pPos.x, hillY2(pPos.x, pPos.z) + 1.35, pPos.z - 2.5);
+      }
+      return;
+    }
     var now = performance.now();
     var elapsedTick = Math.max(0.001, (now - lastTick) / 1000);
     if (elapsedTick < 0.001) return;
@@ -31993,7 +32254,8 @@ window.__createHeroine = function () {
     if (ml > 0.01) {
       mvx /= ml; mvz /= ml;
       dashCd -= dt; dashT -= dt;
-      var spd = preSwim ? (keys.shift ? 6.2 : 3.4) : (keys.shift ? (flyMode ? 240 : 12.0) : (flyMode ? 95 : 4.2));
+      var speedMult = (window.__RPG_STATS && window.__RPG_STATS().spdMult) ? window.__RPG_STATS().spdMult : 1.0;
+      var spd = (preSwim ? (keys.shift ? 6.2 : 3.4) : (keys.shift ? (flyMode ? 240 : 12.0) : (flyMode ? 95 : 4.2))) * speedMult;
       if (dashT > 0) spd = flyMode ? 320 : (preSwim ? 9.0 : 18.0);
       if (!flyMode && !preSwim && ws0.depth > 0.25) spd *= 0.78;
       moveVX = mvx * spd; moveVZ = mvz * spd;
