@@ -20882,7 +20882,7 @@ window.__createTerrain = function (context) {
       buildRibbonMesh(MD.roads, 2.2, roadMat, function (px, pz) {
         return Math.max(seaY + 0.25, hillY(px, pz) + 0.22);
       }, function (px, pz) {
-        return window.__REGION ? window.__REGION.coastDist(px, pz) > 1.0 : true;
+        return hillY(px, pz) > seaY + 0.28;
       });
     }
 
