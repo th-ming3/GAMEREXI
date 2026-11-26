@@ -20743,7 +20743,8 @@ window.__createTerrain = function (context) {
       var z = b.minZ + rz * step;
       for (var cx = 0; cx < cols; cx++) {
         var x = b.minX + cx * step;
-        var y = hillY(x, z) - (Math.hypot(x, z) < 34 ? 0.22 : 0.08);
+        var y = hillY(x, z) - (Math.hypot(x, z) < 34 ? 0.35 : 0.08);
+        if (LAKE && Math.hypot(x - LAKE.x, z - LAKE.z) < 28) y = Math.min(y, -4.5);
         positions[idx * 3] = x;
         positions[idx * 3 + 1] = y;
         positions[idx * 3 + 2] = z;
@@ -20877,26 +20878,28 @@ window.__createTerrain = function (context) {
       buildRibbonMesh(MD.rivers, 20.0, riverMat, function (px, pz, nx, nz) {
         var cH = hillY(px, pz);
         var bL = hillY(px + nx * 38, pz + nz * 38), bR = hillY(px - nx * 38, pz - nz * 38);
-        return Math.max(seaY + 0.24, Math.min(cH + 3.2, Math.min(bL, bR) - 0.6));
-      }, null, riverPolys);
+        return Math.max(seaY + 0.24, Math.min(cH + 2.2, Math.min(bL, bR) - 0.9));
+      }, function (px, pz) {
+        return Math.hypot(px, pz) > 95 && hillY(px, pz) < 28;
+      }, riverPolys);
     }
     var R7 = (window.__REGION && window.__REGION.DATA && window.__REGION.DATA.regions)
       ? (window.__REGION.DATA.regions.filter(function (r) { return r.id === 'r07'; })[0] || { x: 2067.0, z: -257.4 })
       : { x: 2067.0, z: -257.4 };
     var r7Lagoon = { x: R7.x, z: R7.z + 40.0, r: 245, y: seaY + 0.3 };
     window.__waterSurfaceY = function (x, z) {
-      var best = seaY;
       var L = window.__lakeInfo;
       if (L) {
         var ldx = x - L.x, ldz = z - L.z;
-        if ((ldx * ldx) / (L.rx * L.rx) + (ldz * ldz) / (L.rz * L.rz) < 0.98) {
-          var ly = window.__lakeWaterY ? window.__lakeWaterY() : 0.18;
-          if (ly > best) best = ly;
+        if ((ldx * ldx) / (L.rx * L.rx) + (ldz * ldz) / (L.rz * L.rz) < 0.96) {
+          return window.__lakeWaterY ? window.__lakeWaterY() : 0.18;
         }
       }
+      var best = seaY;
       if (Math.hypot(x - r7Lagoon.x, z - r7Lagoon.z) < r7Lagoon.r) {
         if (r7Lagoon.y > best) best = r7Lagoon.y;
       }
+      if (Math.hypot(x, z) <= 95) return best;
       for (var pi = 0; pi < riverPolys.length; pi++) {
         var rp = riverPolys[pi];
         if (x < rp.minX || x > rp.maxX || z < rp.minZ || z > rp.maxZ) continue;
@@ -20907,7 +20910,7 @@ window.__createTerrain = function (context) {
           var ab2 = abx * abx + abz * abz;
           var t = ab2 > 1e-6 ? Math.max(0, Math.min(1, ((x - s.ax) * abx + (z - s.az) * abz) / ab2)) : 0;
           var dx = x - (s.ax + abx * t), dz = z - (s.az + abz * t);
-          if (dx * dx + dz * dz < 484.0) {
+          if (dx * dx + dz * dz < 361.0) {
             var ry = s.yA + (s.yB - s.yA) * t;
             if (ry > best) best = ry;
           }
@@ -28507,6 +28510,7 @@ window.__createPlayerPhysics = function (context) {
     } else {
       flyMode = false; pY = 0; pPos.y = baseH;
     }
+    isSwimming = false; diving = false; window.__isSwimming = false; window.__isDiving = false;
     jumpV = 0; onGround = !flyMode;
     if (window.__physicsReset) window.__physicsReset(pPos.x, pPos.z);
   };
@@ -28815,7 +28819,7 @@ window.__createPlayerPhysics = function (context) {
     } else if (isSwimming) {
       if (keys.q) { pY -= 3.4 * dt; diving = true; }
       if (keys[' '] || keys.e) pY += 3.4 * dt;
-      var submerge = 1.95 * Math.cos(Math.min(1.42, Math.abs(charG.rotation.x))) - 0.30;
+      var submerge = 1.55 * Math.cos(Math.min(1.42, Math.abs(charG.rotation.x))) + 0.16;
       var swimSurfaceBase = ws.waterY - submerge;
       var swimBottomPY = (groundH + 0.28) - swimSurfaceBase;
       pY = Math.max(swimBottomPY, Math.min(0.05, pY));
