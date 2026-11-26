@@ -26859,7 +26859,7 @@ if (!window.__GAME && consented) {
     var mistSprites = [];
     [[-12, -16], [-18, -8], [-8, 4], [2, 12], [11, 14], [15, -16], [0, -25]].forEach(function (mp, mi) {
       var spM = new THREE.Sprite(mistMat.clone());
-      var my = Math.max(hillY(mp[0], mp[1]), LAKE_W + 0.18) + 0.75;
+      var my = Math.max(hillY(mp[0], mp[1]), (window.__lakeWaterY ? window.__lakeWaterY() : -0.8) + 0.18) + 0.75;
       spM.position.set(mp[0], my, mp[1]);
       spM.scale.set(11 + (mi % 3) * 3, 2.8, 1);
       gardenRoot.add(spM);
