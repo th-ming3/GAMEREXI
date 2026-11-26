@@ -20805,7 +20805,8 @@ window.__createTerrain = function (context) {
     gardenRoot.add(seaMesh);
 
     /* Tạo hình dải sông ngọc & quan lộ hành hương từ DATA.rivers / DATA.roads (chỉ 2 draw calls) */
-    function buildRibbonMesh(polylines, halfWidth, mat, yCalc, keepFn) {
+    var riverPolys = [];
+    function buildRibbonMesh(polylines, halfWidth, mat, yCalc, keepFn, segOut) {
       var pos = [], idx = [];
       var vc = 0;
       (polylines || []).forEach(function (pl) {
@@ -20821,7 +20822,8 @@ window.__createTerrain = function (context) {
           }
         }
         pts.push(pl[pl.length - 1]);
-        var baseV = vc, prevKept = false;
+        var baseV = vc, prevKept = false, prevPx = 0, prevPz = 0, prevPy = 0;
+        var polyEntry = segOut ? { minX: 1e9, maxX: -1e9, minZ: 1e9, maxZ: -1e9, segs: [] } : null;
         for (var j = 0; j < pts.length; j++) {
           var p0 = pts[Math.max(0, j - 1)], p1 = pts[Math.min(pts.length - 1, j + 1)];
           var tx = p1[0] - p0[0], tz = p1[1] - p0[1];
@@ -20835,9 +20837,26 @@ window.__createTerrain = function (context) {
           if (j > 0 && kept && prevKept) {
             var a = baseV + (j - 1) * 2, b = a + 1, c = baseV + j * 2, d = c + 1;
             idx.push(a, b, c, b, d, c);
+            if (polyEntry) {
+              polyEntry.segs.push({ ax: prevPx, az: prevPz, yA: prevPy, bx: px, bz: pz, yB: py });
+              if (prevPx < polyEntry.minX) polyEntry.minX = prevPx;
+              if (prevPx > polyEntry.maxX) polyEntry.maxX = prevPx;
+              if (px < polyEntry.minX) polyEntry.minX = px;
+              if (px > polyEntry.maxX) polyEntry.maxX = px;
+              if (prevPz < polyEntry.minZ) polyEntry.minZ = prevPz;
+              if (prevPz > polyEntry.maxZ) polyEntry.maxZ = prevPz;
+              if (pz < polyEntry.minZ) polyEntry.minZ = pz;
+              if (pz > polyEntry.maxZ) polyEntry.maxZ = pz;
+            }
           }
           prevKept = kept;
+          prevPx = px; prevPz = pz; prevPy = py;
           vc += 2;
+        }
+        if (polyEntry && polyEntry.segs.length) {
+          polyEntry.minX -= 26; polyEntry.maxX += 26;
+          polyEntry.minZ -= 26; polyEntry.maxZ += 26;
+          segOut.push(polyEntry);
         }
       });
       if (!idx.length) return;
@@ -20859,8 +20878,43 @@ window.__createTerrain = function (context) {
         var cH = hillY(px, pz);
         var bL = hillY(px + nx * 38, pz + nz * 38), bR = hillY(px - nx * 38, pz - nz * 38);
         return Math.max(seaY + 0.24, Math.min(cH + 3.2, Math.min(bL, bR) - 0.6));
-      });
+      }, null, riverPolys);
     }
+    var R7 = (window.__REGION && window.__REGION.DATA && window.__REGION.DATA.regions)
+      ? (window.__REGION.DATA.regions.filter(function (r) { return r.id === 'r07'; })[0] || { x: 2067.0, z: -257.4 })
+      : { x: 2067.0, z: -257.4 };
+    var r7Lagoon = { x: R7.x, z: R7.z + 40.0, r: 245, y: seaY + 0.3 };
+    window.__waterSurfaceY = function (x, z) {
+      var best = seaY;
+      var L = window.__lakeInfo;
+      if (L) {
+        var ldx = x - L.x, ldz = z - L.z;
+        if ((ldx * ldx) / (L.rx * L.rx) + (ldz * ldz) / (L.rz * L.rz) < 0.98) {
+          var ly = window.__lakeWaterY ? window.__lakeWaterY() : 0.18;
+          if (ly > best) best = ly;
+        }
+      }
+      if (Math.hypot(x - r7Lagoon.x, z - r7Lagoon.z) < r7Lagoon.r) {
+        if (r7Lagoon.y > best) best = r7Lagoon.y;
+      }
+      for (var pi = 0; pi < riverPolys.length; pi++) {
+        var rp = riverPolys[pi];
+        if (x < rp.minX || x > rp.maxX || z < rp.minZ || z > rp.maxZ) continue;
+        var segs = rp.segs;
+        for (var si = 0; si < segs.length; si++) {
+          var s = segs[si];
+          var abx = s.bx - s.ax, abz = s.bz - s.az;
+          var ab2 = abx * abx + abz * abz;
+          var t = ab2 > 1e-6 ? Math.max(0, Math.min(1, ((x - s.ax) * abx + (z - s.az) * abz) / ab2)) : 0;
+          var dx = x - (s.ax + abx * t), dz = z - (s.az + abz * t);
+          if (dx * dx + dz * dz < 484.0) {
+            var ry = s.yA + (s.yB - s.yA) * t;
+            if (ry > best) best = ry;
+          }
+        }
+      }
+      return best;
+    };
     if (MD && MD.roads) {
       var roadMat = new THREE.MeshStandardMaterial({
         color: 0xc2aa7c, roughness: 0.92, side: THREE.DoubleSide
@@ -25779,6 +25833,7 @@ if (!window.__GAME && consented) {
       }
     }
 
+    if (window.__playerTick) window.__playerTick();
     /* xoay quán tính + camera */
     if (!dragging) {
       gardenRoot.rotation.y += velY;
@@ -27244,8 +27299,8 @@ if (!window.__GAME && consented) {
       var midX = bx + CHSZ / 2, midZ = bz + CHSZ / 2;
       var region = window.__REGION ? window.__REGION.at(midX, midZ) : 'meadow';
       var chunkBodies = [];
-      /* đất: tile 4×4 vertex uốn theo hillY — đúng địa hình trung tâm */
-      var gg = new THREE.PlaneGeometry(CHSZ + 0.8, CHSZ + 0.8, 13, 13);
+      /* đất: tile 6×6 vertex uốn theo hillY — nhẹ khung hình khi bước qua ranh chunk */
+      var gg = new THREE.PlaneGeometry(CHSZ + 0.8, CHSZ + 0.8, 6, 6);
       gg.rotateX(-Math.PI / 2);
       var gp2 = gg.attributes.position, gc2 = new Float32Array(gp2.count * 3);
       var gt2 = new THREE.Color();
@@ -27612,8 +27667,9 @@ if (!window.__GAME && consented) {
         }
         genQueue.sort(function (a2, b2) { return a2.d - b2.d; });
       }
-      var budget = LOW ? 2 : 5;
-      while (genQueue.length && budget > 0 && chunkList.length < (LOW ? 42 : 76)) {
+      var budget = (!window.__playerMoving || frameN2 % 2 === 0) ? 1 : 0;
+      var chunkStartT = performance.now();
+      while (genQueue.length && budget > 0 && chunkList.length < (LOW ? 42 : 76) && performance.now() - chunkStartT < 5) {
         var nextChunk = genQueue.shift();
         if (!chunkMap[nextChunk.cx + '|' + nextChunk.cz]) buildChunk(nextChunk.cx, nextChunk.cz);
         budget--;
@@ -28045,19 +28101,32 @@ window.__createPlayerPhysics = function (context) {
   function resolve(pos, dt, vx, vz, enabled) {
     if (!physWorld || !playerBody) return;
     if (enabled === false) { pos.x += (vx || 0) * dt; pos.z += (vz || 0) * dt; return; }
+    if (!vx && !vz) return;
+    var stepDt = Math.max(1 / 240, Math.min(dt || 1 / 60, 0.05));
     playerBody.position.set(pos.x, 0.42, pos.z);
     playerBody.velocity.set(vx || 0, 0, vz || 0);
-    physWorld.step(1 / 60, Math.max(1 / 240, Math.min(dt || 1 / 60, 0.05)), 3);
+    playerBody.force.set(0, 0, 0);
+    playerBody.angularVelocity.set(0, 0, 0);
+    physWorld.step(stepDt);
     pos.x = playerBody.position.x;
     pos.z = playerBody.position.z;
     window.__physics.steps++;
     window.__physics.contacts = physWorld.contacts.length;
   }
 
+  function resetBody(x, z) {
+    if (!playerBody) return;
+    playerBody.position.set(x, 0.42, z);
+    playerBody.velocity.set(0, 0, 0);
+    playerBody.force.set(0, 0, 0);
+    playerBody.angularVelocity.set(0, 0, 0);
+  }
+
   init();
   window.__physicsAddStatic = addStatic;
   window.__physicsRemoveStatic = removeStatic;
-  return { resolve: resolve, addStatic: addStatic, removeStatic: removeStatic };
+  window.__physicsReset = resetBody;
+  return { resolve: resolve, addStatic: addStatic, removeStatic: removeStatic, reset: resetBody };
 };
 
 /* ============================================================
@@ -28144,6 +28213,7 @@ window.__createPlayerPhysics = function (context) {
 
   /* ---- NHÂN VẬT: Soldier.glb CC0 (Quaternius) — skeleton thật, Idle/Walk/Run ---- */
   var charG = new THREE.Group();
+  charG.rotation.order = 'YXZ';
   window.__garden.add(charG);
   window.__char = charG;
   var mixer = null, actIdle = null, actWalk = null, actRun = null, curAct = null, avatarModel = null;
@@ -28166,6 +28236,18 @@ window.__createPlayerPhysics = function (context) {
       if (gltf.animations && gltf.animations.length) {
         mixer = new THREE.AnimationMixer(model);
         gltf.animations.forEach(function (clip) {
+          /* Xóa dịch chuyển ngang (root motion) trên xương Hips (Soldier xoay -90deg X nên ngang là X/Y, cao độ là Z) */
+          clip.tracks.forEach(function (tr) {
+            if (/hips|root/i.test(tr.name) && /\.position$/.test(tr.name) && tr.values && tr.values.length >= 3) {
+              var x0 = tr.values[0], y0 = tr.values[1], z0 = tr.values[2];
+              var zUp = Math.abs(z0) > Math.abs(y0);
+              for (var vi = 0; vi < tr.values.length; vi += 3) {
+                tr.values[vi] = x0;
+                if (zUp) tr.values[vi + 1] = y0;
+                else tr.values[vi + 2] = z0;
+              }
+            }
+          });
           var nm = clip.name.toLowerCase();
           if (nm.indexOf('idle') >= 0) actIdle = mixer.clipAction(clip);
           else if (nm.indexOf('walk') >= 0) actWalk = mixer.clipAction(clip);
@@ -28260,28 +28342,55 @@ window.__createPlayerPhysics = function (context) {
   var SPAWN = { x: 0.4, z: 6.8 };
   var playerPhysics = window.__createPlayerPhysics({ garden: window.__garden, landmarks: window.__landmarks });
   function resolvePhysics(pos, dt, vx, vz) {
-    playerPhysics.resolve(pos, dt, vx, vz, !indoorMode && !caveMode);
+    playerPhysics.resolve(pos, dt, vx, vz, !indoorMode && !caveMode && !flyMode);
   }
 
   var pPos = new THREE.Vector3(SPAWN.x, 0, SPAWN.z), pYaw = 0, orbitYaw = 0, orbitPitch = 0.42, walkT = 0;
   var flyMode = false, pY = 0, jumpV = 0, onGround = true, dashT = 0, dashCd = 0, petCd = 0, flyPoseT = 0;
-  var diving = false, underwaterN = 0;
+  var diving = false, isSwimming = false, swimT = 0, lastSwimToast = 0, underwaterN = 0;
   window.__isDiving = false;
+  window.__isSwimming = false;
   window.__underwaterN = function () { return underwaterN; };
   var indoorMode = false, indoorReturn = null, indoorRoom = null, indoorYawReturn = 0, indoorPitchReturn = 0;
   var caveMode = false, caveReturn = null, caveYawReturn = 0, cavePitchReturn = 0;
+  var swimRipples = [];
+  if (THREE.RingGeometry && window.__garden) {
+    for (var sri = 0; sri < 2; sri++) {
+      var sRing = new THREE.Mesh(
+        new THREE.RingGeometry(0.32, 0.44, 24),
+        new THREE.MeshBasicMaterial({ color: 0xdff7ff, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide })
+      );
+      sRing.rotation.x = -Math.PI / 2;
+      sRing.visible = false;
+      window.__garden.add(sRing);
+      swimRipples.push(sRing);
+    }
+  }
   function inLakeNow() {
     if (!window.__lakeInfo) return false;
     var pl = playerLocal(), L = window.__lakeInfo;
     var dx = pl.x - L.x, dz = pl.z - L.z;
     return dx * dx / (L.rx * L.rx) + dz * dz / (L.rz * L.rz) < 0.98;
   }
+  function waterAt(x, z, groundH) {
+    if (indoorMode || caveMode || (pPos && pPos.y > 45 && window.__skyIsleY && window.__skyIsleY(x, z) !== null)) {
+      return { waterY: -999, depth: 0 };
+    }
+    var wy = window.__waterSurfaceY ? window.__waterSurfaceY(x, z) : (window.__lakeInfo && inLakeNow() && window.__lakeWaterY ? window.__lakeWaterY() : -0.8);
+    return { waterY: wy, depth: wy - groundH };
+  }
+  window.__waterState = function () {
+    var pl = playerLocal();
+    var gh = hillY2(pl.x, pl.z);
+    var ws = waterAt(pl.x, pl.z, gh);
+    return { swimming: isSwimming, diving: diving, waterY: ws.waterY, groundH: gh, depth: ws.depth };
+  };
   function toggleDive() {
-    if (!inLakeNow() || flyMode) { showToast('Xuống hồ rồi nhấn X để lặn'); return; }
+    if (!isSwimming || flyMode) { showToast('Xu\u1ed1ng n\u01b0\u1edbc s\u00e2u r\u1ed3i nh\u1ea5n X ho\u1eb7c Q \u0111\u1ec3 l\u1eb7n'); return; }
     diving = !diving; window.__isDiving = diving;
-    pY = diving ? -0.55 : 0.18;
+    pY = diving ? -0.65 : 0.0;
     jumpV = 0; onGround = true;
-    showToast(diving ? 'Lặn xuống — Space lên · Q xuống' : 'Nổi lên mặt nước');
+    showToast(diving ? 'L\u1eb7n xu\u1ed1ng \u2014 Space l\u00ean \u00b7 Q xu\u1ed1ng' : 'N\u1ed5i l\u00ean m\u1eb7t n\u01b0\u1edbc');
     if (window.__sfx) window.__sfx.whoosh();
   }
   var keys = {}, lastTick = performance.now();
@@ -28619,12 +28728,14 @@ window.__createPlayerPhysics = function (context) {
     });
   }, 130);
 
-  /* ---- vòng điều khiển 16ms: WASD + animation + camera ---- */
-  setInterval(function () {
+  /* ---- vòng điều khiển đồng bộ rAF: WASD + bơi lặn toàn bản đồ + animation + camera ---- */
+  var pvLq = new THREE.Vector3();
+  function stepPlayer() {
     if (window.__MENU_OPEN) return;
     var now = performance.now();
-    var elapsedTick = Math.max(0, (now - lastTick) / 1000);
-    var dt = Math.min(0.1, elapsedTick);
+    var elapsedTick = Math.max(0.001, (now - lastTick) / 1000);
+    if (elapsedTick < 0.001) return;
+    var dt = Math.min(0.05, elapsedTick);
     var flightDt = Math.min(0.5, elapsedTick);
     lastTick = now;
     var dx = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
@@ -28634,10 +28745,12 @@ window.__createPlayerPhysics = function (context) {
     rV.crossVectors(fV, UP);
     var mvx = fV.x * dz + rV.x * dx, mvz = fV.z * dz + rV.z * dx;
     var ml = Math.sqrt(mvx * mvx + mvz * mvz);
-    var moving = ml > 0.01 || dy !== 0;
+    window.__playerMoving = ml > 0.01;
+    var pl0 = playerLocal();
+    var groundH0 = hillY2(pl0.x, pl0.z);
+    var ws0 = waterAt(pl0.x, pl0.z, groundH0);
     var inLake = false, nearLakeCam = false, lakeAimX = 0, lakeAimZ = 1, lakeAimDist = 0;
     if (window.__lakeInfo) {
-      if (!pvLq) var pvLq = new THREE.Vector3();
       pvLq.set(pPos.x, 0, pPos.z);
       window.__garden.worldToLocal(pvLq);
       var ddx = pvLq.x - window.__lakeInfo.x, ddz = pvLq.z - window.__lakeInfo.z;
@@ -28649,15 +28762,17 @@ window.__createPlayerPhysics = function (context) {
       lakeAimDist = Math.hypot(lakeAimX, lakeAimZ) || 1;
       lakeAimX /= lakeAimDist; lakeAimZ /= lakeAimDist;
     }
+    var preSwim = !flyMode && !indoorMode && !caveMode && (isSwimming ? ws0.depth >= 0.42 : (ws0.depth >= 0.72 || (inLake && ws0.depth >= 0.45)));
     var moveVX = 0, moveVZ = 0;
     if (ml > 0.01) {
       mvx /= ml; mvz /= ml;
       dashCd -= dt; dashT -= dt;
-      var spd = keys.shift ? (flyMode ? 240 : 12.0) : (flyMode ? 95 : 4.2);
-      if (dashT > 0) spd = flyMode ? 320 : 18.0;
-      if (inLake && !flyMode) spd *= 0.55;
+      var spd = preSwim ? (keys.shift ? 6.2 : 3.4) : (keys.shift ? (flyMode ? 240 : 12.0) : (flyMode ? 95 : 4.2));
+      if (dashT > 0) spd = flyMode ? 320 : (preSwim ? 9.0 : 18.0);
+      if (!flyMode && !preSwim && ws0.depth > 0.25) spd *= 0.78;
       moveVX = mvx * spd; moveVZ = mvz * spd;
-      pYaw = Math.atan2(-mvx, -mvz);
+      var gRot = window.__garden ? window.__garden.rotation.y : 0;
+      pYaw = Math.atan2(-mvx, -mvz) - gRot;
     }
     resolvePhysics(pPos, dt, moveVX, moveVZ);
     var bnd = (window.__WORLD_MAP_DATA && window.__WORLD_MAP_DATA.bounds) || { minX: -1794.0, maxX: 6006.0, minZ: -2644.0, maxZ: 2036.0 };
@@ -28666,21 +28781,48 @@ window.__createPlayerPhysics = function (context) {
     if (pPos.z < bnd.minZ) pPos.z = bnd.minZ;
     if (pPos.z > bnd.maxZ) pPos.z = bnd.maxZ;
     var pl = playerLocal();
-    /* Space nhảy trên đất; dưới hồ Space bơi lên và Q bơi xuống */
-    if (keys[' '] && onGround && !flyMode && !inLake) { jumpV = 3.3 + (keys.shift ? 0.9 : 0); onGround = false; if (window.__sfx) window.__sfx.whoosh(); }
+    if (window.__lakeInfo) {
+      var ddx2 = pl.x - window.__lakeInfo.x, ddz2 = pl.z - window.__lakeInfo.z;
+      inLake = (ddx2 * ddx2) / (window.__lakeInfo.rx * window.__lakeInfo.rx) + (ddz2 * ddz2) / (window.__lakeInfo.rz * window.__lakeInfo.rz) < 0.98;
+    }
+    var groundH = hillY2(pl.x, pl.z);
+    var ws = waterAt(pl.x, pl.z, groundH);
+    var wasSwimming = isSwimming;
+    if (flyMode || indoorMode || caveMode) {
+      isSwimming = false;
+    } else if (isSwimming) {
+      isSwimming = ws.depth >= 0.42;
+    } else {
+      isSwimming = ws.depth >= 0.72 || (inLake && ws.depth >= 0.45);
+    }
+    if (!wasSwimming && isSwimming) {
+      pY = 0; jumpV = 0; onGround = true;
+      if (now - lastSwimToast > 8000) {
+        lastSwimToast = now;
+        showToast('\u0110ang b\u01a1i \u2014 W/A/S/D b\u01a1i \u00b7 Shift b\u01a1i nhanh \u00b7 Q/X l\u1eb7n \u00b7 Space n\u1ed5i');
+      }
+    }
+    window.__isSwimming = isSwimming;
+
+    /* Space nhảy trên đất; khi đang bơi Space nổi lên và Q lặn xuống */
+    if (keys[' '] && onGround && !flyMode && !isSwimming && ws.depth < 0.72) { jumpV = 3.3 + (keys.shift ? 0.9 : 0); onGround = false; if (window.__sfx) window.__sfx.whoosh(); }
+    var gy2 = groundH;
     if (flyMode) {
       if (keys.e || keys[' ']) pY += 75.0 * flightDt;
       if (keys.q) pY -= 75.0 * flightDt;
       pY = Math.max(0.2, Math.min(1800, pY));
-      jumpV = 0;
-    } else if (inLake) {
-      if (keys.q) { pY -= 3.0 * dt; diving = true; }
-      if (keys[' '] || keys.e) pY += 3.0 * dt;
-      var swimBase = window.__lakeWaterY ? window.__lakeWaterY() - 1.25 : 0;
-      var swimBottom = hillY2(pl.x, pl.z) + 0.35 - swimBase;
-      pY = Math.max(swimBottom, Math.min(0.12, pY));
-      if (pY >= 0.12) diving = false;
+      jumpV = 0; diving = false; window.__isDiving = false;
+    } else if (isSwimming) {
+      if (keys.q) { pY -= 3.4 * dt; diving = true; }
+      if (keys[' '] || keys.e) pY += 3.4 * dt;
+      var submerge = 1.95 * Math.cos(Math.min(1.42, Math.abs(charG.rotation.x))) - 0.30;
+      var swimSurfaceBase = ws.waterY - submerge;
+      var swimBottomPY = (groundH + 0.28) - swimSurfaceBase;
+      pY = Math.max(swimBottomPY, Math.min(0.05, pY));
+      if (pY >= -0.15) diving = false;
+      else if (pY < -0.25) diving = true;
       jumpV = 0; onGround = true; window.__isDiving = diving;
+      gy2 = swimSurfaceBase;
     } else {
       if (diving) { diving = false; window.__isDiving = false; pY = 0; onGround = true; }
       if (!onGround) {
@@ -28690,12 +28832,14 @@ window.__createPlayerPhysics = function (context) {
       }
     }
     if (SC && SC.fog) {
-      if (diving && inLake) { SC.fog.near = 1.2; SC.fog.far = 19; SC.fog.color.setHex(0x07546a); }
+      if (diving && isSwimming) { SC.fog.near = 1.5; SC.fog.far = 26; SC.fog.color.setHex(0x07546a); }
       else if (flyMode && pPos.y > 40) { SC.fog.near = 900 + pPos.y * 3.5; SC.fog.far = 3600 + pPos.y * 12.0; }
       else { SC.fog.near = 420; SC.fog.far = 2400; }
     }
-    diveTint.style.opacity = diving && inLake ? '0.20' : '0';
-    walkT += dt * (ml > 0.01 ? (keys.shift ? 10.5 : 7.5) : 1.6);
+    diveTint.style.opacity = diving && isSwimming ? '0.24' : '0';
+    var moving2 = ml > 0.01;
+    walkT += dt * (moving2 ? (keys.shift ? 10.5 : 7.5) : 1.6);
+    swimT += dt * (moving2 ? (keys.shift ? 4.8 : 3.2) : 1.5);
     var cabinCheck=window.__cabinPos||{x:26,z:9}, caveCheck=window.__cavePos||{x:-30,z:-12};
     var cabinNear=Math.hypot(pl.x-cabinCheck.x,pl.z-cabinCheck.z)<4.1, caveNear=Math.hypot(pl.x-caveCheck.x,pl.z-caveCheck.z)<4.3;
     var waypointNear=false;
@@ -28712,44 +28856,59 @@ window.__createPlayerPhysics = function (context) {
       pl.z = Math.max(window.__cavePos.z-6.2, Math.min(window.__cavePos.z+6.2, pl.z));
       window.__garden.localToWorld(pl); pPos.set(pl.x, pl.y, pl.z); window.__garden.worldToLocal(pl);
     }
-    var gy2 = hillY2(pl.x, pl.z);
-    if (inLake && !flyMode && window.__lakeWaterY) gy2 = window.__lakeWaterY() - 1.25; /* bơi: ngập tới vai, chỉ nhô đầu trên mặt hồ */
-    charG.position.set(pl.x, gy2 + pY + (ml > 0.01 && onGround ? Math.abs(Math.sin(walkT)) * 0.035 : Math.sin(walkT) * 0.012), pl.z);
-    if (fbLegs) { var swF = (ml > 0.01 && !flyMode) ? Math.sin(walkT * 2) * 0.5 : 0; fbLegs[0].rotation.x = swF; fbLegs[1].rotation.x = -swF; }
-    /* nghiêng người khi lướt dash — cảm giác tốc độ */
-    charG.rotation.z += ((dashT > 0 ? 0.24 : 0) - charG.rotation.z) * Math.min(1, dt * 9);
-    /* BAY: đóng băng animation chân (hết "bay mà vẫn đi bộ") + nghiêng người glide */
-    if (mixer) mixer.timeScale = flyMode ? 0 : 1;
-    charG.rotation.x += ((flyMode ? (ml > 0.01 ? 0.42 : 0.14) : 0) - charG.rotation.x) * Math.min(1, dt * 6);
+    var bobY = isSwimming ? (diving ? 0 : Math.sin(swimT * 2.0) * 0.055) : (moving2 && onGround ? Math.abs(Math.sin(walkT)) * 0.035 : Math.sin(walkT) * 0.012);
+    charG.position.set(pl.x, gy2 + pY + bobY, pl.z);
+    if (fbLegs) { var swF = (moving2 && !flyMode) ? Math.sin(walkT * 2) * 0.5 : 0; fbLegs[0].rotation.x = swF; fbLegs[1].rotation.x = -swF; }
+    var targetRoll = (isSwimming && moving2) ? Math.sin(swimT * 2.2) * 0.24 : (dashT > 0 ? 0.24 : 0);
+    charG.rotation.z += (targetRoll - charG.rotation.z) * Math.min(1, dt * 9);
+    var targetPitch = 0;
+    if (flyMode) targetPitch = moving2 ? -0.35 : -0.12;
+    else if (isSwimming) targetPitch = moving2 ? (diving && keys.q ? -1.42 : (diving && (keys[' '] || keys.e) ? -0.78 : -1.22)) : -0.18;
+    charG.rotation.x += (targetPitch - charG.rotation.x) * Math.min(1, dt * 7);
     /* quay người mượt theo hướng đi */
     var dy3 = pYaw - charG.rotation.y;
     while (dy3 > Math.PI) dy3 -= 6.283;
     while (dy3 < -Math.PI) dy3 += 6.283;
     charG.rotation.y += dy3 * Math.min(1, dt * 10);
     if (mixer) {
-      var moving2 = ml > 0.01;
       if (flyMode) {
-        /* bay: luôn Idle (glide) — crossfade 0.4s xong mới đóng băng, không kẹ giữa bước chạy */
+        /* bay: luôn Idle (glide) — crossfade 0.4s xong mới đóng băng, không kẹt giữa bước chạy */
         flyPoseT -= dt;
         mixer.timeScale = flyPoseT > 0 ? 1 : 0;
         setAct(actIdle);
+      } else if (isSwimming) {
+        mixer.timeScale = 1;
+        setAct(actWalk);
+        if (curAct) curAct.timeScale = moving2 ? (keys.shift ? 1.45 : 1.05) : 0.45;
       } else {
         mixer.timeScale = 1;
         if (!onGround) setAct(actRun);
-        else setAct(moving2 ? (actRun && (ml > 0.85 || keys.shift) ? actRun : actWalk) : actIdle);
+        else setAct(moving2 ? (actRun && keys.shift ? actRun : actWalk) : actIdle);
         if (curAct) curAct.timeScale = moving2 ? 1.15 : 0.9;
       }
       mixer.update(dt);
     }
-    /* camera third-person: sau lưng nhân vật, chặn dưới terrain;
-       BAY: camera bay theo độ cao pY (hết đứng dưới đất nhìn nhân vật bay) */
+    var showRipples = (isSwimming && !diving) || (!flyMode && ws.depth > 0.22);
+    for (var sri2 = 0; sri2 < swimRipples.length; sri2++) {
+      var srMesh = swimRipples[sri2];
+      srMesh.visible = showRipples;
+      if (showRipples) {
+        var rPhase = ((now * 0.0011 + sri2 * 0.5) % 1);
+        var rScale = 0.65 + rPhase * 2.1;
+        srMesh.position.set(pl.x, ws.waterY + 0.05, pl.z);
+        srMesh.scale.set(rScale, rScale, 1);
+        srMesh.material.opacity = (1 - rPhase) * (moving2 ? 0.52 : 0.30);
+      }
+    }
+    /* camera third-person: sau lưng nhân vật, chặn dưới terrain */
     var camD = (indoorMode || caveMode) ? 3.4 : (flyMode ? (orbitPitch > 0.75 ? 9.5 : 5.8) : (nearLakeCam ? 6.4 : 4.8));
     var camH = ((indoorMode || caveMode) ? 1.55 : (flyMode ? 2.1 : (nearLakeCam ? 1.9 : 1.55))) + orbitPitch * (flyMode ? 8.2 : 2.4);
-    if (diving && inLake) { camD = 3.2; camH = 0.22 + orbitPitch * 0.3; }
+    if (diving && isSwimming) { camD = 3.4; camH = 0.25 + orbitPitch * 0.4; }
+    var camBaseY = (isSwimming && !diving) ? (ws.waterY - 0.45) : (gy2 + pY);
     var cx2 = pPos.x - fV.x * camD, cz2 = pPos.z - fV.z * camD;
     var shake = (window.__shakeT && now - window.__shakeT < 220) ? (window.__shakeAmt || 0.1) * (1 - (now - window.__shakeT) / 220) : 0;
     if (shake > 0) { cx2 += (Math.random() - 0.5) * shake; cz2 += (Math.random() - 0.5) * shake; }
-    var cy2 = gy2 + pY + camH;
+    var cy2 = camBaseY + camH;
     if (indoorMode) {
       var camL = window.__garden.worldToLocal(new THREE.Vector3(cx2, 0, cz2));
       var cabL = window.__cabinPos || { x: 26, z: 9 };
@@ -28763,8 +28922,11 @@ window.__createPlayerPhysics = function (context) {
     if (cy2 < gY) cy2 = gY;
     window.CAM.set(cx2, cy2, cz2);
     var lakeLookAhead = nearLakeCam ? Math.min(0.6, lakeAimDist * 0.06) : 0;
-    window.TARGET.set(pPos.x + lakeAimX * lakeLookAhead, gy2 + pY + (diving && inLake ? 0.45 : ((indoorMode || caveMode) ? 1.55 : 1.35)), pPos.z + lakeAimZ * lakeLookAhead);
-  }, 16);
+    var targetY = (diving && isSwimming) ? (charG.position.y + 0.45) : (camBaseY + ((indoorMode || caveMode) ? 1.55 : 1.35));
+    window.TARGET.set(pPos.x + lakeAimX * lakeLookAhead, targetY, pPos.z + lakeAimZ * lakeLookAhead);
+  }
+  window.__playerTick = stepPlayer;
+  setInterval(function () { if (!document.hidden && performance.now() - lastTick > 250) stepPlayer(); }, 100);
 
   /* ---- HUD FPS + chunk ---- */
   var fpsEl = document.getElementById('hudFps'), fr = 0, last = performance.now();
