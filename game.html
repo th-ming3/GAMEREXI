@@ -23715,7 +23715,7 @@ window.__initNPCs = function (gardenRoot) {
   document.body.appendChild(panel);
 
   var hint = document.createElement('div');
-  hint.style.cssText = 'position:fixed;left:50%;bottom:104px;transform:translateX(-50%);z-index:79;padding:6px 13px;border-radius:999px;background:rgba(20,18,15,.84);border:1px solid rgba(226,192,122,.4);color:#ffd89a;font:600 12.5px "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;opacity:0;transition:opacity .15s;pointer-events:none';
+  hint.style.cssText = 'position:fixed;left:50%;bottom:116px;transform:translateX(-50%);z-index:79;padding:6px 13px;border-radius:999px;background:rgba(20,18,15,.84);border:1px solid rgba(226,192,122,.4);color:#ffd89a;font:600 12.5px "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;opacity:0;transition:opacity .15s;pointer-events:none';
   document.body.appendChild(hint);
 
   function addNonLaToHead(headNode, sc) {
@@ -23969,14 +23969,14 @@ window.__initCombat = function (gardenRoot) {
       '<div style="flex:1;min-width:120px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Thể lực</span><span id="cStTxt">100</span></div><div style="height:6px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden"><div id="cStFill" style="height:100%;width:100%;background:linear-gradient(90deg,#d99a32,#ffe178);transition:width .08s"></div></div></div>' +
       '<div id="cEnemyTxt" style="font-size:11px;color:#e8d3a3;white-space:nowrap">Kẻ địch: 8</div>' +
     '</div>' +
-    '<div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center">' +
-      '<button type="button" data-sk="atk" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font:inherit"><b>J</b> Đánh</button>' +
-      '<button type="button" data-sk="1" id="btnS1" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(78,247,212,.45);background:rgba(22,109,84,.45);color:#dffcf3;cursor:pointer;font:inherit"><b>1</b> Xuyên Thủy <span id="cdS1"></span></button>' +
-      '<button type="button" data-sk="2" id="btnS2" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(230,190,99,.45);background:rgba(120,86,28,.45);color:#fff0c9;cursor:pointer;font:inherit"><b>2</b> Toàn Phong <span id="cdS2"></span></button>' +
-      '<button type="button" data-sk="3" id="btnS3" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(110,224,255,.45);background:rgba(24,84,112,.45);color:#dcf7ff;cursor:pointer;font:inherit"><b>3</b> Kết Giới <span id="cdS3"></span></button>' +
-      '<button type="button" data-sk="parry" id="btnParry" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(255,215,110,.38);background:rgba(50,42,26,.65);color:#ffd89a;cursor:pointer;font:inherit"><b>F</b> Đỡ/Phản</button>' +
-      '<button type="button" data-sk="dodge" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(170,235,255,.35);background:rgba(32,52,60,.65);color:#d0f4ff;cursor:pointer;font:inherit"><b>C</b> Né</button>' +
-      '<button type="button" data-sk="lock" id="btnLock" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(255,220,120,.38);background:rgba(46,38,24,.68);color:#ffe49b;cursor:pointer;font:inherit"><b>Tab</b> Khóa</button>' +
+    '<div style="display:flex;gap:4px;flex-wrap:nowrap;justify-content:center;white-space:nowrap">' +
+      '<button type="button" data-sk="atk" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font:inherit"><b>J</b> Đánh</button>' +
+      '<button type="button" data-sk="1" id="btnS1" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(78,247,212,.45);background:rgba(22,109,84,.45);color:#dffcf3;cursor:pointer;font:inherit"><b>1</b> Xuyên Thủy <span id="cdS1"></span></button>' +
+      '<button type="button" data-sk="2" id="btnS2" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(230,190,99,.45);background:rgba(120,86,28,.45);color:#fff0c9;cursor:pointer;font:inherit"><b>2</b> Toàn Phong <span id="cdS2"></span></button>' +
+      '<button type="button" data-sk="3" id="btnS3" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(110,224,255,.45);background:rgba(24,84,112,.45);color:#dcf7ff;cursor:pointer;font:inherit"><b>3</b> Kết Giới <span id="cdS3"></span></button>' +
+      '<button type="button" data-sk="parry" id="btnParry" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(255,215,110,.38);background:rgba(50,42,26,.65);color:#ffd89a;cursor:pointer;font:inherit"><b>F</b> Đỡ/Phản</button>' +
+      '<button type="button" data-sk="dodge" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(170,235,255,.35);background:rgba(32,52,60,.65);color:#d0f4ff;cursor:pointer;font:inherit"><b>C</b> Né</button>' +
+      '<button type="button" data-sk="lock" id="btnLock" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(255,220,120,.38);background:rgba(46,38,24,.68);color:#ffe49b;cursor:pointer;font:inherit"><b>Tab</b> Khóa</button>' +
     '</div>';
   document.body.appendChild(bar);
 
@@ -29967,7 +29967,6 @@ if (!window.__GAME && consented) {
         bReal.rotation.y = rng() * 6.283;
         grp.add(bReal);
       }
-      chunkShadows[ck] = shC;
       /* ---- HANG THỎ: 1 hang cố định (−18, 6): vòng đất, lỗ tối, đá quanh, nấm sáng ---- */
       var isDen = cx === -2 && cz === 0;
       if (isDen) {
@@ -31479,7 +31478,7 @@ window.__createHeroine = function () {
   document.body.appendChild(qHud);
   var doorHint = document.createElement('div');
   doorHint.textContent = 'E — TƯƠNG TÁC';
-  doorHint.style.cssText = 'position:fixed;left:50%;bottom:104px;transform:translateX(-50%);z-index:55;padding:7px 14px;border-radius:999px;background:rgba(20,18,15,.84);color:#ffd89a;border:1px solid rgba(226,192,122,.42);font:700 13px "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;opacity:0;transition:opacity .18s;pointer-events:none;backdrop-filter:blur(8px)';
+  doorHint.style.cssText = 'position:fixed;left:50%;bottom:116px;transform:translateX(-50%);z-index:55;padding:7px 14px;border-radius:999px;background:rgba(20,18,15,.84);color:#ffd89a;border:1px solid rgba(226,192,122,.42);font:700 13px "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;opacity:0;transition:opacity .18s;pointer-events:none;backdrop-filter:blur(8px)';
   document.body.appendChild(doorHint);
   function questText() {
     if (questIdx === 0) return 'Hái hoa đồng — <b>' + questN + '/5</b>';
