@@ -26040,6 +26040,7 @@ if (!window.__GAME && consented) {
     grassData.push({ x: rgx, y: hillY(rgx, rgzz) - .01, z: rgzz, yaw: rand(0, 6.283), s: rand(.45, .82), sx: rand(.8, 1.2), sy: rand(.65, .95), phase: rand(0, 6.283), amp: rand(.07, .14) });
     grassMesh.setColorAt(grassData.length - 1, grassTints[(grassData.length - 1) % grassTints.length]);
   }
+  grassData = grassData.filter(function (gd) { return !(gd.x > -6.2 && gd.x < 6.8 && gd.z > -29 && gd.z < 10.0); });
   grassMesh.count = grassData.length;
   if (window.__REAL_ASSETS) window.__REAL_ASSETS.replaceInstanced('grass', grassMesh, grassData.length);
   if (grassMesh.instanceColor) grassMesh.instanceColor.needsUpdate = true;
@@ -28481,8 +28482,8 @@ if (!window.__GAME && consented) {
       /* Mố trụ đá rêu cắm sâu xuống đất hai đầu Cầu Ngói để không bao giờ bị hở đáy khi nhìn từ Hồ Gương */
       var pierMat = new THREE.MeshStandardMaterial({ color: 0x626056, roughness: 0.94, flatShading: true });
       [-1, 1].forEach(function (side) {
-        var pier = new THREE.Mesh(new THREE.BoxGeometry(2.4, 3.4, 2.2), pierMat);
-        pier.position.set(-7.5 + Math.cos(0.45) * side * 2.55, brY - 1.55, -5.5 - Math.sin(0.45) * side * 2.55);
+        var pier = new THREE.Mesh(new THREE.BoxGeometry(2.6, 5.2, 2.6), pierMat);
+        pier.position.set(-7.5 + Math.cos(0.45) * side * 2.55, brY - 2.4, -5.5 - Math.sin(0.45) * side * 2.55);
         pier.rotation.y = 0.45;
         pier.castShadow = true;
         pier.receiveShadow = true;
@@ -29054,7 +29055,7 @@ if (!window.__GAME && consented) {
       var inOcean = region === 'ocean' || coastD < -0.5;
       var isDryRock = region === 'r03' || region === 'r05' || region === 'r06' || region === 'r07';
       function inCourtyard(cx, cz) {
-        return (Math.abs(cx) < 4.2 && cz > -29 && cz < 9.0) || (cx > -3.5 && cx < 6.4 && cz > 0.0 && cz < 9.0);
+        return (Math.abs(cx) < 5.6 && cz > -29 && cz < 10.0) || (cx > -3.5 && cx < 6.8 && cz > 0.0 && cz < 10.0);
       }
       /* cỏ instanced: mật độ theo 8 hệ sinh thái Đại Việt; ngoài biển và trên sân đá không mọc cỏ */
       var grassDensity = inOcean ? 0 : (region === 'r06' ? 0.12 : (region === 'r03' || region === 'r05' ? 0.28 : (region === 'r02' || region === 'r04' ? 0.88 : 1)));
@@ -29923,7 +29924,7 @@ window.__createHeroine = function () {
 
     /* VRM 0.x mặt hướng +Z; xoay Math.PI quanh Y để mặt hướng -Z khớp player-quest.js */
     model.scale.setScalar(sc);
-    model.rotation.y = Math.PI;
+    model.rotation.y = 0;
     model.updateMatrixWorld(true);
     var box2 = new THREE.Box3().setFromObject(model);
     var ctr2 = box2.getCenter(new THREE.Vector3());
@@ -29973,12 +29974,10 @@ window.__createHeroine = function () {
     if (bones.J_Bip_R_UpperArm) bones.J_Bip_R_UpperArm.rotation.z = -1.24;
 
     /* Gắn Ngọc Thương vào bàn tay phải */
-    var rHand = bones.J_Bip_R_Hand || bones.J_Bip_R_LowerArm || model;
-    var invSc = 1 / sc;
-    spearGroup.scale.setScalar(invSc);
-    spearGroup.position.set(0.02 * invSc, -0.04 * invSc, 0.02 * invSc);
-    spearGroup.rotation.set(Math.PI * 0.44, 0, -0.18);
-    rHand.add(spearGroup);
+    spearGroup.scale.setScalar(1);
+    spearGroup.position.set(0.30, 0.02, -0.05);
+    spearGroup.rotation.set(-0.10, 0, -0.14);
+    root.add(spearGroup);
 
     root.add(model);
     ready = true;
@@ -30022,6 +30021,7 @@ window.__createHeroine = function () {
     var lLoLeg = bones.J_Bip_L_LowerLeg;
     var rLoLeg = bones.J_Bip_R_LowerLeg;
 
+    root.position.y = st.swimming ? 0.30 : 0;
     if (st.swimming) {
       var str = Math.sin(animT * 1.45);
       if (lUpLeg) lUpLeg.rotation.set(Math.sin(animT * 2.4) * 0.42, 0, 0);
@@ -30072,8 +30072,14 @@ window.__createHeroine = function () {
       if (hips) hips.position.y = 0.896;
     }
 
+    if (attackT <= 0) {
+      spearGroup.position.set(0.30, 0.02, -0.05);
+      spearGroup.rotation.set(-0.10, 0, -0.14);
+    }
     if (attackT > 0) {
       var slash = Math.sin(attackT * Math.PI);
+      spearGroup.position.set(0.30, 0.02, -0.05 - 0.55 * slash);
+      spearGroup.rotation.set(-0.10 - 1.2 * slash, 0, -0.14);
       if (rUpArm) rUpArm.rotation.set(-1.35 * slash, 0.4 * slash, -0.85);
       if (rLoArm) rLoArm.rotation.set(-0.45 * slash, 0, 0);
       if (spine) spine.rotation.y = 0.38 * slash;

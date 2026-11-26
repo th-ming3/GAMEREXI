@@ -26062,6 +26062,7 @@ if (!window.__GAME && consented) {
     grassData.push({ x: rgx, y: hillY(rgx, rgzz) - .01, z: rgzz, yaw: rand(0, 6.283), s: rand(.45, .82), sx: rand(.8, 1.2), sy: rand(.65, .95), phase: rand(0, 6.283), amp: rand(.07, .14) });
     grassMesh.setColorAt(grassData.length - 1, grassTints[(grassData.length - 1) % grassTints.length]);
   }
+  grassData = grassData.filter(function (gd) { return !(gd.x > -6.2 && gd.x < 6.8 && gd.z > -29 && gd.z < 10.0); });
   grassMesh.count = grassData.length;
   if (window.__REAL_ASSETS) window.__REAL_ASSETS.replaceInstanced('grass', grassMesh, grassData.length);
   if (grassMesh.instanceColor) grassMesh.instanceColor.needsUpdate = true;
@@ -28503,8 +28504,8 @@ if (!window.__GAME && consented) {
       /* Mố trụ đá rêu cắm sâu xuống đất hai đầu Cầu Ngói để không bao giờ bị hở đáy khi nhìn từ Hồ Gương */
       var pierMat = new THREE.MeshStandardMaterial({ color: 0x626056, roughness: 0.94, flatShading: true });
       [-1, 1].forEach(function (side) {
-        var pier = new THREE.Mesh(new THREE.BoxGeometry(2.4, 3.4, 2.2), pierMat);
-        pier.position.set(-7.5 + Math.cos(0.45) * side * 2.55, brY - 1.55, -5.5 - Math.sin(0.45) * side * 2.55);
+        var pier = new THREE.Mesh(new THREE.BoxGeometry(2.6, 5.2, 2.6), pierMat);
+        pier.position.set(-7.5 + Math.cos(0.45) * side * 2.55, brY - 2.4, -5.5 - Math.sin(0.45) * side * 2.55);
         pier.rotation.y = 0.45;
         pier.castShadow = true;
         pier.receiveShadow = true;
@@ -29076,7 +29077,7 @@ if (!window.__GAME && consented) {
       var inOcean = region === 'ocean' || coastD < -0.5;
       var isDryRock = region === 'r03' || region === 'r05' || region === 'r06' || region === 'r07';
       function inCourtyard(cx, cz) {
-        return (Math.abs(cx) < 4.2 && cz > -29 && cz < 9.0) || (cx > -3.5 && cx < 6.4 && cz > 0.0 && cz < 9.0);
+        return (Math.abs(cx) < 5.6 && cz > -29 && cz < 10.0) || (cx > -3.5 && cx < 6.8 && cz > 0.0 && cz < 10.0);
       }
       /* cỏ instanced: mật độ theo 8 hệ sinh thái Đại Việt; ngoài biển và trên sân đá không mọc cỏ */
       var grassDensity = inOcean ? 0 : (region === 'r06' ? 0.12 : (region === 'r03' || region === 'r05' ? 0.28 : (region === 'r02' || region === 'r04' ? 0.88 : 1)));
