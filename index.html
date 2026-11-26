@@ -20796,7 +20796,7 @@ window.__createTerrain = function (context) {
     gardenRoot.add(seaMesh);
 
     /* Tạo hình dải sông ngọc & quan lộ hành hương từ DATA.rivers / DATA.roads (chỉ 2 draw calls) */
-    function buildRibbonMesh(polylines, halfWidth, mat, yCalc) {
+    function buildRibbonMesh(polylines, halfWidth, mat, yCalc, keepFn) {
       var pos = [], idx = [];
       var vc = 0;
       (polylines || []).forEach(function (pl) {
@@ -20812,20 +20812,22 @@ window.__createTerrain = function (context) {
           }
         }
         pts.push(pl[pl.length - 1]);
-        var baseV = vc;
+        var baseV = vc, prevKept = false;
         for (var j = 0; j < pts.length; j++) {
           var p0 = pts[Math.max(0, j - 1)], p1 = pts[Math.min(pts.length - 1, j + 1)];
           var tx = p1[0] - p0[0], tz = p1[1] - p0[1];
           var tl = Math.hypot(tx, tz) || 1;
           var nx = -tz / tl, nz = tx / tl;
           var px = pts[j][0], pz = pts[j][1];
+          var kept = !keepFn || keepFn(px, pz);
           var py = yCalc(px, pz, nx, nz);
           pos.push(px + nx * halfWidth, py, pz + nz * halfWidth);
           pos.push(px - nx * halfWidth, py, pz - nz * halfWidth);
-          if (j > 0) {
+          if (j > 0 && kept && prevKept) {
             var a = baseV + (j - 1) * 2, b = a + 1, c = baseV + j * 2, d = c + 1;
             idx.push(a, b, c, b, d, c);
           }
+          prevKept = kept;
           vc += 2;
         }
       });
@@ -20856,6 +20858,8 @@ window.__createTerrain = function (context) {
       });
       buildRibbonMesh(MD.roads, 2.2, roadMat, function (px, pz) {
         return Math.max(seaY + 0.25, hillY(px, pz) + 0.22);
+      }, function (px, pz) {
+        return window.__REGION ? window.__REGION.coastDist(px, pz) > 1.0 : true;
       });
     }
 
