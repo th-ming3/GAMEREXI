@@ -20923,9 +20923,9 @@ window.__createTerrain = function (context) {
         color: 0xc2aa7c, roughness: 0.92, side: THREE.DoubleSide
       });
       buildRibbonMesh(MD.roads, 7.2, roadMat, function (px, pz) {
-        return Math.max(seaY + 0.35, hillY(px, pz) + 0.45);
+        return Math.max(seaY + 0.25, hillY(px, pz) + 0.14);
       }, function (px, pz) {
-        return hillY(px, pz) > seaY + 0.35;
+        return Math.hypot(px, pz) > 55 && hillY(px, pz) > seaY + 0.35;
       });
     }
 
@@ -29446,8 +29446,8 @@ window.__createPlayerPhysics = function (context) {
     }
     if (window.__hillY) return window.__hillY(x, z);
     return 0.13 * Math.sin(x * 0.45 + 1.3) * Math.cos(z * 0.5)
-         + 0.06 * Math.sin(x * 1.7 + z * 1.3)
-         + smoothG(-z, 2.5, 9) * 0.75;
+      + 0.06 * Math.sin(x * 1.7 + z * 1.3)
+      + smoothG(-z, 2.5, 9) * 0.75;
   }
 
   /* ---- sao đêm + chu kỳ ngày-đêm (giữ từ v1) ---- */
@@ -29712,8 +29712,8 @@ window.__createPlayerPhysics = function (context) {
     }
     if (kk === 'h') goHome();
     if (kk === 'f') {
-      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
-      else document.documentElement.requestFullscreen().catch(function () {});
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () { });
+      else document.documentElement.requestFullscreen().catch(function () { });
     }
     if ('wasdqe'.indexOf(kk) >= 0) e.preventDefault();
   });
@@ -29829,37 +29829,37 @@ window.__createPlayerPhysics = function (context) {
     var floorMat = new THREE.MeshStandardMaterial({ color: 0x98724c, roughness: 0.92, side: THREE.DoubleSide });
     var plaster = new THREE.MeshStandardMaterial({ color: 0x876348, roughness: 0.92, side: THREE.DoubleSide });
     var warm = new THREE.MeshStandardMaterial({ color: 0xffc766, emissive: 0xffa52e, emissiveIntensity: 1.5, roughness: 0.25 });
-    function box(w,h,d,mat,x,y,z) { var m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat); m.position.set(x,y,z); g.add(m); return m; }
-    box(22,0.22,20,floorMat,0,0,0);
+    function box(w, h, d, mat, x, y, z) { var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); g.add(m); return m; }
+    box(22, 0.22, 20, floorMat, 0, 0, 0);
     /* Sealed BackSide shell: unlike an outside-facing cabin wall, this is visible from inside. */
-    var insideShell=new THREE.Mesh(new THREE.BoxGeometry(22,10,20),new THREE.MeshStandardMaterial({color:0x76563c,roughness:0.96,side:THREE.DoubleSide}));
-    insideShell.position.y=4; g.add(insideShell);
+    var insideShell = new THREE.Mesh(new THREE.BoxGeometry(22, 10, 20), new THREE.MeshStandardMaterial({ color: 0x76563c, roughness: 0.96, side: THREE.DoubleSide }));
+    insideShell.position.y = 4; g.add(insideShell);
     /* visible inner timber backdrop panels (camera is always inside the room) */
-    var wallCanvas=document.createElement('canvas'); wallCanvas.width=256; wallCanvas.height=128;
-    var wg=wallCanvas.getContext('2d'); wg.fillStyle='#806044'; wg.fillRect(0,0,256,128);
-    for(var wi=0;wi<8;wi++){wg.fillStyle=wi%2?'#88684a':'#765539';wg.fillRect(0,wi*16+1,256,14);wg.fillStyle='rgba(43,29,19,.35)';wg.fillRect(0,wi*16,256,2);for(var wj=0;wj<4;wj++){wg.fillStyle='rgba(190,150,100,.25)';wg.fillRect(wj*67+((wi%2)*12),wi*16+5,42,1);}}
-    var wallMap=new THREE.CanvasTexture(wallCanvas);
-    var innerWallMat=new THREE.MeshBasicMaterial({map:wallMap,side:THREE.DoubleSide});
-    var innerBack=new THREE.Mesh(new THREE.PlaneGeometry(21.8,10),innerWallMat);innerBack.position.set(0,2,-9.8);g.add(innerBack);
-    var innerSide1=new THREE.Mesh(new THREE.PlaneGeometry(20,10),innerWallMat);innerSide1.rotation.y=Math.PI/2;innerSide1.position.set(-10.8,2,0);g.add(innerSide1);
-    var innerSide2=innerSide1.clone();innerSide2.position.x=10.8;g.add(innerSide2);
+    var wallCanvas = document.createElement('canvas'); wallCanvas.width = 256; wallCanvas.height = 128;
+    var wg = wallCanvas.getContext('2d'); wg.fillStyle = '#806044'; wg.fillRect(0, 0, 256, 128);
+    for (var wi = 0; wi < 8; wi++) { wg.fillStyle = wi % 2 ? '#88684a' : '#765539'; wg.fillRect(0, wi * 16 + 1, 256, 14); wg.fillStyle = 'rgba(43,29,19,.35)'; wg.fillRect(0, wi * 16, 256, 2); for (var wj = 0; wj < 4; wj++) { wg.fillStyle = 'rgba(190,150,100,.25)'; wg.fillRect(wj * 67 + ((wi % 2) * 12), wi * 16 + 5, 42, 1); } }
+    var wallMap = new THREE.CanvasTexture(wallCanvas);
+    var innerWallMat = new THREE.MeshBasicMaterial({ map: wallMap, side: THREE.DoubleSide });
+    var innerBack = new THREE.Mesh(new THREE.PlaneGeometry(21.8, 10), innerWallMat); innerBack.position.set(0, 2, -9.8); g.add(innerBack);
+    var innerSide1 = new THREE.Mesh(new THREE.PlaneGeometry(20, 10), innerWallMat); innerSide1.rotation.y = Math.PI / 2; innerSide1.position.set(-10.8, 2, 0); g.add(innerSide1);
+    var innerSide2 = innerSide1.clone(); innerSide2.position.x = 10.8; g.add(innerSide2);
     /* timber ribs + ceiling beams */
-    for (var i=0;i<6;i++) { var xx=-9+i*3.6; box(0.17,7.6,0.17,wood,xx,4,9.82); box(22,0.12,0.14,dark,0,7.58,-8+i*3.2); }
+    for (var i = 0; i < 6; i++) { var xx = -9 + i * 3.6; box(0.17, 7.6, 0.17, wood, xx, 4, 9.82); box(22, 0.12, 0.14, dark, 0, 7.58, -8 + i * 3.2); }
     /* sleeping nook, low table, rug, shelves and warm lantern */
-    box(2.3,0.24,1.5,dark,-2.4,0.28,-2.55); box(2.1,0.24,1.35,new THREE.MeshStandardMaterial({color:0xd8c3a0,roughness:0.98}),-2.4,0.49,-2.55);
-    box(1.4,0.14,0.95,wood,1.55,0.55,-0.5); box(0.12,0.52,0.12,dark,1.05,0.25,-0.9); box(0.12,0.52,0.12,dark,2.05,0.25,-0.9); box(0.12,0.52,0.12,dark,1.05,0.25,-0.1); box(0.12,0.52,0.12,dark,2.05,0.25,-0.1);
-    box(1.8,1.3,0.28,wood,3.9,1.0,-2.3); box(1.55,0.1,0.35,dark,3.75,1.65,-2.3);
-    var rug = new THREE.Mesh(new THREE.CircleGeometry(1.35,32),new THREE.MeshStandardMaterial({color:0x9a5c48,roughness:1})); rug.rotation.x=-Math.PI/2; rug.position.set(0,0.13,0.45); rug.scale.set(1.35,0.76,1); g.add(rug);
-    box(0.55,0.82,0.12,dark,0,2.65,0.1); box(0.24,0.36,0.24,warm,0,2.65,0.16);
-    var lamp = new THREE.PointLight(0xffb858,1.6,12,2); lamp.position.set(0,2.75,0.4); g.add(lamp);
-    for (var wi2=0;wi2<3;wi2++) { var w2 = new THREE.Mesh(new THREE.PlaneGeometry(2.2,1.6),new THREE.MeshBasicMaterial({color:0xffd38c})); w2.position.set(10.75,2.6,-5+wi2*4); w2.rotation.y=-Math.PI/2; g.add(w2); }
-  box(3.2,0.9,1.5,wood,-6,0.55,4); box(2.9,0.16,1.3,new THREE.MeshStandardMaterial({color:0xcfb48e,roughness:0.95}),-6,1.08,4);
-  box(4.2,0.18,2.2,wood,4.5,0.5,4.5); box(0.18,1.2,0.18,dark,2.7,0.85,3.7); box(0.18,1.2,0.18,dark,6.3,0.85,3.7); box(0.18,1.2,0.18,dark,2.7,0.85,5.3); box(0.18,1.2,0.18,dark,6.3,0.85,5.3);
-  var hearth = box(2.4,1.6,0.5,dark,0,0.9,-9.3); var fire = new THREE.Mesh(new THREE.PlaneGeometry(1.2,0.9),new THREE.MeshBasicMaterial({color:0xff8b3d,transparent:true,opacity:0.85})); fire.position.set(0,0.85,-9.02); g.add(fire);
-  var lamp2 = new THREE.PointLight(0xffb858,1.4,18,2); lamp2.position.set(5,3,4); g.add(lamp2);
-  var lamp3 = new THREE.PointLight(0xffb858,1.4,18,2); lamp3.position.set(-5,3,-4); g.add(lamp3);
-    g.traverse(function(o){if(o.isMesh)o.frustumCulled=false;});
-    g.visible=false; window.__garden.add(g); indoorRoom=g; window.__insideRoom=g; return g;
+    box(2.3, 0.24, 1.5, dark, -2.4, 0.28, -2.55); box(2.1, 0.24, 1.35, new THREE.MeshStandardMaterial({ color: 0xd8c3a0, roughness: 0.98 }), -2.4, 0.49, -2.55);
+    box(1.4, 0.14, 0.95, wood, 1.55, 0.55, -0.5); box(0.12, 0.52, 0.12, dark, 1.05, 0.25, -0.9); box(0.12, 0.52, 0.12, dark, 2.05, 0.25, -0.9); box(0.12, 0.52, 0.12, dark, 1.05, 0.25, -0.1); box(0.12, 0.52, 0.12, dark, 2.05, 0.25, -0.1);
+    box(1.8, 1.3, 0.28, wood, 3.9, 1.0, -2.3); box(1.55, 0.1, 0.35, dark, 3.75, 1.65, -2.3);
+    var rug = new THREE.Mesh(new THREE.CircleGeometry(1.35, 32), new THREE.MeshStandardMaterial({ color: 0x9a5c48, roughness: 1 })); rug.rotation.x = -Math.PI / 2; rug.position.set(0, 0.13, 0.45); rug.scale.set(1.35, 0.76, 1); g.add(rug);
+    box(0.55, 0.82, 0.12, dark, 0, 2.65, 0.1); box(0.24, 0.36, 0.24, warm, 0, 2.65, 0.16);
+    var lamp = new THREE.PointLight(0xffb858, 1.6, 12, 2); lamp.position.set(0, 2.75, 0.4); g.add(lamp);
+    for (var wi2 = 0; wi2 < 3; wi2++) { var w2 = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.6), new THREE.MeshBasicMaterial({ color: 0xffd38c })); w2.position.set(10.75, 2.6, -5 + wi2 * 4); w2.rotation.y = -Math.PI / 2; g.add(w2); }
+    box(3.2, 0.9, 1.5, wood, -6, 0.55, 4); box(2.9, 0.16, 1.3, new THREE.MeshStandardMaterial({ color: 0xcfb48e, roughness: 0.95 }), -6, 1.08, 4);
+    box(4.2, 0.18, 2.2, wood, 4.5, 0.5, 4.5); box(0.18, 1.2, 0.18, dark, 2.7, 0.85, 3.7); box(0.18, 1.2, 0.18, dark, 6.3, 0.85, 3.7); box(0.18, 1.2, 0.18, dark, 2.7, 0.85, 5.3); box(0.18, 1.2, 0.18, dark, 6.3, 0.85, 5.3);
+    var hearth = box(2.4, 1.6, 0.5, dark, 0, 0.9, -9.3); var fire = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.9), new THREE.MeshBasicMaterial({ color: 0xff8b3d, transparent: true, opacity: 0.85 })); fire.position.set(0, 0.85, -9.02); g.add(fire);
+    var lamp2 = new THREE.PointLight(0xffb858, 1.4, 18, 2); lamp2.position.set(5, 3, 4); g.add(lamp2);
+    var lamp3 = new THREE.PointLight(0xffb858, 1.4, 18, 2); lamp3.position.set(-5, 3, -4); g.add(lamp3);
+    g.traverse(function (o) { if (o.isMesh) o.frustumCulled = false; });
+    g.visible = false; window.__garden.add(g); indoorRoom = g; window.__insideRoom = g; return g;
   }
   function toggleHouse() {
     if (caveMode) {
@@ -29882,22 +29882,22 @@ window.__createPlayerPhysics = function (context) {
         showToast('Vào Hang Pha Lê — E để trở ra'); return true;
       }
     }
-    var cab=window.__cabinPos || {x:26,z:9};
+    var cab = window.__cabinPos || { x: 26, z: 9 };
     if (indoorMode) {
-      indoorMode=false; indoorRoom.visible=false;
-      if (window.__cabinGroup) window.__cabinGroup.visible=true;
+      indoorMode = false; indoorRoom.visible = false;
+      if (window.__cabinGroup) window.__cabinGroup.visible = true;
       if (indoorReturn) pPos.copy(indoorReturn);
-      orbitYaw=indoorYawReturn; orbitPitch=indoorPitchReturn;
+      orbitYaw = indoorYawReturn; orbitPitch = indoorPitchReturn;
       showToast('Ra ngoài vườn'); return true;
     }
-    var pl=playerLocal(), d=Math.hypot(pl.x-cab.x,pl.z-cab.z);
-    if (d>4.1) return false;
-    indoorRoom=makeInterior(); indoorRoom.visible=true; indoorMode=true;
-    indoorReturn=pPos.clone(); indoorYawReturn=orbitYaw; indoorPitchReturn=orbitPitch;
-    orbitYaw=Math.PI; orbitPitch=0.34;
-    if (window.__cabinGroup) window.__cabinGroup.visible=false;
-    var enter=new THREE.Vector3(cab.x,0,cab.z); window.__garden.localToWorld(enter); pPos.set(enter.x,enter.y,enter.z);
-    pY=0; flyMode=false; onGround=true;
+    var pl = playerLocal(), d = Math.hypot(pl.x - cab.x, pl.z - cab.z);
+    if (d > 4.1) return false;
+    indoorRoom = makeInterior(); indoorRoom.visible = true; indoorMode = true;
+    indoorReturn = pPos.clone(); indoorYawReturn = orbitYaw; indoorPitchReturn = orbitPitch;
+    orbitYaw = Math.PI; orbitPitch = 0.34;
+    if (window.__cabinGroup) window.__cabinGroup.visible = false;
+    var enter = new THREE.Vector3(cab.x, 0, cab.z); window.__garden.localToWorld(enter); pPos.set(enter.x, enter.y, enter.z);
+    pY = 0; flyMode = false; onGround = true;
     showToast('Vào nhà — E để trở ra'); return true;
   }
 
@@ -29910,13 +29910,13 @@ window.__createPlayerPhysics = function (context) {
       if (sv.p) pPos.set(sv.p[0], 0, sv.p[2]);
       if (typeof sv.yaw === 'number') orbitYaw = sv.yaw;
     }
-  } catch (eL) {}
+  } catch (eL) { }
   var qHud = document.createElement('div');
   qHud.style.cssText = 'position:fixed;top:52px;left:16px;z-index:50;font:600 12.5px/1.6 Georgia,serif;color:#5f4626;background:rgba(255,252,246,.78);border:1px solid rgba(122,90,52,.22);border-radius:10px;padding:7px 12px;backdrop-filter:blur(5px);max-width:260px';
   document.body.appendChild(qHud);
-  var doorHint=document.createElement('div');
-  doorHint.textContent='E — TƯƠNG TÁC';
-  doorHint.style.cssText='position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:55;padding:7px 14px;border-radius:999px;background:rgba(255,248,224,.9);color:#644623;border:1px solid rgba(122,90,52,.34);font:700 13px Georgia,serif;opacity:0;transition:opacity .18s;pointer-events:none';
+  var doorHint = document.createElement('div');
+  doorHint.textContent = 'E — TƯƠNG TÁC';
+  doorHint.style.cssText = 'position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:55;padding:7px 14px;border-radius:999px;background:rgba(255,248,224,.9);color:#644623;border:1px solid rgba(122,90,52,.34);font:700 13px Georgia,serif;opacity:0;transition:opacity .18s;pointer-events:none';
   document.body.appendChild(doorHint);
   function questText() {
     if (questIdx === 0) return 'Hái hoa đồng — <b>' + questN + '/5</b>';
@@ -30136,20 +30136,20 @@ window.__createPlayerPhysics = function (context) {
     var moving2 = ml > 0.01;
     walkT += dt * (moving2 ? (keys.shift ? 10.5 : 7.5) : 1.6);
     swimT += dt * (moving2 ? (keys.shift ? 4.8 : 3.2) : 1.5);
-    var cabinCheck=window.__cabinPos||{x:26,z:9}, caveCheck=window.__cavePos||{x:-30,z:-12};
-    var cabinNear=Math.hypot(pl.x-cabinCheck.x,pl.z-cabinCheck.z)<4.1, caveNear=Math.hypot(pl.x-caveCheck.x,pl.z-caveCheck.z)<4.3;
-    var waypointNear=false;
-    if(window.__waypoints) window.__waypoints.forEach(function(wp){if(Math.hypot(pl.x-wp.x,pl.z-wp.z)<2.4)waypointNear=true;});
-    doorHint.style.opacity=(indoorMode||caveMode||cabinNear||caveNear||waypointNear)?'1':'0';
-    doorHint.textContent=caveMode?'E — RA HANG':(indoorMode?'E — RA VƯỜN':(waypointNear?'E — KÍCH HOẠT CỘT':(caveNear?'E — VÀO HANG PHA LÊ':'E — VÀO NHÀ')));
+    var cabinCheck = window.__cabinPos || { x: 26, z: 9 }, caveCheck = window.__cavePos || { x: -30, z: -12 };
+    var cabinNear = Math.hypot(pl.x - cabinCheck.x, pl.z - cabinCheck.z) < 4.1, caveNear = Math.hypot(pl.x - caveCheck.x, pl.z - caveCheck.z) < 4.3;
+    var waypointNear = false;
+    if (window.__waypoints) window.__waypoints.forEach(function (wp) { if (Math.hypot(pl.x - wp.x, pl.z - wp.z) < 2.4) waypointNear = true; });
+    doorHint.style.opacity = (indoorMode || caveMode || cabinNear || caveNear || waypointNear) ? '1' : '0';
+    doorHint.textContent = caveMode ? 'E — RA HANG' : (indoorMode ? 'E — RA VƯỜN' : (waypointNear ? 'E — KÍCH HOẠT CỘT' : (caveNear ? 'E — VÀO HANG PHA LÊ' : 'E — VÀO NHÀ')));
     if (indoorMode) {
-      pl.x = Math.max((window.__cabinPos||{x:26}).x-8.8, Math.min((window.__cabinPos||{x:26}).x+8.8, pl.x));
-      pl.z = Math.max((window.__cabinPos||{z:9}).z-8.2, Math.min((window.__cabinPos||{z:9}).z+8.2, pl.z));
+      pl.x = Math.max((window.__cabinPos || { x: 26 }).x - 8.8, Math.min((window.__cabinPos || { x: 26 }).x + 8.8, pl.x));
+      pl.z = Math.max((window.__cabinPos || { z: 9 }).z - 8.2, Math.min((window.__cabinPos || { z: 9 }).z + 8.2, pl.z));
       window.__garden.localToWorld(pl); pPos.set(pl.x, pl.y, pl.z); window.__garden.worldToLocal(pl);
     }
     if (caveMode) {
-      pl.x = Math.max(window.__cavePos.x-3.2, Math.min(window.__cavePos.x+3.2, pl.x));
-      pl.z = Math.max(window.__cavePos.z-6.2, Math.min(window.__cavePos.z+6.2, pl.z));
+      pl.x = Math.max(window.__cavePos.x - 3.2, Math.min(window.__cavePos.x + 3.2, pl.x));
+      pl.z = Math.max(window.__cavePos.z - 6.2, Math.min(window.__cavePos.z + 6.2, pl.z));
       window.__garden.localToWorld(pl); pPos.set(pl.x, pl.y, pl.z); window.__garden.worldToLocal(pl);
     }
     var bobY = isSwimming ? (diving ? 0 : Math.sin(swimT * 2.0) * 0.055) : (moving2 && onGround ? Math.abs(Math.sin(walkT)) * 0.035 : Math.sin(walkT) * 0.012);
@@ -30248,12 +30248,12 @@ window.__createPlayerPhysics = function (context) {
     return b;
   }
   mkBtn('\u26f6', 'To\u00e0n m\u00e0n h\u00ecnh', 58, function () {
-    if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
-    else document.documentElement.requestFullscreen().catch(function () {});
+    if (document.fullscreenElement) document.exitFullscreen().catch(function () { });
+    else document.documentElement.requestFullscreen().catch(function () { });
   });
   mkBtn('\u23cd', 'V\u1ec1 \u0111i\u1ec3m xu\u1ea5t ph\u00e1t', 98, goHome);
   setInterval(function () {
-    try { localStorage.setItem('worldSave', JSON.stringify({ p: [pPos.x, 0, pPos.z], yaw: orbitYaw, sc: score, qi: questIdx, fly: flyMode })); } catch (eS) {}
+    try { localStorage.setItem('worldSave', JSON.stringify({ p: [pPos.x, 0, pPos.z], yaw: orbitYaw, sc: score, qi: questIdx, fly: flyMode })); } catch (eS) { }
   }, 4000);
 })();
 

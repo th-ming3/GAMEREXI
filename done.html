@@ -20946,9 +20946,9 @@ window.__createTerrain = function (context) {
         color: 0xc2aa7c, roughness: 0.92, side: THREE.DoubleSide
       });
       buildRibbonMesh(MD.roads, 7.2, roadMat, function (px, pz) {
-        return Math.max(seaY + 0.35, hillY(px, pz) + 0.45);
+        return Math.max(seaY + 0.25, hillY(px, pz) + 0.14);
       }, function (px, pz) {
-        return hillY(px, pz) > seaY + 0.35;
+        return Math.hypot(px, pz) > 55 && hillY(px, pz) > seaY + 0.35;
       });
     }
 
