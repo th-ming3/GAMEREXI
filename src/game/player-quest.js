@@ -77,7 +77,7 @@
     requestAnimationFrame(frame);
   }
   if (starGroup) starGroup.scale.setScalar(1.75);
-  if (SC && SC.fog) { SC.fog.near = 16; SC.fog.far = 80; }
+  if (SC && SC.fog) { SC.fog.near = 75; SC.fog.far = 280; }
   requestAnimationFrame(frame);
 
   /* ---- NHÂN VẬT: Soldier.glb CC0 (Quaternius) — skeleton thật, Idle/Walk/Run ---- */
@@ -626,7 +626,7 @@
     }
     if (SC && SC.fog) {
       if (diving && inLake) { SC.fog.near = 1.2; SC.fog.far = 19; SC.fog.color.setHex(0x07546a); }
-      else { SC.fog.near = 16; SC.fog.far = 80; }
+      else { SC.fog.near = 75; SC.fog.far = 280; }
     }
     diveTint.style.opacity = diving && inLake ? '0.20' : '0';
     walkT += dt * (ml > 0.01 ? (keys.shift ? 10.5 : 7.5) : 1.6);

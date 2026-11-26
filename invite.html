@@ -20686,6 +20686,56 @@ window.__createTerrain = function (context) {
     return geo;
   }
 
+  /* Lưới nền toàn lục địa Đại Việt (LOD xa) để núi non, bờ biển và 8 khu vực luôn hiện rõ ngay lập tức */
+  function buildContinentBackdrop() {
+    var b = (window.__WORLD_MAP_DATA && window.__WORLD_MAP_DATA.bounds) || { minX: -110.4, maxX: 369.6, minZ: -162.7, maxZ: 125.3 };
+    var step = 3.5;
+    var cols = Math.floor((b.maxX - b.minX) / step) + 1;
+    var rows = Math.floor((b.maxZ - b.minZ) / step) + 1;
+    var positions = new Float32Array(cols * rows * 3);
+    var colors = new Float32Array(cols * rows * 3);
+    var indices = [];
+    var gt = new THREE.Color();
+    var idx = 0;
+    for (var rz = 0; rz < rows; rz++) {
+      var z = b.minZ + rz * step;
+      for (var cx = 0; cx < cols; cx++) {
+        var x = b.minX + cx * step;
+        var y = hillY(x, z);
+        if (Math.hypot(x, z) < 32) y -= 0.14;
+        else y -= 0.06;
+        positions[idx * 3] = x;
+        positions[idx * 3 + 1] = y;
+        positions[idx * 3 + 2] = z;
+        terrainColor(x, z, gt);
+        var sh = 0.94 + 0.06 * Math.sin(x * 0.4) * Math.cos(z * 0.4);
+        colors[idx * 3] = gt.r * sh;
+        colors[idx * 3 + 1] = gt.g * sh;
+        colors[idx * 3 + 2] = gt.b * sh;
+        idx++;
+      }
+    }
+    for (var rz2 = 0; rz2 < rows - 1; rz2++) {
+      for (var cx2 = 0; cx2 < cols - 1; cx2++) {
+        var a = rz2 * cols + cx2;
+        var b2 = a + 1;
+        var c = a + cols;
+        var d = c + 1;
+        indices.push(a, c, b2, b2, c, d);
+      }
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    var mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.96, metalness: 0.02 });
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.receiveShadow = true;
+    gardenRoot.add(mesh);
+  }
+  buildContinentBackdrop();
+
   /* Mặt biển Đông Hải & hệ thống đảo bay Tiên Giới (Khu 08) */
   function buildWorldWaterAndSky() {
     var seaY = window.__REGION ? window.__REGION.SEA_LEVEL : -0.55;
@@ -22378,7 +22428,7 @@ if (!window.__GAME && consented) {
   window.__renderer = renderer; /* debug */
   scene.fog = new THREE.Fog(0xaab37f, 55, 145);
 
-  var camera = new THREE.PerspectiveCamera(36, 1, 0.1, 145);
+  var camera = new THREE.PerspectiveCamera(42, 1, 0.1, 420);
   window.__cam3d = camera; /* debug */
 
   /* ---- ánh sáng giờ vàng ---- */

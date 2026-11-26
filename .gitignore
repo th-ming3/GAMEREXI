@@ -1,1 +1,6 @@
 dist/
+node_modules/
+__pycache__/
+*.pyc
+shots/archive/
+shots/desktop-game.png
