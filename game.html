@@ -245,13 +245,13 @@ window.__REGION = (function () {
     var crater6 = -16.0 * Math.exp(-(d6 * d6) / 620);
     var h06 = 5.0 + rim6 + crater6 + 3.2 * Math.sin(x * 0.05) * Math.cos(z * 0.05);
 
-    /* 7. Thiên Khanh Sơn Đoòng & Vực Ngọc Bích (r07) — hố sụt rộng R=56m sâu -18m, đảo giữa hồ */
+    /* 7. Thiên Khanh Sơn Đoòng & Vực Ngọc Bích (r07) — vách đá cao +34m vây quanh lòng hồ ở -4m & đảo giữa hồ +8m */
     var r7 = R_MAP.r07 || { x: 413.4, z: -51.5 };
     var d7 = Math.hypot(x - r7.x, z - r7.z);
-    var sinkhole = -22.0 * (1 - smooth(d7, 26, 62));
-    var centerIsle7 = 12.0 * Math.exp(-(d7 * d7) / 240);
-    var rim7 = 16.0 * Math.exp(-Math.pow((d7 - 68) / 24, 2));
-    var h07 = 3.5 + rim7 + sinkhole + centerIsle7 + 1.8 * Math.sin(x * 0.05 + z * 0.04);
+    var sinkhole = -5.5 * (1 - smooth(d7, 36, 58));
+    var centerIsle7 = 11.5 * Math.exp(-(d7 * d7) / 260);
+    var rim7 = 30.0 * Math.exp(-Math.pow((d7 - 68) / 22, 2));
+    var h07 = 4.5 + rim7 + sinkhole + centerIsle7 + 1.8 * Math.sin(x * 0.05 + z * 0.04);
 
     /* 8. Tiên Giới Đảo Bay (nền đất/biển bên dưới vùng r08) */
     var h08 = 1.2 + 2.5 * Math.sin(x * 0.03) * Math.cos(z * 0.03);
@@ -301,7 +301,7 @@ window.__REGION = (function () {
     var c06 = lavaCrack ? [0.85, 0.28, 0.06] : [0.16, 0.15, 0.18]; /* Dung nham & đá bazan đen */
     var r7 = R_MAP.r07 || { x: 413.4, z: -51.5 };
     var d7 = Math.hypot(x - r7.x, z - r7.z);
-    var c07 = (d7 < 48 && h < -4.0) ? [0.13, 0.44, 0.43] : [0.27, 0.33, 0.28]; /* Hồ ngọc & vách đá vôi rêu */
+    var c07 = (d7 < 50 && h < 2.0) ? [0.12, 0.45, 0.44] : [0.32, 0.36, 0.26]; /* Đáy hồ ngọc & vách đá vôi rêu xanh */
     var c08 = [0.45, 0.54, 0.32];
 
     var rgb = [0, 1, 2].map(function (ch) {
@@ -20816,11 +20816,13 @@ window.__createTerrain = function (context) {
     /* Cầu nối giữa 5 đảo bay */
     function connectSkyBridge(a, b, isStone) {
       var dx = b.x - a.x, dz = b.z - a.z, dy = b.y - a.y;
-      var len = Math.hypot(dx, dz) - a.r * 0.65 - b.r * 0.65;
+      var dist = Math.hypot(dx, dz);
+      var len = dist - a.r * 0.3 - b.r * 0.3;
       if (len <= 2) return;
-      var mx = (a.x + b.x) * 0.5, my = (a.y + b.y) * 0.5, mz = (a.z + b.z) * 0.5;
-      var deck = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.5, len), isStone ? stoneBridgeMat : bridgeMat);
-      deck.position.set(mx, my + 0.1, mz);
+      var tMid = (a.r * 0.3 + len * 0.5) / (dist || 1);
+      var mx = a.x + dx * tMid, my = a.y + dy * tMid, mz = a.z + dz * tMid;
+      var deck = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.7, len), isStone ? stoneBridgeMat : bridgeMat);
+      deck.position.set(mx, my + 0.05, mz);
       deck.rotation.y = Math.atan2(dx, dz);
       deck.rotation.x = -Math.atan2(dy, len);
       gardenRoot.add(deck);
@@ -21375,18 +21377,18 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
     } else if (id === 'r07_01') {
       /* Đảo Rừng Bậc Thang giữa Hồ Ngọc Bích */
       var lake7 = new THREE.Mesh(new THREE.CircleGeometry(54, 28), M.jadeWater);
-      lake7.rotation.x = -Math.PI / 2; lake7.position.y = -5.5; g.add(lake7);
-      g.add(makePavilion(6, 6, 3.0, 1, M.mossStone, M.stone));
+      lake7.rotation.x = -Math.PI / 2; lake7.position.y = -0.6 - gy; g.add(lake7);
+      g.add(makePavilion(7, 7, 3.4, 1, M.mossStone, M.stone));
       [-1, 0, 1].forEach(function (dir) {
-        var b7 = makeStoneBridge(26, 3.4);
-        b7.rotation.y = dir * 1.1; b7.position.set(Math.sin(b7.rotation.y) * 20, -5.5, Math.cos(b7.rotation.y) * 20);
+        var b7 = makeStoneBridge(28, 3.6);
+        b7.rotation.y = dir * 1.1; b7.position.set(Math.sin(b7.rotation.y) * 22, -0.5 - gy, Math.cos(b7.rotation.y) * 22);
         g.add(b7);
       });
     } else if (id === 'r07_02') {
-      /* Tam Thác Thiên Khanh khổng lồ đổ xuống hồ */
+      /* Tam Thác Thiên Khanh khổng lồ đổ từ vách núi +30m xuống hồ */
       [-16, 0, 16].forEach(function (wx) {
-        var wf7 = new THREE.Mesh(new THREE.BoxGeometry(6.5, 36, 2.2), M.waterfall);
-        wf7.position.set(wx, 12, 0); g.add(wf7);
+        var wf7 = new THREE.Mesh(new THREE.BoxGeometry(6.5, 34, 2.2), M.waterfall);
+        wf7.position.set(wx, -14, 0); g.add(wf7);
       });
     } else if (id === 'r07_03') {
       /* Hang Thạch Nhũ Ngọc Bích Sơn Đoòng */
@@ -25950,19 +25952,7 @@ if (!window.__GAME && consented) {
     window.__landmarks = { cabin: CAB, rocks: RK, tomb: TOMB, lake: LAKE, den: window.__denPos, well: { x: -10.5, z: -27 }, bigTree: { x: 7, z: -20 } };
   })();
 
-  /* Dãy đồi xa làm nền trời (nhìn thấy từ mọi chỗ trong world) */
-  (function distantHills() {
-    var mat = new THREE.MeshStandardMaterial({ color: 0x8ba0b5, roughness: 1, flatShading: true });
-    var mat2 = new THREE.MeshStandardMaterial({ color: 0x7b93a8, roughness: 1, flatShading: true });
-    for (var i = 0; i < 30; i++) {
-      var a = (i / 30) * Math.PI * 2 + (i % 3) * 0.07;
-      var r = 62 + (i % 6) * 8;
-      var h = 10 + (i % 8) * 4;
-      var m = new THREE.Mesh(new THREE.ConeGeometry(11 + (i % 4) * 5, h, 7), i % 2 ? mat : mat2);
-      m.position.set(Math.cos(a) * r, h / 2 - 2, Math.sin(a) * r);
-      gardenRoot.add(m);
-    }
-  })();
+  /* Đã bỏ vòng nón distantHills() cũ để giữ không gian mở 1560x936m cho bản đồ Đại Việt */
 
   /* Suối chảy từ rừng xuống hồ + cầu gỗ bắc qua + nhà phụ + lửa trại */
   (function creekAndStructures() {
