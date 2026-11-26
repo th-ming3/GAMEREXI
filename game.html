@@ -20614,7 +20614,7 @@ window.__createTerrain = function (context) {
   var LAKE = context.LAKE, LAKE_DEPTH = context.LAKE_DEPTH;
   var smooth = context.smooth, lakeDepth = context.lakeDepth;
 
-  var CREEK = [[-16, -22], [-9, -10], [-2, 0], [0, 8], [-1, 14]];
+  var CREEK = [[-16, -22], [-11, -13], [-7.5, -5.5], [-8.4, 2.5], [-6.6, 8.8], [-2.5, 12.8]];
   window.__creek = CREEK;
   function creekDepth(x, z) {
     var best = 1e9;
@@ -20658,7 +20658,7 @@ window.__createTerrain = function (context) {
     var rC = Math.sqrt(x * x + z * z);
     var spawnMask = 1 - smooth(rC, 18, 32);
     var fl = 1;
-    var SPOTS = hillY._fl || (hillY._fl = [[0.4, 6.8, 8], [26, 9, 7], [4.5, 17, 9.2]]);
+    var SPOTS = hillY._fl || (hillY._fl = [[1.2, 4.5, 9.0], [0, -11, 7.0], [26, 9, 7], [4.5, 17, 9.2]]);
     for (var fi = 0; fi < SPOTS.length; fi++) {
       var dxS = x - SPOTS[fi][0], dzS = z - SPOTS[fi][1];
       fl = Math.min(fl, smooth(Math.sqrt(dxS * dxS + dzS * dzS), SPOTS[fi][2] * 0.5, SPOTS[fi][2]));
@@ -20685,7 +20685,7 @@ window.__createTerrain = function (context) {
     if (window.__REGION) {
       var rgb = window.__REGION.colorAt(x, z);
       target.setRGB(rgb[0], rgb[1], rgb[2]);
-    } else target.setHex(0x8c925c);
+    } else target.setHex(0x6e8f48);
     return target;
   }
 
@@ -21260,7 +21260,27 @@ window.__createRealAssets = function () {
     if (mesh) {
       record.geometry = mesh.geometry.clone();
       record.material = Array.isArray(mesh.material) ? mesh.material[0].clone() : mesh.material.clone();
-      if (name === 'grass' || name === 'flower') {
+      if (name === 'grass') {
+        record.geometry.scale(1.12, 0.92, 1.12);
+        /* Hướng toàn bộ normal của cỏ lên trời (+Y) để cỏ không bị đen sì dưới nắng xiên */
+        var nAttr = record.geometry.attributes.normal;
+        if (nAttr) {
+          for (var ni = 0; ni < nAttr.count; ni++) nAttr.setXYZ(ni, 0, 1, 0);
+          nAttr.needsUpdate = true;
+        }
+        record.material = new THREE.MeshStandardMaterial({
+          map: record.material.map || null,
+          color: 0x8ad054,
+          emissive: 0x2d4f18,
+          emissiveIntensity: 0.40,
+          roughness: 0.88,
+          metalness: 0.0,
+          alphaTest: 0.35,
+          transparent: false,
+          side: THREE.DoubleSide
+        });
+        windify(record.material);
+      } else if (name === 'flower') {
         record.geometry.scale(0.95, 1.0, 0.95);
         windify(record.material);
       }
@@ -21313,6 +21333,7 @@ window.__createRealAssets = function () {
       if (!record.geometry || !record.material) return;
       mesh.geometry = record.geometry;
       mesh.material = record.material;
+      if (name === 'grass') { mesh.castShadow = false; mesh.receiveShadow = true; }
       mesh.count = count;
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
@@ -22535,107 +22556,50 @@ window.__REAL_ASSETS = window.__createRealAssets();
   function makeBanyanTreeShrine(scale) {
     var s = scale || 1;
     var g = new THREE.Group();
+    var RA = window.__REAL_ASSETS;
 
-    /* Gò đá rêu đế gốc */
-    for (var ri = 0; ri < 9; ri++) {
-      var ra = (ri / 9) * Math.PI * 2;
-      var dist = ri === 0 ? 0 : 2.3 + (ri % 3) * 0.75;
-      var rock = addShadow(new THREE.Mesh(new THREE.DodecahedronGeometry(ri === 0 ? 2.4 : 1.55 + (ri % 2) * 0.55, 1), MAT.mossBoulder));
-      rock.scale.set(1.35, 0.72, 1.25);
-      rock.position.set(Math.cos(ra) * dist, 0.62, Math.sin(ra) * dist);
-      g.add(rock);
-    }
+    if (RA) {
+      /* 3 cổ thụ PBR thật lồng tán tạo thành gốc Đa rậm rạp tự nhiên (không dùng cầu xanh & đá nhọn) */
+      [
+        { x: -0.6, z: -1.4, h: 11.2, ry: 0.2 },
+        { x: 1.5, z: -1.9, h: 9.6, ry: 2.1 },
+        { x: -1.9, z: -0.6, h: 8.8, ry: 4.1 }
+      ].forEach(function (tr) {
+        var tree = RA.makeModel('broadleaf', { height: tr.h });
+        tree.position.set(tr.x, -0.1, tr.z);
+        tree.rotation.y = tr.ry;
+        g.add(tree);
+      });
 
-    /* Các thân chính xoắn & rễ bạnh lùi sau z <= 0.6 để không xuyên mái miếu */
-    for (var ti = 0; ti < 7; ti++) {
-      var ta = (ti / 7) * Math.PI * 2 + 0.3;
-      var tr = ti === 0 ? 0 : 0.78;
-      var trunk = addShadow(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.95, 5.4, 7), MAT.bark));
-      trunk.position.set(Math.cos(ta) * tr, 2.8, Math.min(0.6, Math.sin(ta) * tr - 0.6));
-      trunk.rotation.z = Math.cos(ta) * 0.14;
-      trunk.rotation.x = Math.min(0.05, Math.sin(ta) * 0.12);
+      /* Đá rêu bờ tự nhiên quây gốc Đa */
+      [
+        ['pondStone', -2.6, 0.8, 2.2, 0.4],
+        ['pondStone2', 2.4, 0.7, 2.0, 1.8],
+        ['pondStone', -1.8, -2.8, 2.4, 3.1],
+        ['pondStone2', 2.1, -2.9, 2.1, 4.4]
+      ].forEach(function (rk) {
+        var rMesh = RA.makeModel(rk[0], rk[3]);
+        rMesh.position.set(rk[1], -0.05, rk[2]);
+        rMesh.rotation.y = rk[4];
+        g.add(rMesh);
+      });
+    } else {
+      var trunk = addShadow(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, 5.2, 8), MAT.bark));
+      trunk.position.set(0, 2.6, -1.2);
       g.add(trunk);
     }
-    for (var bi = 0; bi < 10; bi++) {
-      var ba = (bi / 10) * Math.PI * 2;
-      if (Math.abs(ba - Math.PI * 0.5) < 0.72) continue; /* chừa hốc chính diện cho miếu thờ */
-      var root = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.44, 3.6, 6), MAT.bark);
-      root.position.set(Math.cos(ba) * 2.15, 1.65, Math.sin(ba) * 2.15 - 0.35);
-      root.rotation.z = Math.cos(ba) * 0.48;
-      root.rotation.x = -Math.sin(ba) * 0.48;
-      g.add(root);
-    }
 
-    /* Tán lá đa tầng hữu cơ có họa tiết phiến lá chồng lớp (thay khối cầu thô) + rễ buông */
-    var leafClusterTex = makeTex(256, 256, 2, 2, function (cg, w, h) {
-      cg.fillStyle = '#36682c';
-      cg.fillRect(0, 0, w, h);
-      for (var li = 0; li < 260; li++) {
-        var lx = (li * 67) % w, ly = (li * 113) % h;
-        cg.save();
-        cg.translate(lx, ly);
-        cg.rotate((li * 0.71) % 6.28);
-        cg.fillStyle = li % 3 === 0 ? '#5b9e3d' : (li % 2 ? '#295422' : '#437c32');
-        cg.beginPath();
-        cg.ellipse(0, 0, 12 + (li % 8), 6 + (li % 5), 0, 0, 6.28);
-        cg.fill();
-        cg.restore();
-      }
-    });
-    var canopyMats = [
-      new THREE.MeshStandardMaterial({ map: leafClusterTex, color: 0x2c6025, roughness: 0.86 }),
-      new THREE.MeshStandardMaterial({ map: leafClusterTex, color: 0x3e7d32, roughness: 0.82 }),
-      new THREE.MeshStandardMaterial({ map: leafClusterTex, color: 0x579c3f, roughness: 0.78 })
-    ];
-    var canopyClusters = [
-      [0, 7.3, -0.3, 3.6, 2.1, 0],
-      [-3.1, 6.2, 1.0, 2.7, 1.8, 1],
-      [3.2, 6.3, 0.9, 2.8, 1.8, 1],
-      [-2.8, 6.4, -2.3, 2.6, 1.7, 0],
-      [2.6, 6.5, -2.2, 2.7, 1.7, 1],
-      [0, 6.2, 2.5, 2.4, 1.5, 2],
-      [0, 5.9, -3.2, 2.5, 1.6, 0],
-      [-1.5, 8.4, 0.4, 2.3, 1.5, 2],
-      [1.7, 8.2, -0.8, 2.3, 1.5, 2],
-      [-4.6, 5.7, -0.5, 2.0, 1.3, 1],
-      [4.7, 5.8, 0.2, 2.1, 1.3, 2]
-    ];
-    canopyClusters.forEach(function (c, idx) {
-      var crown = addShadow(new THREE.Mesh(new THREE.IcosahedronGeometry(c[3], 2), canopyMats[c[5]]));
-      crown.scale.set(1.22, 0.68, 1.18);
-      crown.position.set(c[0], c[1], c[2]);
-      crown.rotation.set((idx % 3 - 1) * 0.14, idx * 0.7, (idx % 2 ? 0.1 : -0.1));
-      g.add(crown);
-      for (var sub = 0; sub < 2; sub++) {
-        var ang = idx * 1.9 + sub * 2.7;
-        var tuft = addShadow(new THREE.Mesh(new THREE.IcosahedronGeometry(c[3] * 0.52, 1), canopyMats[(c[5] + sub + 1) % 3]));
-        tuft.scale.set(1.15, 0.62, 1.15);
-        tuft.position.set(c[0] + Math.cos(ang) * c[3] * 0.62, c[1] + (sub ? 0.55 : -0.35), c[2] + Math.sin(ang) * c[3] * 0.62);
-        g.add(tuft);
-      }
-    });
-
-    for (var ai = 0; ai < 18; ai++) {
-      var aa = (ai / 18) * Math.PI * 2;
-      if (Math.abs(aa - Math.PI * 0.5) < 0.70) continue;
-      var ar = 2.6 + (ai % 3) * 1.1;
-      var ah = 4.2 + (ai % 4) * 0.65;
-      var aerial = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.055, ah, 5), MAT.bark);
-      aerial.position.set(Math.cos(aa) * ar, ah * 0.5 + 1.0, Math.sin(aa) * ar);
-      g.add(aerial);
-    }
-
-    /* Miếu thờ sơn son đặt gọn trong hốc rễ chính diện (+Z) */
+    /* Miếu thờ sơn son đặt trang nghiêm dưới bóng cổ thụ (+Z) */
     var shrine = new THREE.Group();
-    shrine.position.set(0, 0.85, 2.65);
-    var sBase = new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.34, 1.95), MAT.stone);
+    shrine.position.set(0, 0.05, 2.35);
+    var sBase = addShadow(new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.34, 1.95), MAT.stone));
     sBase.position.y = 0.17;
     shrine.add(sBase);
-    var sBack = new THREE.Mesh(new THREE.BoxGeometry(2.05, 1.65, 1.35), MAT.redLacquer);
+    var sBack = addShadow(new THREE.Mesh(new THREE.BoxGeometry(2.05, 1.65, 1.35), MAT.redLacquer));
     sBack.position.set(0, 1.16, -0.15);
     shrine.add(sBack);
     [-0.92, 0.92].forEach(function (sx) {
-      var scol = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.10, 1.65, 6), MAT.redLacquer);
+      var scol = addShadow(new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.10, 1.65, 8), MAT.redLacquer));
       scol.position.set(sx, 1.16, 0.72);
       shrine.add(scol);
       var slan = makeLantern(0.14, 0.18);
@@ -23677,161 +23641,31 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
   return window.__DAIVIET_LANDMARKS;
 };
 
-/* NPC hiện trường: model thật + hội thoại trạng thái theo quest. */
+/* NPC hiện trường: 4 nhân vật GLB có khung xương và animation thật (idle / look_around / wave), đứng vững trên mặt đất. */
 window.__initNPCs = function (gardenRoot) {
   if (window.__NPC_SYSTEM) return window.__NPC_SYSTEM;
   var DATA = [
     {
-      id: 'tam', name: 'Tâm', role: 'Kỹ sư hiện trường', x: -1.8, z: 2.2, yaw: 1.05, plaza: true,
-      outfit: { tunic: 0x264b5d, sash: 0xc99c4a, pants: 0x1e2426, hat: 'turban', height: 1.72 },
+      id: 'tam', name: 'Tâm', role: 'Kỹ sư hiện trường', src: 'models/npc-tam.glb', x: -2.2, z: 2.2, yaw: 1.05, plaza: true, height: 1.74, hat: false,
       first: 'Đồng hồ đang nói mực nước giảm. Bờ hồ lại bảo điều ngược lại. Mình cần kiểm tra ba dấu trước khi chạm van.',
       late: 'Tôi đọc nó như lệnh cần sửa. Nó là dấu vết của một lần người ta phải chọn ai được an toàn trước.'
     },
     {
-      id: 'ba_man', name: 'Bà Mận', role: 'Giữ ký ức lũ', x: 4.3, z: 4.9, yaw: -1.15, plaza: true,
-      outfit: { tunic: 0x7c4a32, sash: 0xa63c33, pants: 0x22201d, hat: 'nonla', height: 1.62 },
+      id: 'ba_man', name: 'Bà Mận', role: 'Giữ ký ức lũ', src: 'models/npc-hoa.glb', x: 4.3, z: 4.9, yaw: -1.15, plaza: true, height: 1.64, hat: true, tint: 0xd9c2a8,
       first: 'Trước khi đổi dòng, mình cần chắc đường sơ tán vẫn mở. Lũ không chỉ là con số trên đồng hồ.',
       late: 'Đi vạch nước này cùng tôi. Nếu mình đánh dấu được đường an toàn thứ hai, tôi sẽ yên tâm hơn.'
     },
     {
-      id: 'hoa', name: 'Hòa', role: 'Ngư dân bến Hồ Gương', x: 11.2, z: 12.6, yaw: 2.1, plaza: false,
-      outfit: { tunic: 0x2c5c50, sash: 0xd4b26a, pants: 0x1e2624, hat: 'nonla', height: 1.68 },
+      id: 'hoa', name: 'Hòa', role: 'Ngư dân bến Hồ Gương', src: 'models/npc-hoa.glb', x: 11.2, z: 12.6, yaw: 2.1, plaza: false, height: 1.68, hat: true,
       first: 'Nếu mở nước mà cá không về thì ai trả lại cái bến này? Tôi cần thấy dấu cá trước đã.',
       late: 'Tôi đã chép lại lịch cá. Giờ mình có thể cùng giữ lịch bến cho những người tới sau.'
     },
     {
-      id: 'lam', name: 'Lâm', role: 'Người ghi chép sinh cảnh', x: 3.9, z: -11.5, yaw: -1.35, plaza: false,
-      outfit: { tunic: 0x3b593c, sash: 0xd9b86c, pants: 0x242622, hat: 'turban', height: 1.70 },
+      id: 'lam', name: 'Lâm', role: 'Người ghi chép sinh cảnh', src: 'models/npc-lam.glb', x: 3.9, z: -11.5, yaw: -1.35, plaza: false, height: 1.72, hat: false,
       first: 'Tôi ghi dấu vết, không kết luận thay người dân. Cái cò và dấu chân đang nói khác cái đồng hồ.',
       late: 'Cuốn ghi chép cần cả lời người dân lẫn dấu tự nhiên. Nhà cửa cũng là một phần của sinh cảnh.'
     }
   ];
-
-  function makeDaiVietVillager(info) {
-    var o = info.outfit || {};
-    var root = new THREE.Group();
-    var body = new THREE.Group();
-    var sc = (o.height || 1.70) / 1.70;
-    body.scale.set(sc, sc, sc);
-    root.add(body);
-
-    var mSkin = new THREE.MeshStandardMaterial({ color: 0xefc9a5, roughness: 0.62, metalness: 0.02 });
-    var mTunic = new THREE.MeshStandardMaterial({ color: o.tunic || 0x2e5246, roughness: 0.72, metalness: 0.04 });
-    var mSash = new THREE.MeshStandardMaterial({ color: o.sash || 0xcfa44e, roughness: 0.56, metalness: 0.08 });
-    var mPants = new THREE.MeshStandardMaterial({ color: o.pants || 0x1e2426, roughness: 0.78 });
-    var mHair = new THREE.MeshStandardMaterial({ color: 0x1a1715, roughness: 0.75 });
-    var mStraw = new THREE.MeshStandardMaterial({ color: 0xd8bf84, roughness: 0.78, side: THREE.DoubleSide });
-    var mTurban = new THREE.MeshStandardMaterial({ color: 0x23333d, roughness: 0.68 });
-    var mEye = new THREE.MeshStandardMaterial({ color: 0x191816, roughness: 0.35 });
-
-    function sh(mesh) {
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      return mesh;
-    }
-
-    /* Đôi chân mặc quần tối màu & hài vải đứng chạm đất y = 0 */
-    [-0.085, 0.085].forEach(function (lx) {
-      var leg = sh(new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.050, 0.74, 9), mPants));
-      leg.position.set(lx, 0.39, 0);
-      body.add(leg);
-      var shoe = sh(new THREE.Mesh(new THREE.BoxGeometry(0.088, 0.075, 0.175), mHair));
-      shoe.position.set(lx, 0.038, 0.03);
-      body.add(shoe);
-    });
-
-    /* Thân áo dài / áo bà ba + tà áo xẻ + thắt lưng */
-    var torso = new THREE.Group();
-    torso.position.set(0, 0.76, 0);
-    body.add(torso);
-
-    var skirtFront = sh(new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.42, 0.045), mTunic));
-    skirtFront.position.set(0, -0.02, 0.095);
-    skirtFront.rotation.x = -0.08;
-    torso.add(skirtFront);
-
-    var skirtBack = sh(new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.48, 0.045), mTunic));
-    skirtBack.position.set(0, -0.04, -0.095);
-    skirtBack.rotation.x = 0.09;
-    torso.add(skirtBack);
-
-    var chest = sh(new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.145, 0.50, 10), mTunic));
-    chest.scale.set(1.08, 1, 0.76);
-    chest.position.y = 0.27;
-    torso.add(chest);
-
-    var belt = sh(new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.155, 0.08, 10), mSash));
-    belt.scale.set(1.09, 1, 0.78);
-    belt.position.y = 0.06;
-    torso.add(belt);
-
-    var neck = sh(new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 0.10, 8), mSkin));
-    neck.position.y = 0.55;
-    torso.add(neck);
-
-    /* Cánh tay buông tự nhiên hai bên (không T-pose) */
-    function makeArm(side) {
-      var piv = new THREE.Group();
-      piv.position.set(side * 0.195, 0.49, 0);
-      piv.rotation.z = side * 0.10;
-      var sleeve = sh(new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.042, 0.38, 8), mTunic));
-      sleeve.position.y = -0.19;
-      piv.add(sleeve);
-      var hand = sh(new THREE.Mesh(new THREE.SphereGeometry(0.036, 8, 8), mSkin));
-      hand.position.y = -0.41;
-      piv.add(hand);
-      return piv;
-    }
-    var leftArm = makeArm(-1);
-    var rightArm = makeArm(1);
-    torso.add(leftArm);
-    torso.add(rightArm);
-
-    /* Đầu, tóc búi/khăn đóng hoặc nón lá (mặt hướng +Z) */
-    var head = new THREE.Group();
-    head.position.set(0, 0.67, 0);
-    torso.add(head);
-
-    var skull = sh(new THREE.Mesh(new THREE.SphereGeometry(0.118, 14, 12), mSkin));
-    skull.scale.set(0.95, 1.04, 0.98);
-    head.add(skull);
-
-    [-0.040, 0.040].forEach(function (ex) {
-      var eye = new THREE.Mesh(new THREE.SphereGeometry(0.014, 7, 7), mEye);
-      eye.position.set(ex, 0.015, 0.105);
-      head.add(eye);
-    });
-
-    var hairCap = sh(new THREE.Mesh(new THREE.SphereGeometry(0.124, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.58), mHair));
-    hairCap.position.y = 0.018;
-    hairCap.rotation.x = -0.16;
-    head.add(hairCap);
-
-    var bun = sh(new THREE.Mesh(new THREE.SphereGeometry(0.048, 9, 8), mHair));
-    bun.position.set(0, 0.01, -0.115);
-    head.add(bun);
-
-    if (o.hat === 'nonla') {
-      var cone = sh(new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.17, 18, 1, true), mStraw));
-      cone.position.set(0, 0.145, 0);
-      head.add(cone);
-      var rim = sh(new THREE.Mesh(new THREE.TorusGeometry(0.315, 0.011, 6, 18), mSash));
-      rim.rotation.x = Math.PI / 2;
-      rim.position.y = 0.062;
-      head.add(rim);
-    } else {
-      var turb = sh(new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.028, 7, 14), mTurban));
-      turb.rotation.x = Math.PI / 2;
-      turb.position.y = 0.065;
-      head.add(turb);
-      var turb2 = sh(new THREE.Mesh(new THREE.TorusGeometry(0.108, 0.022, 6, 14), mSash));
-      turb2.rotation.x = Math.PI / 2;
-      turb2.position.y = 0.092;
-      head.add(turb2);
-    }
-
-    return { group: root, torso: torso, head: head, leftArm: leftArm, rightArm: rightArm };
-  }
 
   var panel = document.createElement('div');
   panel.style.cssText = 'position:fixed;left:50%;bottom:110px;transform:translateX(-50%);z-index:80;width:min(560px,86vw);display:none;padding:14px 18px;border-radius:14px;background:rgba(20,18,15,.92);color:#f6efe0;font:15px/1.55 "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;box-shadow:0 12px 36px rgba(0,0,0,.42);border:1px solid rgba(226,192,122,.34);backdrop-filter:blur(10px)';
@@ -23847,15 +23681,100 @@ window.__initNPCs = function (gardenRoot) {
   hint.style.cssText = 'position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:79;padding:6px 13px;border-radius:999px;background:rgba(20,18,15,.84);border:1px solid rgba(226,192,122,.4);color:#ffd89a;font:600 12.5px "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;opacity:0;transition:opacity .15s;pointer-events:none';
   document.body.appendChild(hint);
 
+  function addNonLaToHead(headNode, sc) {
+    var inv = 1 / sc;
+    var hatGroup = new THREE.Group();
+    hatGroup.scale.setScalar(inv);
+    var mStraw = new THREE.MeshStandardMaterial({ color: 0xd9bf82, roughness: 0.80, side: THREE.DoubleSide });
+    var mRim = new THREE.MeshStandardMaterial({ color: 0x9b6e3c, roughness: 0.72 });
+    var cone = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.145, 20, 1, true), mStraw);
+    cone.position.set(0, 0.19, 0.0);
+    cone.castShadow = true;
+    hatGroup.add(cone);
+    var rim = new THREE.Mesh(new THREE.TorusGeometry(0.275, 0.008, 6, 20), mRim);
+    rim.rotation.x = Math.PI / 2;
+    rim.position.y = 0.12;
+    hatGroup.add(rim);
+    headNode.add(hatGroup);
+  }
+
   var npcs = [];
+  var mixers = [];
+  window.__npcsGlbLoaded = 0;
+
+  function loadAnimatedNpc(info, holder) {
+    function onGltf(gltf) {
+      var model = gltf.scene;
+      model.updateMatrixWorld(true);
+      var box = new THREE.Box3().setFromObject(model);
+      var size = box.getSize(new THREE.Vector3());
+      var sc = (info.height || 1.70) / (size.y > 0.1 ? size.y : 1.70);
+      model.scale.setScalar(sc);
+      var ctr = box.getCenter(new THREE.Vector3());
+      model.position.set(-ctr.x * sc, -box.min.y * sc, -ctr.z * sc);
+
+      var headNode = null;
+      model.traverse(function (o) {
+        if (!headNode && o.isBone && /head$/i.test(o.name)) headNode = o;
+        if (o.isMesh) {
+          o.castShadow = true;
+          o.receiveShadow = true;
+          var mats = Array.isArray(o.material) ? o.material : [o.material];
+          mats.forEach(function (m) {
+            if (!m) return;
+            m.roughness = 0.72;
+            m.metalness = 0.05;
+            if (info.tint && m.color) m.color.multiply(new THREE.Color(info.tint));
+          });
+        }
+      });
+
+      if (info.hat && headNode) {
+        addNonLaToHead(headNode, sc);
+      }
+
+      holder.add(model);
+
+      if (gltf.animations && gltf.animations.length) {
+        var mixer = new THREE.AnimationMixer(model);
+        var idleClip = gltf.animations.find(function (a) { return /idle/i.test(a.name); }) || gltf.animations[0];
+        var lookClip = gltf.animations.find(function (a) { return /look/i.test(a.name); });
+        var waveClip = gltf.animations.find(function (a) { return /wave/i.test(a.name); });
+        var idleAct = mixer.clipAction(idleClip);
+        idleAct.play();
+        mixers.push({ mixer: mixer, idle: idleAct, look: lookClip ? mixer.clipAction(lookClip) : null, wave: waveClip ? mixer.clipAction(waveClip) : null, info: info, waving: false });
+      }
+      window.__npcsGlbLoaded++;
+    }
+
+    var loader = new THREE.GLTFLoader();
+    var src = info.src;
+    if (/^(models\/|https?:\/\/|\.\/|blob:)/.test(src)) {
+      loader.load(src, onGltf, undefined, function (err) { console.warn('NPC GLB load failed:', info.id, err); });
+    } else if (src && src.charAt(0) !== '_') {
+      try {
+        var bytes = Uint8Array.from(atob(src), function (c) { return c.charCodeAt(0); });
+        loader.parse(bytes.buffer, '', onGltf, function (err) { console.warn('NPC GLB parse failed:', info.id, err); });
+      } catch (e) { console.warn('NPC GLB decode failed:', info.id, e); }
+    }
+  }
+
   DATA.forEach(function (info) {
-    var rig = makeDaiVietVillager(info);
-    var y = (window.__hillY ? window.__hillY(info.x, info.z) : 0) + (info.plaza ? 0.095 : 0.02);
-    rig.group.position.set(info.x, y, info.z);
-    rig.group.rotation.y = info.yaw;
-    gardenRoot.add(rig.group);
-    npcs.push({ info: info, group: rig.group, rig: rig, baseYaw: info.yaw });
+    var holder = new THREE.Group();
+    var y = (window.__hillY ? window.__hillY(info.x, info.z) : 0) + (info.plaza ? 0.08 : 0.01);
+    holder.position.set(info.x, y, info.z);
+    holder.rotation.y = info.yaw;
+    gardenRoot.add(holder);
+    loadAnimatedNpc(info, holder);
+    npcs.push({ info: info, group: holder });
   });
+
+  window.__updateNpcMixers = function (dt) {
+    var d = Math.min(0.05, dt || 0.016);
+    for (var i = 0; i < mixers.length; i++) {
+      mixers[i].mixer.update(d);
+    }
+  };
 
   function localPlayer() {
     if (!window.__playerPos || !gardenRoot) return null;
@@ -23903,23 +23822,6 @@ window.__initNPCs = function (gardenRoot) {
       hint.style.opacity = '1';
     } else hint.style.opacity = '0';
   }, 180);
-
-  var idleT0 = performance.now();
-  setInterval(function () {
-    var el = (performance.now() - idleT0) / 1000;
-    npcs.forEach(function (n, i) {
-      var ph = el * 1.4 + i * 1.7;
-      var rig = n.rig;
-      if (rig) {
-        rig.torso.position.y = 0.76 + Math.sin(ph) * 0.012;
-        rig.head.rotation.y = Math.sin(el * 0.55 + i * 2.1) * 0.16;
-        rig.leftArm.rotation.x = Math.sin(ph) * 0.04;
-        rig.rightArm.rotation.x = -Math.sin(ph) * 0.04;
-      }
-      var y = (window.__hillY ? window.__hillY(n.info.x, n.info.z) : 0) + (n.info.plaza ? 0.095 : 0.02);
-      n.group.position.set(n.info.x, y, n.info.z);
-    });
-  }, 60);
 
   window.__NPC_SYSTEM = { npcs: npcs, tryTalk: tryTalk, panel: panel };
   return window.__NPC_SYSTEM;
@@ -24488,18 +24390,18 @@ window.__initCampaign = function (gardenRoot) {
       if (visited(i, mi)) continue;
       var m = ob.marks[mi], y = hY(m.x, m.z);
       var beam = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.13, 0.2, 3.6, 10, 1, true),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide })
+        new THREE.SphereGeometry(0.11, 10, 8),
+        new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.2, transparent: true, opacity: 0.85, roughness: 0.2 })
       );
-      beam.position.set(m.x, y + 1.8, m.z);
+      beam.position.set(m.x, y + 0.72, m.z);
       var ring = new THREE.Mesh(
-        new THREE.RingGeometry(0.44, 0.62, 24),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide })
+        new THREE.RingGeometry(0.42, 0.56, 28),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.72, depthWrite: false, side: THREE.DoubleSide })
       );
       ring.rotation.x = -Math.PI / 2;
       ring.position.set(m.x, y + 0.06, m.z);
       markerRoot.add(beam); markerRoot.add(ring);
-      markers.push({ beam: beam, ring: ring, x: m.x, z: m.z, npc: m.npc, oi: i, mi: mi, baseY: y + 1.8 });
+      markers.push({ beam: beam, ring: ring, x: m.x, z: m.z, npc: m.npc, oi: i, mi: mi, baseY: y + 0.72 });
     }
   }
 
@@ -25255,8 +25157,8 @@ if (!window.__GAME && consented) {
   try {
     renderer.setClearColor(0x000000, 0);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile || LOW ? 1.25 : 2));
+    renderer.toneMappingExposure = 1.08;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -25266,22 +25168,22 @@ if (!window.__GAME && consented) {
   var scene = new THREE.Scene();
   window.__scene3d = scene;
   window.__renderer = renderer; /* debug */
-  scene.fog = new THREE.Fog(0xd8e8f5, 160, 1550);
+  scene.fog = new THREE.Fog(0xcadff0, 75, 420);
 
   var camera = new THREE.PerspectiveCamera(44, 1, 0.1, 9500);
   window.__cam3d = camera; /* debug */
 
-  /* ---- ánh sáng trời tự nhiên & shadow map rộng ±58m theo người chơi ---- */
-  var hemiL = new THREE.HemisphereLight(0x8ec8ff, 0x4c5f35, 0.95);
+  /* ---- ánh sáng trời tự nhiên & shadow map ±42m theo người chơi ---- */
+  var hemiL = new THREE.HemisphereLight(0x9ad0ff, 0x556b38, 1.05);
   scene.add(hemiL);
   window.__hemi = hemiL;
-  var key = new THREE.DirectionalLight(0xffe8c6, 2.65);
+  var key = new THREE.DirectionalLight(0xfff1d6, 2.15);
   window.__key = key;
   key.position.set(-28, 42, -24);
   key.castShadow = true;
-  key.shadow.mapSize.set(LOW ? 1024 : 2048, LOW ? 1024 : 2048);
-  key.shadow.camera.left = -58; key.shadow.camera.right = 58;
-  key.shadow.camera.top = 58; key.shadow.camera.bottom = -58;
+  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.camera.left = -42; key.shadow.camera.right = 42;
+  key.shadow.camera.top = 42; key.shadow.camera.bottom = -42;
   key.shadow.camera.near = 2; key.shadow.camera.far = 190;
   key.shadow.bias = -0.0005;
   key.shadow.normalBias = 0.035;
@@ -25613,26 +25515,26 @@ if (!window.__GAME && consented) {
     var c = document.createElement('canvas');
     c.width = c.height = 512;
     var g = c.getContext('2d');
-    g.fillStyle = '#dde5c2';
+    g.fillStyle = '#c4da92';
     g.fillRect(0, 0, 512, 512);
     for (var b = 0; b < 72; b++) {
-      var bx = Math.random() * 512, by = Math.random() * 512, br = 20 + Math.random() * 55;
+      var bx = Math.random() * 512, by = Math.random() * 512, br = 22 + Math.random() * 58;
       var rg = g.createRadialGradient(bx, by, 2, bx, by, br);
-      var warmSoil = b % 5 === 0;
-      rg.addColorStop(0, warmSoil ? 'rgba(136,120,76,0.16)' : 'rgba(98,136,56,0.15)');
+      var warmSoil = b % 6 === 0;
+      rg.addColorStop(0, warmSoil ? 'rgba(130,136,78,0.16)' : 'rgba(117,155,73,0.22)');
       rg.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = rg;
       g.beginPath(); g.arc(bx, by, br, 0, 7); g.fill();
     }
-    for (var i = 0; i < 22000; i++) {
-      var dark = Math.random() < 0.58;
-      g.fillStyle = dark ? 'rgba(66,104,40,' + (0.12 + Math.random() * 0.24) + ')' : 'rgba(202,226,144,' + (0.09 + Math.random() * 0.2) + ')';
+    for (var i = 0; i < 20000; i++) {
+      var dark = Math.random() < 0.55;
+      g.fillStyle = dark ? 'rgba(84,126,52,' + (0.14 + Math.random() * 0.22) + ')' : 'rgba(168,208,112,' + (0.12 + Math.random() * 0.2) + ')';
       var px = Math.random() * 512, py = Math.random() * 512;
-      g.fillRect(px, py, 1.4, 3 + Math.random() * 8);
+      g.fillRect(px, py, 1.5, 3 + Math.random() * 8);
     }
-    for (var s = 0; s < 420; s++) {
-      g.fillStyle = 'rgba(104,88,58,' + (0.06 + Math.random() * 0.12) + ')';
-      g.beginPath(); g.arc(Math.random() * 512, Math.random() * 512, 1.2 + Math.random() * 3, 0, 7); g.fill();
+    for (var s = 0; s < 320; s++) {
+      g.fillStyle = 'rgba(116,104,68,' + (0.05 + Math.random() * 0.1) + ')';
+      g.beginPath(); g.arc(Math.random() * 512, Math.random() * 512, 1.2 + Math.random() * 2.8, 0, 7); g.fill();
     }
     var tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
@@ -26505,18 +26407,21 @@ if (!window.__GAME && consented) {
     });
   }
 
-  /* ---- bướm ---- */
-  var butterflies = [
-    { g: makeButterfly('monarch', 1.12), cx: -3.0, cy: 2.6, cz: -0.4, rx: 1.5, rz: 0.8, spd: 0.5, ph: 0, flap: 12 },
-    { g: makeButterfly('monarch', 0.92), cx: -1.2, cy: 2.15, cz: -0.8, rx: 1.2, rz: 0.6, spd: 0.38, ph: 2.4, flap: 10 },
-    { g: makeButterfly('white', 1.0), cx: -2.2, cy: 2.95, cz: -1.3, rx: 1.0, rz: 0.55, spd: 0.3, ph: 4.2, flap: 14 },
-    { g: makeButterfly('white', 0.9), cx: 2.6, cy: 2.2, cz: 0.8, rx: 1.1, rz: 0.7, spd: 0.42, ph: 1.2, flap: 13 },
-    { g: makeButterfly('monarch', 0.85), cx: 4.2, cy: 2.5, cz: -1.8, rx: 1.3, rz: 0.8, spd: 0.36, ph: 3.6, flap: 11 },
-    { g: makeButterfly('white', 1.05), cx: -4.6, cy: 2.4, cz: -2.6, rx: 1.2, rz: 0.7, spd: 0.44, ph: 5.1, flap: 12 },
-    { g: makeButterfly('monarch', 0.8), cx: 0.8, cy: 2.8, cz: -4.4, rx: 1.4, rz: 0.9, spd: 0.32, ph: 0.9, flap: 10 },
-    { g: makeButterfly('white', 0.85), cx: -2.0, cy: 2.6, cz: 3.6, rx: 1.0, rz: 0.6, spd: 0.4, ph: 2.9, flap: 13 },
-    { g: makeButterfly('monarch', 0.95), cx: 3.2, cy: 2.9, cz: 4.2, rx: 1.3, rz: 0.8, spd: 0.34, ph: 4.8, flap: 11 }
-  ];
+  /* ---- bướm & ong & chuồn chuồn: chỉ dùng cho chế độ thiệp cưới, KHÔNG bật trong game ---- */
+  var butterflies = [];
+  if (!window.__GAME) {
+    butterflies = [
+      { g: makeButterfly('monarch', 1.12), cx: -3.0, cy: 2.6, cz: -0.4, rx: 1.5, rz: 0.8, spd: 0.5, ph: 0, flap: 12 },
+      { g: makeButterfly('monarch', 0.92), cx: -1.2, cy: 2.15, cz: -0.8, rx: 1.2, rz: 0.6, spd: 0.38, ph: 2.4, flap: 10 },
+      { g: makeButterfly('white', 1.0), cx: -2.2, cy: 2.95, cz: -1.3, rx: 1.0, rz: 0.55, spd: 0.3, ph: 4.2, flap: 14 },
+      { g: makeButterfly('white', 0.9), cx: 2.6, cy: 2.2, cz: 0.8, rx: 1.1, rz: 0.7, spd: 0.42, ph: 1.2, flap: 13 },
+      { g: makeButterfly('monarch', 0.85), cx: 4.2, cy: 2.5, cz: -1.8, rx: 1.3, rz: 0.8, spd: 0.36, ph: 3.6, flap: 11 },
+      { g: makeButterfly('white', 1.05), cx: -4.6, cy: 2.4, cz: -2.6, rx: 1.2, rz: 0.7, spd: 0.44, ph: 5.1, flap: 12 },
+      { g: makeButterfly('monarch', 0.8), cx: 0.8, cy: 2.8, cz: -4.4, rx: 1.4, rz: 0.9, spd: 0.32, ph: 0.9, flap: 10 },
+      { g: makeButterfly('white', 0.85), cx: -2.0, cy: 2.6, cz: 3.6, rx: 1.0, rz: 0.6, spd: 0.4, ph: 2.9, flap: 13 },
+      { g: makeButterfly('monarch', 0.95), cx: 3.2, cy: 2.9, cz: 4.2, rx: 1.3, rz: 0.8, spd: 0.34, ph: 4.8, flap: 11 }
+    ];
+  }
 
   /* vùng cấm UI (rail + panel receipt): bướm bay đè chữ thì mờ dần đi.
      Chiếu hình học chạy trong setInterval SAU rAF-render (matrixWorld fresh),
@@ -26571,7 +26476,7 @@ if (!window.__GAME && consented) {
 
   /* ong mật ẢNH THẬT (macro nhìn từ trên): 1 tấm ảnh nguyên vẹn, billboard theo camera */
   var bees = [];
-  (function buildBees() {
+  if (!window.__GAME) (function buildBees() {
     var beeTex = new THREE.TextureLoader().load(TXT.bee);
     var beeAnchor = [
       [-3.35, 1.9, 1.15, 0.5, 0.4, 1.5], [1.4, 2.0, 3.4, 0.6, 0.5, 0.7], [-1.6, 1.7, 3.0, 0.45, 0.5, 0.85],
@@ -26595,9 +26500,9 @@ if (!window.__GAME && consented) {
     window.__bees = bees;
   })();
 
-  /* ---- CHUỒN CHUỒN ban ngày: thân mảnh, 4 cánh trong, lượn thấp quanh cỏ/hồ ---- */
+  /* ---- CHUỒN CHUỒN ban ngày ---- */
   var dragonflies = [];
-  (function () {
+  if (!window.__GAME) (function () {
     var dfMat6 = new THREE.MeshStandardMaterial({ color: 0x3f8f9e, roughness: 0.4, emissive: 0x123236, emissiveIntensity: 0.2 });
     var wgMat6 = new THREE.MeshBasicMaterial({ color: 0xdceef2, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false });
     for (var di6 = 0; di6 < 3; di6++) {
@@ -26841,7 +26746,7 @@ if (!window.__GAME && consented) {
     if (isMobile) LOW = true;
     renderer.setSize(w, h);
     renderer.shadowMap.enabled = !LOW;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile || LOW ? 1.25 : 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
     applyLayout();
     if (!isMobile) {
       FOV = 50;
@@ -27428,7 +27333,9 @@ if (!window.__GAME && consented) {
     }
 
     if (window.__playerTick) window.__playerTick();
+    if (window.__updateNpcMixers) window.__updateNpcMixers(dtRaw);
     if (window.__DAIVIET_MODELS && window.__DAIVIET_MODELS.update) window.__DAIVIET_MODELS.update(dtRaw);
+    if (window.__waterUniforms) window.__waterUniforms.uTime.value = t;
     if (window.__creekTex) window.__creekTex.offset.y -= dtRaw * 0.14;
     /* xoay quán tính + camera */
     if (!dragging) {
@@ -27657,39 +27564,108 @@ if (!window.__GAME && consented) {
     return hillY(x, z);
   }
   var lakeBaseY = 0; window.__lakeWaterY = function () { return lakeBaseY - 0.35 + (window.__waterOffset || 0); };
+  window.__waterUniforms = {
+    uTime: { value: 0 },
+    uSunDir: { value: new THREE.Vector3(-28, 42, -24).normalize() }
+  };
+  function makeWaterShaderMat(isRadialLake) {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: window.__waterUniforms.uTime,
+        uSunDir: window.__waterUniforms.uSunDir,
+        uRadial: { value: isRadialLake ? 1.0 : 0.0 }
+      },
+      vertexShader: [
+        'varying vec2 vUv;',
+        'varying vec3 vWorldPos;',
+        'uniform float uTime;',
+        'void main() {',
+        '  vUv = uv;',
+        '  vec4 wp = modelMatrix * vec4(position, 1.0);',
+        '  wp.y += sin(wp.x * 1.4 + uTime * 1.8) * 0.015 + cos(wp.z * 1.7 - uTime * 1.4) * 0.015;',
+        '  vWorldPos = wp.xyz;',
+        '  gl_Position = projectionMatrix * viewMatrix * wp;',
+        '}'
+      ].join('\n'),
+      fragmentShader: [
+        'varying vec2 vUv;',
+        'varying vec3 vWorldPos;',
+        'uniform float uTime;',
+        'uniform vec3 uSunDir;',
+        'uniform float uRadial;',
+        'void main() {',
+        '  vec2 p = vWorldPos.xz;',
+        '  float w1 = sin(p.x * 1.9 + uTime * 1.7) * cos(p.y * 2.1 - uTime * 1.3);',
+        '  float w2 = sin(p.x * 4.3 - uTime * 2.4 + p.y * 3.1) * 0.5;',
+        '  vec3 n = normalize(vec3((w1 + w2) * 0.11, 1.0, (w2 - w1) * 0.11));',
+        '  vec3 viewDir = normalize(cameraPosition - vWorldPos);',
+        '  float fresnel = pow(1.0 - max(dot(n, viewDir), 0.0), 3.0);',
+        '  vec3 deepJade = vec3(0.06, 0.34, 0.42);',
+        '  vec3 shallowTeal = vec3(0.16, 0.56, 0.62);',
+        '  vec3 skyCol = vec3(0.56, 0.82, 0.96);',
+        '  vec3 col = mix(deepJade, shallowTeal, clamp(0.5 + w1 * 0.3, 0.0, 1.0));',
+        '  col = mix(col, skyCol, clamp(fresnel * 0.85, 0.05, 0.78));',
+        '  vec3 halfV = normalize(uSunDir + viewDir);',
+        '  float spec = pow(max(dot(n, halfV), 0.0), 72.0);',
+        '  col += vec3(1.0, 0.96, 0.85) * spec * 0.72;',
+        '  float edgeAlpha = 0.84;',
+        '  if (uRadial > 0.5) {',
+        '    float r = length(vUv - vec2(0.5)) * 2.0;',
+        '    edgeAlpha = mix(0.86, 0.0, smoothstep(0.76, 1.0, r));',
+        '  } else {',
+        '    float ex = abs(vUv.x - 0.5) * 2.0;',
+        '    edgeAlpha = mix(0.84, 0.0, smoothstep(0.58, 1.0, ex));',
+        '  }',
+        '  gl_FragColor = vec4(col, edgeAlpha);',
+        '}'
+      ].join('\n'),
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+  }
+  window.__makeWaterShaderMat = makeWaterShaderMat;
   (function () {
     var ly = lakeBaseY = lakeGroundLocalY(LAKE.x, LAKE.z) + LAKE_DEPTH;
-    var baseW = new THREE.Mesh(new THREE.CircleGeometry(1.28, 40), new THREE.MeshStandardMaterial({ color: 0x2e3a30, roughness: 1 }));
+    var baseW = new THREE.Mesh(new THREE.CircleGeometry(1.18, 40), new THREE.MeshStandardMaterial({ color: 0x263830, roughness: 0.98 }));
     baseW.rotation.x = -Math.PI / 2;
     baseW.scale.set(LAKE.rx, LAKE.rz, 1);
     baseW.position.set(LAKE.x, lakeGroundLocalY(LAKE.x, LAKE.z) - 0.05, LAKE.z);
     gardenRoot.add(baseW);
-    /* A recessed basin, smaller waterline, and a broad earthy bank make the shoreline legible. */
-    var bankW = new THREE.Mesh(new THREE.RingGeometry(0.90, 1.00, 80), new THREE.MeshStandardMaterial({ color: 0x88764e, roughness: 0.98, side: THREE.DoubleSide }));
-    bankW.rotation.x = -Math.PI / 2; bankW.scale.set(LAKE.rx, LAKE.rz, 1);
-    bankW.position.set(LAKE.x, ly - 0.40, LAKE.z); gardenRoot.add(bankW);
-    var waterGeoW = new THREE.CircleGeometry(1, 80);
-    var surfW = new THREE.Mesh(waterGeoW, new THREE.MeshPhysicalMaterial({ color: 0x1d7a8c, roughness: 0.07, metalness: 0.05, clearcoat: 0.45, clearcoatRoughness: 0.3, emissive: 0x06222e, emissiveIntensity: 0.25, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }));
+    var dummyBank = new THREE.Object3D();
+    dummyBank.position.set(LAKE.x, ly - 0.40, LAKE.z);
+    gardenRoot.add(dummyBank);
+    var waterGeoW = new THREE.CircleGeometry(1, 72);
+    var surfW = new THREE.Mesh(waterGeoW, makeWaterShaderMat(true));
     surfW.rotation.x = -Math.PI / 2;
-    surfW.scale.set(LAKE.rx * 0.86, LAKE.rz * 0.86, 1);
+    surfW.scale.set(LAKE.rx * 0.95, LAKE.rz * 0.95, 1);
     surfW.position.set(LAKE.x, ly - 0.35, LAKE.z);
     gardenRoot.add(surfW);
-    var shoreW = new THREE.Mesh(new THREE.TorusGeometry(1, 0.045, 9, 80), new THREE.MeshStandardMaterial({ color: 0xc1ad78, roughness: 0.88 }));
-    shoreW.rotation.x = -Math.PI / 2; shoreW.scale.set(LAKE.rx * 0.88, LAKE.rz * 0.88, 1); shoreW.position.set(LAKE.x, ly - 0.335, LAKE.z); gardenRoot.add(shoreW);
-    window.__lakeSurf = surfW; window.__lakeShore = shoreW; window.__lakeBank = bankW;
-    /* gợn sáng lăn tăn: 26 hạt trắng mỏng trôi trên mặt hồ */
-    var rippleGeoW = new THREE.TorusGeometry(0.12, 0.008, 5, 24);
-    var rippleMatW = new THREE.MeshBasicMaterial({ color: 0xcfe4e8, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false });
-    var ripples = [];
-    for (var ri = 0; ri < 26; ri++) {
-      var rm = new THREE.Mesh(rippleGeoW, rippleMatW);
-      rm.rotation.x = -Math.PI / 2; rm.scale.set(1, 0.72, 1);
-      var aR = Math.random() * 6.283, rR = Math.sqrt(Math.random()) * 0.78;
-      rm.position.set(LAKE.x + Math.cos(aR) * LAKE.rx * 0.86 * rR, ly - 0.32, LAKE.z + Math.sin(aR) * LAKE.rz * 0.86 * rR);
-      rm.rotation.z = Math.random() * 6.283;
-      gardenRoot.add(rm);
-      ripples.push({ m: rm, ph: Math.random() * 6.283, sp: 0.4 + Math.random() * 0.7 });
+    var dummyShore = new THREE.Object3D();
+    dummyShore.position.set(LAKE.x, ly - 0.34, LAKE.z);
+    gardenRoot.add(dummyShore);
+    window.__lakeSurf = surfW; window.__lakeShore = dummyShore; window.__lakeBank = dummyBank;
+    /* Đá rêu & bụi lau sậy thật viền quanh bờ Hồ Gương (bỏ vòng Torus nhựa) */
+    if (window.__REAL_ASSETS) {
+      for (var siL = 0; siL < 10; siL++) {
+        var saL = (siL / 10) * Math.PI * 2 + 0.2;
+        if (Math.abs(saL - Math.PI * 1.15) < 0.45) continue;
+        var sxL = LAKE.x + Math.cos(saL) * LAKE.rx * 0.94;
+        var szL = LAKE.z + Math.sin(saL) * LAKE.rz * 0.94;
+        var propName = siL % 2 === 0 ? 'pondStone' : 'pondStone2';
+        var stL = window.__REAL_ASSETS.makeModel(propName, 1.35 + (siL % 3) * 0.35);
+        stL.position.set(sxL, ly - 0.46, szL);
+        stL.rotation.y = saL + 1.2;
+        gardenRoot.add(stL);
+        if (siL % 2 === 1) {
+          var rdL = window.__REAL_ASSETS.makeModel(siL % 4 === 1 ? 'cattailClump' : 'reedClump', 1.45);
+          rdL.position.set(sxL + Math.cos(saL) * 0.45, ly - 0.44, szL + Math.sin(saL) * 0.45);
+          rdL.rotation.y = saL;
+          gardenRoot.add(rdL);
+        }
+      }
     }
+    var ripples = [];
     window.__lakeRipples = ripples;
     /* cá koi GLB có rig thật: 5 con lượn dưới mặt nước */
     var kois = [];
@@ -28364,19 +28340,19 @@ if (!window.__GAME && consented) {
     var pc = document.createElement('canvas');
     pc.width = pc.height = 512;
     var pg = pc.getContext('2d');
-    pg.fillStyle = '#5c594d';
+    pg.fillStyle = '#4c543e';
     pg.fillRect(0, 0, 512, 512);
     var rows = 8, rh = 512 / rows;
     for (var r = 0; r < rows; r++) {
       var x = -(r % 2) * 32;
       while (x < 512) {
         var bw = 54 + ((r * 19 + Math.floor(x + 64) * 7) % 34);
-        var tint = ((r * 23 + Math.floor(x + 64) * 11) % 24) - 12;
-        pg.fillStyle = 'rgb(' + (142 + tint) + ',' + (134 + tint) + ',' + (116 + (tint >> 1)) + ')';
+        var tint = ((r * 23 + Math.floor(x + 64) * 11) % 22) - 11;
+        pg.fillStyle = 'rgb(' + (114 + tint) + ',' + (112 + tint) + ',' + (101 + (tint >> 1)) + ')';
         pg.fillRect(x + 2, r * rh + 2, bw - 4, rh - 4);
-        if ((r + Math.floor(x / 50)) % 4 === 0) {
-          pg.fillStyle = 'rgba(72,102,46,0.22)';
-          pg.fillRect(x + 2, r * rh + 2, 10, rh - 4);
+        if ((r + Math.floor(x / 50)) % 3 === 0) {
+          pg.fillStyle = 'rgba(72,102,46,0.28)';
+          pg.fillRect(x + 2, r * rh + 2, 12, rh - 4);
         }
         x += bw;
       }
@@ -28384,7 +28360,7 @@ if (!window.__GAME && consented) {
     var stoneTex = new THREE.CanvasTexture(pc);
     stoneTex.wrapS = stoneTex.wrapT = THREE.RepeatWrapping;
     stoneTex.anisotropy = 8;
-    var plazaMat = new THREE.MeshStandardMaterial({ map: stoneTex, roughness: 0.90, metalness: 0.04 });
+    var plazaMat = new THREE.MeshStandardMaterial({ map: stoneTex, roughness: 0.92, metalness: 0.04 });
 
     function addTerrainSlab(cx, cz, w, l, rotY, repU, repV) {
       var segX = 4, segZ = Math.max(4, Math.round(l / 2.2));
@@ -28396,7 +28372,7 @@ if (!window.__GAME && consented) {
         var lx = pa.getX(vi), lz = pa.getZ(vi);
         var wx = cx + lx * cr + lz * sr;
         var wz = cz - lx * sr + lz * cr;
-        pa.setXYZ(vi, wx, hillY(wx, wz) + 0.095, wz);
+        pa.setXYZ(vi, wx, hillY(wx, wz) + 0.08, wz);
         ua.setXY(vi, ua.getX(vi) * repU, ua.getY(vi) * repV);
       }
       geo.computeVertexNormals();
@@ -28405,11 +28381,20 @@ if (!window.__GAME && consented) {
       gardenRoot.add(mesh);
     }
 
-    /* Quảng trường đá chính + đại lộ hướng thẳng Cổng Tam Quan (0, -26) — tránh hẳn lòng suối phía Tây */
+    /* Quảng trường đá rêu Kinh Kỳ + đại lộ hướng thẳng Cổng Tam Quan (0, -26) */
     addTerrainSlab(0, -11.0, 5.0, 26.5, 0, 2.4, 11);
     addTerrainSlab(1.8, 3.8, 7.0, 6.4, 0, 3.2, 3.0);
     addTerrainSlab(-4.2, -5.2, 2.4, 4.4, 1.35, 1.2, 2.2);
     addTerrainSlab(7.2, -10.0, 2.4, 13.5, -0.58, 1.2, 6.0);
+
+    if (window.__REAL_ASSETS) {
+      [[-3.1, 1.0], [5.4, 1.2], [-2.9, -9.0], [3.0, -9.0], [5.3, 6.2], [-1.8, 6.6]].forEach(function (fp, fi) {
+        var fMesh = window.__REAL_ASSETS.makeModel(fi % 2 === 0 ? 'fern' : 'bush', 0.85);
+        fMesh.position.set(fp[0], hillY(fp[0], fp[1]) - 0.02, fp[1]);
+        fMesh.rotation.y = fi * 1.1;
+        gardenRoot.add(fMesh);
+      });
+    }
 
     /* Tứ trụ thạch đăng cổ dọc trục hành lễ trước Cổng Tam Quan */
     var postStone = new THREE.MeshStandardMaterial({ color: 0x7c796c, roughness: 0.88, flatShading: true });
@@ -28480,24 +28465,27 @@ if (!window.__GAME && consented) {
     cg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
     cg.setIndex(idx);
     cg.computeVertexNormals();
-    var creekW = new THREE.Mesh(cg, new THREE.MeshStandardMaterial({
-      map: creekTex,
-      color: 0x52c4d4,
-      roughness: 0.18,
-      metalness: 0.14,
-      transparent: true,
-      opacity: 0.82,
-      depthWrite: false,
-      side: THREE.DoubleSide
-    }));
+    var creekW = new THREE.Mesh(cg, makeWaterShaderMat(false));
     gardenRoot.add(creekW);
     window.__creekMesh = creekW;
     var DM = window.__DAIVIET_MODELS;
     if (DM) {
+      var brY = hillY(-7.5, -5.5) - 0.1;
       var brVN = DM.makeCauNgoiBridge(0.48);
-      brVN.position.set(-7.5, hillY(-7.5, -5.5) - 0.1, -5.5);
+      brVN.position.set(-7.5, brY, -5.5);
       brVN.rotation.y = 0.45;
       gardenRoot.add(brVN);
+
+      /* Mố trụ đá rêu cắm sâu xuống đất hai đầu Cầu Ngói để không bao giờ bị hở đáy khi nhìn từ Hồ Gương */
+      var pierMat = new THREE.MeshStandardMaterial({ color: 0x626056, roughness: 0.94, flatShading: true });
+      [-1, 1].forEach(function (side) {
+        var pier = new THREE.Mesh(new THREE.BoxGeometry(2.4, 3.4, 2.2), pierMat);
+        pier.position.set(-7.5 + Math.cos(0.45) * side * 2.55, brY - 1.55, -5.5 - Math.sin(0.45) * side * 2.55);
+        pier.rotation.y = 0.45;
+        pier.castShadow = true;
+        pier.receiveShadow = true;
+        gardenRoot.add(pier);
+      });
 
       var nha2 = DM.makeNhaBaGian(0.72);
       nha2.position.set(-24, hillY(-24, 14), 14);
@@ -28562,7 +28550,7 @@ if (!window.__GAME && consented) {
      huỷ (dispose) khi xa, cull ngoài frustum + tầm nhìn → bộ nhớ/draw-call không tăng dù map rộng cỡ nào */
   (function buildChunkSystem() {
     if (!window.__GAME) return;
-    var CHSZ = 14, GEN_R = LOW ? 62 : 92, KILL_R = LOW ? 78 : 112, VIEW_R = LOW ? 56 : 84, CENTER_R = 18;
+    var CHSZ = 14, GEN_R = LOW ? 52 : 66, KILL_R = LOW ? 66 : 82, VIEW_R = LOW ? 48 : 60, CENTER_R = 18;
     var chunkMap = {}, chunkList = [], genQueue = [], lastGenCX = NaN, lastGenCZ = NaN;
     /* ---- ĐƯỜNG ĐẤT: hàm world-space xác định — mọi chunk vẽ khớp liền mạch ---- */
     function pathZ(x) { return 15.5 + 5.2 * Math.sin(x * 0.085) + 3.1 * Math.sin(x * 0.041 + 2.0) - 12.5 * Math.exp(-(x * x) / 70); }
@@ -29172,7 +29160,7 @@ if (!window.__GAME && consented) {
       /* ---- ĐƯỜNG ĐẤT: các viên đất chồng dọc pathZ — liền mạch giữa các chunk ---- */
       for (var pxi = 0, sxp = bx - 0.5; sxp < bx + CHSZ + 0.5; pxi++, sxp += 0.82) {
         var pzp = pathZ(sxp);
-        if (pzp < bz - 1.4 || pzp > bz + CHSZ + 1.4 || lakeDepth(sxp, pzp) > 0.12) continue;
+        if (pzp < bz - 1.4 || pzp > bz + CHSZ + 1.4 || lakeDepth(sxp, pzp) > 0.08 || inCourtyard(sxp, pzp) || Math.hypot(sxp, pzp) < 12) continue;
         var wob = Math.sin(sxp * 1.7) * 0.14 + Math.sin(sxp * 0.9 + 3) * 0.09;
         var pwid = 1.75 + Math.sin(sxp * 0.5 + 1) * 0.4;
         var pm = new THREE.Mesh(canopyGeoC, dirtMatC);
@@ -29585,22 +29573,30 @@ window.__initAdventure = function () {
     return room;
   };
 
-  /* Vật nhặt phát sáng rải khắp map — đi tới gần và bấm E để nhặt */
+  /* 8 đèn hoa sen nhỏ đặt gọn ven đồng (không rải kim cương vàng lên sân chính) */
   var collectibles = [];
   var collected = 0;
   (function scatterCollectibles() {
-    var mat = new THREE.MeshStandardMaterial({ color: 0xffd76a, emissive: 0xffb830, emissiveIntensity: 1.6, roughness: 0.25 });
-    var geo = new THREE.OctahedronGeometry(0.22, 0);
-    for (var i = 0; i < 26; i++) {
-      var a = i * 2.399963, r = 6 + ((i * 37) % 34);
+    var bowlMat = new THREE.MeshStandardMaterial({ color: 0xd9a84e, roughness: 0.65, metalness: 0.2 });
+    var orbMat = new THREE.MeshStandardMaterial({ color: 0xfff0b5, emissive: 0xffb830, emissiveIntensity: 1.35, roughness: 0.25 });
+    var bowlGeo = new THREE.CylinderGeometry(0.20, 0.11, 0.14, 8);
+    var orbGeo = new THREE.SphereGeometry(0.11, 10, 8);
+    for (var i = 0; i < 16 && collectibles.length < 8; i++) {
+      var a = i * 2.399963, r = 16 + ((i * 31) % 24);
       var x = Math.cos(a) * r, z = Math.sin(a) * r * 0.9;
-      if (window.__lakeInfo) { var L = window.__lakeInfo, dx = (x - L.x) / L.rx, dz = (z - L.z) / L.rz; if (dx * dx + dz * dz < 1.1) continue; }
-      if (Math.hypot(x - 0.4, z - 6.8) < 3 || Math.hypot(x - 26, z - 9) < 4) continue;
-      var m = new THREE.Mesh(geo, mat);
-      m.position.set(x, hill(x, z) + 0.55, z);
-      m.userData = { baseY: hill(x, z) + 0.55, ph: i * 0.9 };
-      garden.add(m);
-      collectibles.push(m);
+      if (window.__lakeInfo) { var L = window.__lakeInfo, dx = (x - L.x) / L.rx, dz = (z - L.z) / L.rz; if (dx * dx + dz * dz < 1.25) continue; }
+      if (Math.abs(x) < 10.5 && z > -28 && z < 12) continue;
+      if (Math.hypot(x - 26, z - 9) < 4) continue;
+      var baseY = hill(x, z) + 0.10;
+      var grp = new THREE.Group();
+      var bowl = new THREE.Mesh(bowlGeo, bowlMat);
+      var orb = new THREE.Mesh(orbGeo, orbMat);
+      orb.position.y = 0.14;
+      grp.add(bowl, orb);
+      grp.position.set(x, baseY, z);
+      grp.userData = { baseY: baseY, ph: i * 0.9 };
+      garden.add(grp);
+      collectibles.push(grp);
     }
     window.__collectibles = collectibles;
   })();
@@ -29877,325 +29873,209 @@ window.__createPlayerPhysics = function (context) {
   return { resolve: resolve, addStatic: addStatic, removeStatic: removeStatic, reset: resetBody };
 };
 
-/* Lạc Nữ Heroine (dựa theo nhan_vat_genshin_2d.png): nhân vật 3D có khớp xương, tóc bạch kim-ngọc lục bảo, ngọc thương & dải lụa bay. */
+/* Lạc Nữ Heroine: model VRM anime thật có bộ xương J_Bip đầy đủ, mắt/tóc bạch kim-ngọc bích & Ngọc Thương. */
 window.__createHeroine = function () {
   var root = new THREE.Group();
-  var matSkin = new THREE.MeshStandardMaterial({ color: 0xffe4cf, roughness: 0.56, metalness: 0.02 });
-  var matHairWhite = new THREE.MeshStandardMaterial({ color: 0xf1f5f4, roughness: 0.48, metalness: 0.04 });
-  var matHairJade = new THREE.MeshStandardMaterial({ color: 0x4bc89e, roughness: 0.44, emissive: 0x0d3629, emissiveIntensity: 0.16 });
-  var matGold = new THREE.MeshStandardMaterial({ color: 0xe6be63, roughness: 0.28, metalness: 0.72 });
-  var matIvory = new THREE.MeshStandardMaterial({ color: 0xfbf7ee, roughness: 0.52, metalness: 0.05 });
-  var matEmerald = new THREE.MeshStandardMaterial({ color: 0x166d54, roughness: 0.48, metalness: 0.08 });
-  var matBoot = new THREE.MeshStandardMaterial({ color: 0x172422, roughness: 0.36, metalness: 0.22 });
-  var matVision = new THREE.MeshStandardMaterial({ color: 0x4ef7d4, emissive: 0x2de8bd, emissiveIntensity: 1.55, roughness: 0.18 });
-  var matSilk = new THREE.MeshStandardMaterial({ color: 0xe8f9f1, emissive: 0x26745e, emissiveIntensity: 0.15, roughness: 0.45, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
-  var matEye = new THREE.MeshStandardMaterial({ color: 0x1fc49c, emissive: 0x0b5b48, emissiveIntensity: 0.42, roughness: 0.22 });
-  var matSclera = new THREE.MeshStandardMaterial({ color: 0xfffaf6, roughness: 0.35 });
-  var matPupil = new THREE.MeshStandardMaterial({ color: 0x0c2620, roughness: 0.18 });
-  var matSpec = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9, roughness: 0.1 });
+  var bones = {};
+  var ready = false;
+  window.__heroineGlbLoaded = false;
 
-  function s(mesh) {
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    return mesh;
+  /* Ngọc Thương (vũ khí chính gắn vào bàn tay phải khi đứng, xoay ra sau lưng khi bơi) */
+  function buildJadeSpear() {
+    var g = new THREE.Group();
+    var mShaft = new THREE.MeshStandardMaterial({ color: 0x1e2b27, roughness: 0.42, metalness: 0.35 });
+    var mGold = new THREE.MeshStandardMaterial({ color: 0xe6bf65, roughness: 0.28, metalness: 0.72 });
+    var mGem = new THREE.MeshStandardMaterial({ color: 0x4ef7d4, emissive: 0x2de8bd, emissiveIntensity: 1.4, roughness: 0.16 });
+
+    var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.013, 1.85, 8), mShaft);
+    shaft.position.y = 0.42;
+    shaft.castShadow = true;
+    g.add(shaft);
+
+    var guard = new THREE.Mesh(new THREE.TorusGeometry(0.056, 0.014, 6, 12), mGold);
+    guard.position.y = 1.28;
+    g.add(guard);
+
+    var blade = new THREE.Mesh(new THREE.ConeGeometry(0.048, 0.34, 4), mGold);
+    blade.scale.set(1.0, 1.0, 0.34);
+    blade.position.y = 1.48;
+    blade.castShadow = true;
+    g.add(blade);
+
+    var gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.032, 0), mGem);
+    gem.scale.set(0.65, 1.4, 0.5);
+    gem.position.y = 1.32;
+    g.add(gem);
+    return g;
   }
 
-  /* Hệ khớp hông (chiều cao tổng ~1.72m, đáy giày tại y = 0, mặt hướng -Z khớp hướng di chuyển) */
-  var pelvis = new THREE.Group();
-  pelvis.position.set(0, 0.88, 0);
-  root.add(pelvis);
+  var spearGroup = buildJadeSpear();
 
-  var torso = new THREE.Group();
-  pelvis.add(torso);
+  function setupLoadedHeroine(gltf) {
+    var model = gltf.scene;
+    model.updateMatrixWorld(true);
+    var box = new THREE.Box3().setFromObject(model);
+    var size = box.getSize(new THREE.Vector3());
+    var h = size.y > 0.1 ? size.y : 1.55;
+    var sc = 1.70 / h;
 
-  /* Áo giáp ngà trắng + tay áo & cổ cao ngọc lục bảo + đai vàng & Ngọc Nhãn (Vision) */
-  var waist = s(new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.125, 0.22, 12), matEmerald));
-  waist.scale.set(1.06, 1, 0.76);
-  waist.position.y = 0.08;
-  torso.add(waist);
+    /* VRM 0.x mặt hướng +Z; xoay Math.PI quanh Y để mặt hướng -Z khớp player-quest.js */
+    model.scale.setScalar(sc);
+    model.rotation.y = Math.PI;
+    model.updateMatrixWorld(true);
+    var box2 = new THREE.Box3().setFromObject(model);
+    var ctr2 = box2.getCenter(new THREE.Vector3());
+    model.position.set(-ctr2.x, -box2.min.y, -ctr2.z);
 
-  var chest = s(new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.135, 0.28, 12), matIvory));
-  chest.scale.set(1.08, 1, 0.78);
-  chest.position.y = 0.30;
-  torso.add(chest);
+    /* Nâng material từ MToon/Basic lên MeshStandardMaterial sáng đều ngoài nắng */
+    model.traverse(function (o) {
+      if (o.isBone || (o.name && o.name.indexOf('J_Bip_') === 0)) {
+        bones[o.name] = o;
+      }
+      if (o.isMesh) {
+        o.castShadow = true;
+        o.receiveShadow = true;
+        o.frustumCulled = false;
+        var mats = Array.isArray(o.material) ? o.material : [o.material];
+        var nextMats = mats.map(function (m) {
+          if (!m) return m;
+          var nm = new THREE.MeshStandardMaterial({
+            name: m.name || '',
+            map: m.map || null,
+            color: m.color ? m.color.clone() : new THREE.Color(0xffffff),
+            transparent: !!m.transparent,
+            opacity: m.opacity !== undefined ? m.opacity : 1,
+            alphaTest: m.alphaTest || (m.transparent ? 0.35 : 0),
+            side: THREE.DoubleSide,
+            roughness: 0.72,
+            metalness: 0.04,
+            skinning: true,
+            morphTargets: !!(o.morphTargetInfluences && o.morphTargetInfluences.length)
+          });
+          if (nm.map) {
+            nm.emissive = new THREE.Color(0xffffff);
+            nm.emissiveMap = nm.map;
+            nm.emissiveIntensity = 0.24;
+          }
+          if (nm.name && nm.name.indexOf('_out') >= 0) {
+            nm.visible = false;
+          }
+          return nm;
+        });
+        o.material = Array.isArray(o.material) ? nextMats : nextMats[0];
+      }
+    });
 
-  var collar = s(new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.082, 0.09, 10), matEmerald));
-  collar.position.y = 0.47;
-  torso.add(collar);
-  var collarGold = s(new THREE.Mesh(new THREE.TorusGeometry(0.072, 0.011, 6, 14), matGold));
-  collarGold.rotation.x = Math.PI / 2;
-  collarGold.position.y = 0.50;
-  torso.add(collarGold);
+    /* Thư giãn tay từ T-pose ban đầu */
+    if (bones.J_Bip_L_UpperArm) bones.J_Bip_L_UpperArm.rotation.z = 1.24;
+    if (bones.J_Bip_R_UpperArm) bones.J_Bip_R_UpperArm.rotation.z = -1.24;
 
-  /* Đai eo vàng & viên ngọc Vision phát sáng trước bụng (-Z) */
-  var sash = s(new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.145, 0.075, 12), matGold));
-  sash.scale.set(1.06, 1, 0.78);
-  sash.position.y = 0.03;
-  torso.add(sash);
-  var visionRim = s(new THREE.Mesh(new THREE.TorusGeometry(0.046, 0.013, 8, 16), matGold));
-  visionRim.position.set(0, 0.03, -0.122);
-  torso.add(visionRim);
-  var visionGem = new THREE.Mesh(new THREE.SphereGeometry(0.038, 12, 10), matVision);
-  visionGem.scale.set(1, 1, 0.55);
-  visionGem.position.set(0, 0.03, -0.125);
-  torso.add(visionGem);
+    /* Gắn Ngọc Thương vào bàn tay phải */
+    var rHand = bones.J_Bip_R_Hand || bones.J_Bip_R_LowerArm || model;
+    var invSc = 1 / sc;
+    spearGroup.scale.setScalar(invSc);
+    spearGroup.position.set(0.02 * invSc, -0.04 * invSc, 0.02 * invSc);
+    spearGroup.rotation.set(Math.PI * 0.44, 0, -0.18);
+    rHand.add(spearGroup);
 
-  /* Tà áo dài xẻ 4 vạt (trước ngà viền vàng, sau dài xanh-trắng thướt tha) */
-  var frontApron = s(new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.48, 0.025), matIvory));
-  frontApron.position.set(0, -0.22, -0.105);
-  frontApron.rotation.x = 0.08;
-  torso.add(frontApron);
-  var frontTrim = s(new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.49, 0.014), matGold));
-  frontTrim.position.set(0, -0.22, -0.098);
-  frontTrim.rotation.x = 0.08;
-  torso.add(frontTrim);
-
-  var backTailL = s(new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.64, 0.024), matEmerald));
-  backTailL.position.set(-0.085, -0.30, 0.11);
-  backTailL.rotation.set(-0.14, 0, -0.1);
-  torso.add(backTailL);
-  var backTailR = s(new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.64, 0.024), matEmerald));
-  backTailR.position.set(0.085, -0.30, 0.11);
-  backTailR.rotation.set(-0.14, 0, 0.1);
-  torso.add(backTailR);
-
-  /* Dải lụa tiên bay 2 bên vai */
-  var ribbonL = new THREE.Group();
-  ribbonL.position.set(-0.20, 0.36, 0.02);
-  torso.add(ribbonL);
-  var ribMeshL = s(new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.92, 0.012), matSilk));
-  ribMeshL.position.set(-0.04, -0.42, 0.16);
-  ribMeshL.rotation.set(-0.34, 0.15, -0.18);
-  ribbonL.add(ribMeshL);
-
-  var ribbonR = new THREE.Group();
-  ribbonR.position.set(0.20, 0.36, 0.02);
-  torso.add(ribbonR);
-  var ribMeshR = s(new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.92, 0.012), matSilk));
-  ribMeshR.position.set(0.04, -0.42, 0.16);
-  ribMeshR.rotation.set(-0.34, -0.15, 0.18);
-  ribbonR.add(ribMeshR);
-
-  /* Đầu & Tóc đuôi ngựa bạch kim chuyển ngọc + trâm phượng hoàng vàng */
-  var head = new THREE.Group();
-  head.position.set(0, 0.56, 0);
-  torso.add(head);
-
-  var cranium = s(new THREE.Mesh(new THREE.SphereGeometry(0.128, 16, 14), matSkin));
-  cranium.scale.set(0.95, 1.04, 0.96);
-  cranium.position.y = 0.08;
-  head.add(cranium);
-
-  /* Đôi mắt ngọc bích nhiều lớp + chân mày ở mặt trước (-Z) */
-  [-0.043, 0.043].forEach(function (ex, ei) {
-    var sclera = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), matSclera);
-    sclera.scale.set(1.12, 0.96, 0.35);
-    sclera.position.set(ex, 0.072, -0.114);
-    head.add(sclera);
-
-    var iris = new THREE.Mesh(new THREE.SphereGeometry(0.0155, 10, 8), matEye);
-    iris.scale.set(0.95, 1.12, 0.35);
-    iris.position.set(ex, 0.072, -0.118);
-    head.add(iris);
-
-    var pupil = new THREE.Mesh(new THREE.SphereGeometry(0.0082, 8, 8), matPupil);
-    pupil.scale.set(0.95, 1.1, 0.35);
-    pupil.position.set(ex, 0.072, -0.121);
-    head.add(pupil);
-
-    var glint = new THREE.Mesh(new THREE.SphereGeometry(0.0042, 6, 6), matSpec);
-    glint.position.set(ex + 0.0055, 0.079, -0.1235);
-    head.add(glint);
-
-    var brow = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.005, 0.006), matHairJade);
-    brow.position.set(ex, 0.104, -0.116);
-    brow.rotation.z = ei === 0 ? 0.12 : -0.12;
-    head.add(brow);
-  });
-
-  var hairCap = s(new THREE.Mesh(new THREE.SphereGeometry(0.138, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.62), matHairWhite));
-  hairCap.position.set(0, 0.095, 0.01);
-  hairCap.rotation.x = 0.18;
-  head.add(hairCap);
-
-  [-0.06, 0, 0.06].forEach(function (bx, bi) {
-    var bang = s(new THREE.Mesh(new THREE.ConeGeometry(0.038, 0.135, 6), matHairWhite));
-    bang.position.set(bx, 0.11, -0.105);
-    bang.rotation.set(Math.PI + 0.16, 0, (bi - 1) * 0.16);
-    head.add(bang);
-  });
-
-  /* Hai lọn tóc mai bạch kim chuyển ngọc ôm má */
-  [-1, 1].forEach(function (side) {
-    var lockTop = s(new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.016, 0.18, 8), matHairWhite));
-    lockTop.scale.set(1.1, 1, 0.7);
-    lockTop.position.set(side * 0.102, 0.03, -0.055);
-    lockTop.rotation.set(0.10, 0, -side * 0.16);
-    head.add(lockTop);
-
-    var lockTip = s(new THREE.Mesh(new THREE.ConeGeometry(0.016, 0.13, 7), matHairJade));
-    lockTip.position.set(side * 0.092, -0.105, -0.065);
-    lockTip.rotation.set(Math.PI + 0.08, 0, side * 0.10);
-    head.add(lockTip);
-  });
-
-  /* Vương miện trâm vàng trên đỉnh đầu */
-  var crown = s(new THREE.Mesh(new THREE.TorusGeometry(0.072, 0.014, 6, 14), matGold));
-  crown.position.set(0, 0.23, 0.045);
-  crown.rotation.x = -0.35;
-  head.add(crown);
-  var crownSpike = s(new THREE.Mesh(new THREE.OctahedronGeometry(0.038, 0), matVision));
-  crownSpike.scale.set(0.65, 1.4, 0.45);
-  crownSpike.position.set(0, 0.275, 0.02);
-  head.add(crownSpike);
-
-  /* Đuôi tóc dài buộc cao (bạch kim trên, ngọc bích dưới nhiều tầng) */
-  var ponytailPivot = new THREE.Group();
-  ponytailPivot.position.set(0, 0.19, 0.11);
-  head.add(ponytailPivot);
-  var ponyTop = s(new THREE.Mesh(new THREE.ConeGeometry(0.088, 0.50, 9), matHairWhite));
-  ponyTop.rotation.x = Math.PI - 0.36;
-  ponyTop.position.set(0, -0.18, 0.115);
-  ponytailPivot.add(ponyTop);
-  [-0.046, 0, 0.046].forEach(function (tx, ti) {
-    var tailTip = s(new THREE.Mesh(new THREE.ConeGeometry(ti === 1 ? 0.054 : 0.046, ti === 1 ? 0.48 : 0.44, 7), matHairJade));
-    tailTip.rotation.x = Math.PI - 0.45;
-    tailTip.position.set(tx, ti === 1 ? -0.47 : -0.44, ti === 1 ? 0.26 : 0.24);
-    ponytailPivot.add(tailTip);
-  });
-
-  /* Tay trái & Tay phải (cùng cầu vai vàng + bao tay ngọc) */
-  function makeArm(side) {
-    var armPivot = new THREE.Group();
-    armPivot.position.set(side * 0.195, 0.39, 0);
-    var pauldron = s(new THREE.Mesh(new THREE.SphereGeometry(0.068, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), matGold));
-    pauldron.rotation.z = -side * 0.42;
-    pauldron.position.set(side * 0.015, 0.015, 0);
-    armPivot.add(pauldron);
-    var upper = s(new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.038, 0.25, 8), matEmerald));
-    upper.position.y = -0.13;
-    armPivot.add(upper);
-    var bracer = s(new THREE.Mesh(new THREE.CylinderGeometry(0.041, 0.034, 0.22, 8), matGold));
-    bracer.position.y = -0.35;
-    armPivot.add(bracer);
-    var hand = s(new THREE.Mesh(new THREE.SphereGeometry(0.033, 8, 8), matSkin));
-    hand.position.y = -0.48;
-    armPivot.add(hand);
-    return armPivot;
+    root.add(model);
+    ready = true;
+    window.__heroineGlbLoaded = true;
   }
-  var leftArm = makeArm(-1);
-  var rightArm = makeArm(1);
-  torso.add(leftArm);
-  torso.add(rightArm);
 
-  /* Ngọc Thương (cầm dọc chéo thanh thoát bên tay phải, vung chém khi tấn công) */
-  var spearGroup = new THREE.Group();
-  spearGroup.position.set(0.02, -0.46, 0.02);
-  spearGroup.rotation.set(-0.32, 0, -0.16);
-  var shaft = s(new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.014, 1.92, 8), matBoot));
-  shaft.position.y = 0.42;
-  spearGroup.add(shaft);
-  var guard = s(new THREE.Mesh(new THREE.TorusGeometry(0.062, 0.015, 6, 12), matGold));
-  guard.position.y = 1.32;
-  spearGroup.add(guard);
-  var blade = s(new THREE.Mesh(new THREE.ConeGeometry(0.056, 0.35, 4), matGold));
-  blade.scale.set(1.0, 1.0, 0.35);
-  blade.position.y = 1.52;
-  spearGroup.add(blade);
-  var spearGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.036, 0), matVision);
-  spearGem.scale.set(0.65, 1.4, 0.5);
-  spearGem.position.y = 1.36;
-  spearGroup.add(spearGem);
-  rightArm.add(spearGroup);
-
-  /* Đôi chân thon & ủng đen viền vàng-ngọc dài ngang đùi */
-  function makeLeg(side) {
-    var legPivot = new THREE.Group();
-    legPivot.position.set(side * 0.088, 0, 0);
-    var thigh = s(new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.052, 0.34, 10), matSkin));
-    thigh.position.y = -0.17;
-    legPivot.add(thigh);
-    var bootUpper = s(new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.045, 0.42, 10), matBoot));
-    bootUpper.position.y = -0.53;
-    legPivot.add(bootUpper);
-    var bootCuff = s(new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.010, 6, 14), matGold));
-    bootCuff.rotation.x = Math.PI / 2;
-    bootCuff.position.y = -0.34;
-    legPivot.add(bootCuff);
-    var kneeGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.022, 0), matVision);
-    kneeGem.scale.set(0.7, 1.2, 0.4);
-    kneeGem.position.set(0, -0.38, -0.055);
-    legPivot.add(kneeGem);
-    var foot = s(new THREE.Mesh(new THREE.BoxGeometry(0.078, 0.072, 0.178), matBoot));
-    foot.position.set(0, -0.84, -0.035);
-    legPivot.add(foot);
-    var soleGold = s(new THREE.Mesh(new THREE.BoxGeometry(0.081, 0.016, 0.183), matGold));
-    soleGold.position.set(0, -0.872, -0.035);
-    legPivot.add(soleGold);
-    return legPivot;
+  var src = 'models/lac-nu-heroine.glb';
+  var loader = new THREE.GLTFLoader();
+  if (/^(models\/|https?:\/\/|\.\/|blob:)/.test(src)) {
+    loader.load(src, setupLoadedHeroine, undefined, function (err) {
+      console.warn('Heroine GLB load failed:', err);
+    });
+  } else if (src && src.charAt(0) !== '_') {
+    try {
+      var bytes = Uint8Array.from(atob(src), function (c) { return c.charCodeAt(0); });
+      loader.parse(bytes.buffer, '', setupLoadedHeroine, function (err) {
+        console.warn('Heroine GLB parse failed:', err);
+      });
+    } catch (e) { console.warn('Heroine GLB decode failed:', e); }
   }
-  var leftLeg = makeLeg(-1);
-  var rightLeg = makeLeg(1);
-  pelvis.add(leftLeg);
-  pelvis.add(rightLeg);
 
   var animT = 0;
   var attackT = 0;
   function update(dt, st) {
+    if (!ready) return;
     st = st || {};
     var d = Math.min(0.06, dt || 0.016);
-    animT += d * (st.running ? 11.5 : (st.moving ? 7.8 : 2.2));
+    animT += d * (st.running ? 11.5 : (st.moving ? 7.8 : 2.1));
     if (attackT > 0) attackT = Math.max(0, attackT - d * 2.8);
 
+    var hips = bones.J_Bip_C_Hips;
+    var spine = bones.J_Bip_C_Spine;
+    var chest = bones.J_Bip_C_Chest;
+    var head = bones.J_Bip_C_Head;
+    var lUpArm = bones.J_Bip_L_UpperArm;
+    var rUpArm = bones.J_Bip_R_UpperArm;
+    var lLoArm = bones.J_Bip_L_LowerArm;
+    var rLoArm = bones.J_Bip_R_LowerArm;
+    var lUpLeg = bones.J_Bip_L_UpperLeg;
+    var rUpLeg = bones.J_Bip_R_UpperLeg;
+    var lLoLeg = bones.J_Bip_L_LowerLeg;
+    var rLoLeg = bones.J_Bip_R_LowerLeg;
+
     if (st.swimming) {
-      var stroke = Math.sin(animT * 1.4);
-      leftLeg.rotation.x = Math.sin(animT * 2.4) * 0.42;
-      rightLeg.rotation.x = -Math.sin(animT * 2.4) * 0.42;
-      leftArm.rotation.x = 2.4 + stroke * 0.65;
-      rightArm.rotation.x = 2.4 - stroke * 0.65;
-      leftArm.rotation.z = -0.25;
-      rightArm.rotation.z = 0.25;
-      torso.rotation.x = 0.1;
-      pelvis.position.y = 0.88;
+      var str = Math.sin(animT * 1.45);
+      if (lUpLeg) lUpLeg.rotation.set(Math.sin(animT * 2.4) * 0.42, 0, 0);
+      if (rUpLeg) rUpLeg.rotation.set(-Math.sin(animT * 2.4) * 0.42, 0, 0);
+      if (lLoLeg) lLoLeg.rotation.set(0.22 + Math.max(0, Math.sin(animT * 2.4)) * 0.28, 0, 0);
+      if (rLoLeg) rLoLeg.rotation.set(0.22 + Math.max(0, -Math.sin(animT * 2.4)) * 0.28, 0, 0);
+      if (lUpArm) lUpArm.rotation.set(-1.35 + str * 0.55, 0, 0.85);
+      if (rUpArm) rUpArm.rotation.set(-1.35 - str * 0.55, 0, -0.85);
+      if (lLoArm) lLoArm.rotation.set(0, 0, 0.3);
+      if (rLoArm) rLoArm.rotation.set(0, 0, -0.3);
+      if (spine) spine.rotation.set(-0.12, 0, 0);
     } else if (st.airborne) {
-      leftLeg.rotation.x = -0.35;
-      rightLeg.rotation.x = 0.28;
-      leftArm.rotation.set(0.25, 0, -0.55);
-      rightArm.rotation.set(-0.35, 0, 0.45);
-      torso.rotation.x = st.moving ? -0.18 : 0.04;
-      pelvis.position.y = 0.90;
+      if (lUpLeg) lUpLeg.rotation.set(-0.42, 0, 0);
+      if (rUpLeg) rUpLeg.rotation.set(0.24, 0, 0);
+      if (lLoLeg) lLoLeg.rotation.set(0.55, 0, 0);
+      if (rLoLeg) rLoLeg.rotation.set(0.18, 0, 0);
+      if (lUpArm) lUpArm.rotation.set(-0.25, 0, 0.85);
+      if (rUpArm) rUpArm.rotation.set(0.25, 0, -0.95);
+      if (spine) spine.rotation.set(0.12, 0, 0);
     } else if (st.moving) {
-      var amp = st.running ? 0.72 : 0.48;
+      var amp = st.running ? 0.68 : 0.44;
       var sw = Math.sin(animT) * amp;
-      leftLeg.rotation.x = sw;
-      rightLeg.rotation.x = -sw;
-      leftArm.rotation.set(-sw * 0.75, 0, -0.14);
-      rightArm.rotation.set(sw * 0.55 + 0.15, 0, 0.16);
-      torso.rotation.x = st.running ? -0.18 : -0.07;
-      torso.rotation.y = -sw * 0.14;
-      pelvis.position.y = 0.88 + Math.abs(Math.cos(animT)) * 0.032;
+      /* VRM local +Z la huong mat: rotation.x < 0 dua chan/tay len phia truoc */
+      if (lUpLeg) lUpLeg.rotation.set(sw, 0, 0);
+      if (rUpLeg) rUpLeg.rotation.set(-sw, 0, 0);
+      if (lLoLeg) lLoLeg.rotation.set(Math.max(0, -sw * 0.85) + 0.08, 0, 0);
+      if (rLoLeg) rLoLeg.rotation.set(Math.max(0, sw * 0.85) + 0.08, 0, 0);
+      if (lUpArm) lUpArm.rotation.set(-sw * 0.65, 0, 1.24);
+      if (rUpArm) rUpArm.rotation.set(sw * 0.45 - 0.14, 0, -1.20);
+      if (lLoArm) lLoArm.rotation.set(-0.24, 0, 0);
+      if (rLoArm) rLoArm.rotation.set(-0.34, 0, 0);
+      if (spine) spine.rotation.set(st.running ? 0.14 : 0.05, sw * 0.12, 0);
+      if (chest) chest.rotation.set(0, sw * 0.08, 0);
+      if (hips) hips.position.y = 0.896 + Math.abs(Math.cos(animT)) * 0.022;
     } else {
-      leftLeg.rotation.x = 0;
-      rightLeg.rotation.x = 0;
-      leftArm.rotation.set(Math.sin(animT) * 0.04, 0, -0.12);
-      rightArm.rotation.set(-Math.sin(animT) * 0.04 + 0.1, 0, 0.14);
-      torso.rotation.set(0, Math.sin(animT * 0.5) * 0.04, 0);
-      pelvis.position.y = 0.88 + Math.sin(animT) * 0.012;
+      var br = Math.sin(animT);
+      if (lUpLeg) lUpLeg.rotation.set(0, 0, 0.03);
+      if (rUpLeg) rUpLeg.rotation.set(0, 0, -0.03);
+      if (lLoLeg) lLoLeg.rotation.set(0, 0, 0);
+      if (rLoLeg) rLoLeg.rotation.set(0, 0, 0);
+      if (lUpArm) lUpArm.rotation.set(br * 0.03, 0, 1.26);
+      if (rUpArm) rUpArm.rotation.set(-0.12 - br * 0.03, 0, -1.20);
+      if (lLoArm) lLoArm.rotation.set(-0.12, 0, 0);
+      if (rLoArm) rLoArm.rotation.set(-0.28, 0, 0);
+      if (spine) spine.rotation.set(0, br * 0.025, 0);
+      if (chest) chest.rotation.set(br * 0.02, 0, 0);
+      if (head) head.rotation.set(br * 0.02, Math.sin(animT * 0.45) * 0.06, 0);
+      if (hips) hips.position.y = 0.896;
     }
 
     if (attackT > 0) {
       var slash = Math.sin(attackT * Math.PI);
-      rightArm.rotation.x = -1.35 * slash;
-      rightArm.rotation.y = 0.65 * slash;
-      torso.rotation.y = -0.42 * slash;
+      if (rUpArm) rUpArm.rotation.set(-1.35 * slash, 0.4 * slash, -0.85);
+      if (rLoArm) rLoArm.rotation.set(-0.45 * slash, 0, 0);
+      if (spine) spine.rotation.y = 0.38 * slash;
     }
-
-    /* Tóc đuôi ngựa & dải lụa bay theo gió */
-    ponytailPivot.rotation.x = (st.moving ? 0.24 : 0.04) + Math.sin(animT * 1.1) * 0.08;
-    ribbonL.rotation.x = (st.moving ? 0.35 : 0.08) + Math.sin(animT * 0.9) * 0.1;
-    ribbonR.rotation.x = (st.moving ? 0.35 : 0.08) + Math.cos(animT * 0.9) * 0.1;
-    backTailL.rotation.x = -0.14 - (st.moving ? 0.22 : 0) - Math.sin(animT) * 0.06;
-    backTailR.rotation.x = -0.14 - (st.moving ? 0.22 : 0) + Math.sin(animT) * 0.06;
   }
 
   function triggerAttack() {
