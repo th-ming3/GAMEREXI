@@ -29097,7 +29097,7 @@ if (!window.__GAME && consented) {
       for (var ti2 = 0; ti2 < nTr; ti2++) {
         var tx2 = bx + rng() * CHSZ, tz2 = bz + rng() * CHSZ;
         var ppTree = window.__playerPos ? ppL() : null;
-        if (onPathW(tx2, tz2, 2.0) || nearDen(tx2, tz2, 3.6) || lakeDepth(tx2, tz2) > 0.08
+        if (onPathW(tx2, tz2, 2.0) || inCourtyard(tx2, tz2) || nearDen(tx2, tz2, 3.6) || lakeDepth(tx2, tz2) > 0.08
           || Math.hypot(tx2 - 26, tz2 - 9) < 5.5 || Math.hypot(tx2 + 10.5, tz2 + 27) < 4.5 || Math.hypot(tx2 - 7, tz2 + 20) < 4.5
           || Math.hypot(tx2 - .4, tz2 - 6.8) < 11 || (ppTree && Math.hypot(tx2 - ppTree.x, tz2 - ppTree.z) < 10)) continue;
         if (window.__REGION && window.__REGION.coastDist && window.__REGION.coastDist(tx2, tz2) < 3.0) continue;
@@ -30021,7 +30021,7 @@ window.__createHeroine = function () {
     var lLoLeg = bones.J_Bip_L_LowerLeg;
     var rLoLeg = bones.J_Bip_R_LowerLeg;
 
-    root.position.y = st.swimming ? 0.30 : 0;
+    root.position.y = st.swimming ? 0.62 : 0;
     if (st.swimming) {
       var str = Math.sin(animT * 1.45);
       if (lUpLeg) lUpLeg.rotation.set(Math.sin(animT * 2.4) * 0.42, 0, 0);
