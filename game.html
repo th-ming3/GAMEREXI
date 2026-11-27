@@ -680,53 +680,7 @@ window.__TEXTURES = {"mBody":"models/tex-1-mBody.png","mWL":"models/tex-2-mWL.pn
     </style>
 </head>
 <body>
-  <div id="bootSplash" role="status" aria-live="polite" aria-busy="true">
-  <style>
-    #bootSplash{position:fixed;inset:0;z-index:99;display:grid;place-items:center;padding:24px;background:#f7ecdc;color:#68432d;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-    #bootSplash .bootCard{width:min(100%,420px);padding:32px;border:1px solid rgba(122,90,52,.18);border-radius:20px;background:rgba(255,252,246,.82);box-shadow:0 20px 60px rgba(91,58,32,.12);text-align:center;backdrop-filter:blur(12px)}
-    #bootSplash .bootMark{display:grid;place-items:center;width:72px;height:72px;margin:0 auto 20px;animation:bootTurn 14s linear infinite}
-    #bootSplash .bootMark svg{width:72px;height:72px;overflow:visible}
-    #bootSplash .bootEyebrow{margin-bottom:8px;color:#9a7150;font-size:11px;font-weight:600;letter-spacing:.18em}
-    #bootSplash .bootTitle{font:500 42px/1.1 Georgia,serif;letter-spacing:-.02em}
-    #bootSplash .bootQuote{margin:8px 0 24px;color:#92745b;font:15px/1.5 Georgia,serif}
-    #bootSplash .bootTrack{height:4px;overflow:hidden;border-radius:4px;background:#eadcc9}
-    #bootSplash .bootFill{width:8%;height:100%;border-radius:4px;background:#b0532f;transition:width .45s ease}
-    #bootSplash #bootStatus{margin-top:16px;color:#725037;font-size:14px;font-weight:600}
-    #bootSplash #bootDetail{margin-top:6px;color:#9a806a;font-size:12px;line-height:1.5}
-    #bootSplash .bootFoot{position:absolute;bottom:24px;max-width:calc(100vw - 48px);color:#9b7b60;font-size:11px;letter-spacing:.04em;text-align:center}
-    @keyframes bootTurn{to{transform:rotate(360deg)}}
-    @media(max-width:520px){#bootSplash .bootCard{padding:28px 20px}#bootSplash .bootTitle{font-size:36px}}
-    @media(prefers-reduced-motion:reduce){#bootSplash .bootMark{animation:none}#bootSplash .bootFill{transition:none}}
-  </style>
-  <div class="bootCard">
-    <div class="bootMark" aria-hidden="true">
-      <svg viewBox="0 0 72 72" fill="none">
-        <g fill="#d98a74">
-          <ellipse cx="36" cy="17" rx="8" ry="14"/>
-          <ellipse cx="36" cy="55" rx="8" ry="14"/>
-          <ellipse cx="17" cy="36" rx="14" ry="8"/>
-          <ellipse cx="55" cy="36" rx="14" ry="8"/>
-        </g>
-        <g fill="#e8b39a" transform="rotate(45 36 36)">
-          <ellipse cx="36" cy="17" rx="8" ry="14"/>
-          <ellipse cx="36" cy="55" rx="8" ry="14"/>
-          <ellipse cx="17" cy="36" rx="14" ry="8"/>
-          <ellipse cx="55" cy="36" rx="14" ry="8"/>
-        </g>
-        <circle cx="36" cy="36" r="11" fill="#c98f3e"/>
-        <circle cx="36" cy="36" r="5" fill="#f6d994"/>
-      </svg>
-    </div>
-    <div class="bootEyebrow">HÀNH TRÌNH NĂM VÙNG</div>
-    <div class="bootTitle">Cánh Đồng</div>
-    <p class="bootQuote">Nơi nước chảy có trí nhớ</p>
-    <div class="bootTrack" aria-hidden="true"><div id="bootProgress" class="bootFill"></div></div>
-    <div id="bootStatus">Đang chuẩn bị vườn</div>
-    <div id="bootDetail">Ánh sáng, địa hình và những sinh vật đầu tiên</div>
-  </div>
-  <div class="bootFoot">Đồng Bình Minh · Rừng Thì Thầm · Hẻm Đá · Hồ Gương</div>
-</div>
-
+  
 <canvas id="stage3d" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
 
@@ -22127,7 +22081,7 @@ window.__createRealAssets = function () {
         model.scale.set(sx, sy, sz);
       } else model.scale.setScalar(k);
       model.position.set(-record.box.min.x * model.scale.x, -record.box.min.y * model.scale.y, -record.box.min.z * model.scale.z);
-      var keepSh = (name === 'house' || name === 'temple' || name === 'ruins');
+      var keepSh = (name === 'house' || name === 'temple');
       model.traverse(function (o) { if (o.isMesh) { o.castShadow = keepSh; o.receiveShadow = true; } });
       holder.add(model);
     });
@@ -23793,7 +23747,7 @@ window.__REAL_ASSETS = window.__createRealAssets();
       if (!mg) continue;
       var mesh = new THREE.Mesh(mg, bucketMats[b]);
       mesh.receiveShadow = true;
-      mesh.castShadow = bucketMats[b] !== MAT.waterStream && bucketMats[b] !== MAT.waterFlow;
+      mesh.castShadow = false;
       merged.add(mesh);
     }
     keepAnimated.forEach(function (dyn) {
@@ -27709,7 +27663,7 @@ window.__createCombatVfx = function (C) {
     shockwaves.push({ mesh: ring, age: 0, dur: dur || 0.42, maxR: maxR || 4.0 });
   }
 
-  var _enTickN = 0;
+  var _enTickN = 0, _vfxWarmup = 4;
   /* VFX tick (shockwaves, projectiles, enemy mixers) */
   window.__updateEnemyMixers = function (dt) {
     var d = Math.min(0.05, dt || 0.016);
@@ -27731,6 +27685,19 @@ window.__createCombatVfx = function (C) {
   window.__updateCombatVfx = function (dt) {
     var d = Math.min(0.05, dt || 0.016);
     var now = performance.now();
+    if (_vfxWarmup > 0) {
+      _vfxWarmup--;
+      var wm = _vfxWarmup > 0;
+      if (slashPool[0] && !slashArcs.length) {
+        slashPool[0].visible = wm; slashPool[0].position.set(0, -200, 0); slashPool[0].scale.setScalar(0.0001);
+      }
+      if (sparkPool[0] && !sparks.length) {
+        sparkPool[0].visible = wm; sparkPool[0].position.set(0, -200, 0); sparkPool[0].scale.setScalar(0.0001);
+      }
+      if (shockPool[0] && !shockwaves.length) {
+        shockPool[0].visible = wm; shockPool[0].position.set(0, -200, 0); shockPool[0].scale.setScalar(0.0001);
+      }
+    }
     C.recoverStamina(d, now);
     if (C.hasSanctuary(now)) {
       var pl = localPlayer();
@@ -29968,7 +29935,7 @@ window.__populateUnderwaterLife = function () {
   /* ========== ANIMATION LOOP ========== */
   return function updateUnderwater(dt, elapsed) {
     var ppU = window.__W && window.__W.ppL ? window.__W.ppL() : null;
-    var nearUW = !!(window.__isDiving || window.__isSwimming || (ppU && inLake(ppU.x, ppU.z, -0.8)));
+    var nearUW = !!(window.__isDiving);
     if (underwaterRoot.visible !== nearUW) underwaterRoot.visible = nearUW;
     if (!nearUW) return;
     /* Crystals */
@@ -34809,7 +34776,7 @@ if (!window.__GAME && consented) {
   function nearDen(x, z, r) { return W.nearDen ? W.nearDen(x, z, r) : false; }
   function onPathW(x, z, w2) { return W.onPathW ? W.onPathW(x, z, w2) : false; }
     /* ---- THỎ: rig động vật CC0, texture fur + bộ xương/animation thật ---- */
-    var rabbitPool = [], rabbitTimer = 2.5 + Math.random() * 2.5, rabbitLast = 0;
+    var rabbitPool = [], rabbitTimer = 0.25, rabbitLast = 0;
     window.__rabbits = rabbitPool;
     window.__spawnRabbitNow = function () { rabbitTimer = 0; };
     window.__rabbitAssetReady = false;
@@ -34890,7 +34857,7 @@ if (!window.__GAME && consented) {
         });
         o.castShadow = false; o.frustumCulled = false;
       });
-      rabbitSkinTargets.forEach(function (o) { if ((o.name || '').toLowerCase() === 'rabbit' && !o.userData.furFiberMesh) o.userData.furFiberMesh = addSkinnedFur(o, 900); });
+      rabbitSkinTargets.forEach(function (o) { if ((o.name || '').toLowerCase() === 'rabbit' && !o.userData.furFiberMesh) o.userData.furFiberMesh = addSkinnedFur(o, 450); });
       rabbitTemplate.updateMatrixWorld(true);
       var bb = new THREE.Box3().setFromObject(rabbitTemplate), sz = bb.getSize(new THREE.Vector3()), bc = bb.getCenter(new THREE.Vector3());
       var sc = 1.42 / (sz.y || 1500); rabbitTemplate.scale.setScalar(sc);
@@ -34900,6 +34867,9 @@ if (!window.__GAME && consented) {
       rabbitTemplate.userData.rabbitXOffset = rabbitTemplate.position.x;
       rabbitTemplate.userData.rabbitZOffset = rabbitTemplate.position.z;
       rabbitTemplate.updateMatrixWorld(true);
+      var fitT = new THREE.Box3().setFromObject(rabbitTemplate);
+      rabbitTemplate.userData._fitCenter = fitT.getCenter(new THREE.Vector3());
+      rabbitTemplate.userData._fitMinY = fitT.min.y;
       window.__rabbitAssetReady = true;
       window.__rabbitAnimNames = (rabbitTemplate.animations || []).map(function (a) { return a.name; });
     }
@@ -34923,8 +34893,14 @@ if (!window.__GAME && consented) {
     function rabbitRig() {
       if (!rabbitTemplate) return null;
       /* Keep the source FBX skeleton intact: THREE's generic deep clone loses this asset's skin binding. */
-      var fit = new THREE.Box3().setFromObject(rabbitTemplate), fc = fit.getCenter(new THREE.Vector3());
-      var root = new THREE.Group(); root.position.set(-fc.x, -fit.min.y, -fc.z); root.add(rabbitTemplate);
+      var fc = rabbitTemplate.userData._fitCenter;
+      var root = new THREE.Group();
+      if (fc) root.position.set(-fc.x, -rabbitTemplate.userData._fitMinY, -fc.z);
+      else {
+        var fit = new THREE.Box3().setFromObject(rabbitTemplate), fcb = fit.getCenter(new THREE.Vector3());
+        root.position.set(-fcb.x, -fit.min.y, -fcb.z);
+      }
+      root.add(rabbitTemplate);
       var rigRoot = rabbitTemplate, mixer = new THREE.AnimationMixer(rigRoot), acts = {};
       (rabbitTemplate.animations || []).forEach(function (clip) {
         var n = clip.name.toLowerCase(), key = n.indexOf('running') >= 0 ? 'run' : (n.indexOf('guarding') >= 0 ? 'guard' : (n.indexOf('sitting') >= 0 ? 'sit' : (n.indexOf('jump') >= 0 ? 'jump' : null)));
@@ -35643,9 +35619,9 @@ if (!window.__GAME && consented) {
       }
       genQueue.sort(function (a2, b2) { return a2.d - b2.d; });
     }
-    var budget = (!window.__playerMoving || frameN2 % 2 === 0) ? 1 : 0;
+    var budget = !window.__playerMoving ? 1 : (frameN2 % 14 === 0 && genQueue.length && genQueue[0].d < 22 ? 1 : 0);
     var chunkStartT = performance.now();
-    while (genQueue.length && budget > 0 && chunkList.length < (LOW ? 18 : 28) && performance.now() - chunkStartT < 4) {
+    while (genQueue.length && budget > 0 && chunkList.length < (LOW ? 12 : 20) && performance.now() - chunkStartT < 4) {
       var nextChunk = genQueue.shift();
       if (!chunkMap[nextChunk.cx + '|' + nextChunk.cz]) buildChunk(nextChunk.cx, nextChunk.cz);
       budget--;
@@ -35671,7 +35647,9 @@ if (!window.__GAME && consented) {
     var vis2 = 0;
     for (var ci3 = 0; ci3 < chunkList.length; ci3++) {
       var cc = chunkList[ci3];
-      ctrW.set(cc.userData.midX, hillY(cc.userData.midX, cc.userData.midZ), cc.userData.midZ);
+      var my3 = cc.userData.midY;
+      if (my3 === undefined) my3 = cc.userData.midY = hillY(cc.userData.midX, cc.userData.midZ);
+      ctrW.set(cc.userData.midX, my3, cc.userData.midZ);
       gardenRoot.localToWorld(ctrW);
       var dc2 = ctrW.distanceTo(camera.position);
       var ok2 = dc2 < VIEW_R;
