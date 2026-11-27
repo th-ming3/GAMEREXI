@@ -31376,7 +31376,7 @@ if (!window.__GAME && consented) {
   var W = window.__W;
   var gardenRoot = W.gardenRoot, scene = W.scene, camera = W.camera;
   var isMobile = W.isMobile, LOW = W.LOW, TXT = W.TXT, texFromURL = W.texFromURL;
-  var glowTex = W.glowTex, rand = W.rand, hillY = W.hillY, easeInOutSine = W.easeInOutSine;
+  var glowTex = W.glowTex, rand = W.rand, hillY = W.hillY, ppL = W.ppL, easeInOutSine = W.easeInOutSine;
   var LAKE = W.LAKE, plants = W.plants;
   var tmpV = new THREE.Vector3();
   /* ---- bướm dựng từ ẢNH CHỤP THẬT (đã cắt tách thân / từng nửa cánh) ---- */
@@ -32881,7 +32881,7 @@ if (!window.__GAME && consented) {
   if (!window.THREE || !window.__W) return;
   var W = window.__W;
   var gardenRoot = W.gardenRoot, LAKE = W.LAKE, LOW = W.LOW, isMobile = W.isMobile, glowTex = W.glowTex;
-  var hillY = W.hillY, hillYWorld = W.hillYWorld;
+  var hillY = W.hillY, hillYWorld = W.hillYWorld, rand = W.rand;
   /* ---- HIỆU ỨNG VỀ ĐIỂM XUẤT PHÁT: cột sáng + vòng xung ---- */
   window.__spawnHomeFX = function () {
     /* pPos is world-space while these effect meshes belong to rotated gardenRoot. */
@@ -34131,7 +34131,7 @@ if (!window.__GAME && consented) {
   var W = window.__W;
   var byId = W.byId, reduced = W.reduced, isMobile = W.isMobile, LOW = W.LOW;
   var renderer = W.renderer, scene = W.scene, camera = W.camera, gardenRoot = W.gardenRoot;
-  var hillY = W.hillY, smooth = W.smooth, easeOutCubic = W.easeOutCubic, easeInOutSine = W.easeInOutSine;
+  var hillY = W.hillY, smooth = W.smooth, easeOutCubic = W.easeOutCubic, easeInOutSine = W.easeInOutSine, ppL = W.ppL;
   var rand = W.rand, bootStage = W.bootStage;
   var applyLayout = W.applyLayout, liteMeshes = W.liteMeshes;
   var plants = W.plants, headsArr = W.headsArr, egrets = W.egrets, butterflies = W.butterflies;
