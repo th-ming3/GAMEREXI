@@ -32,17 +32,17 @@ export const REF_LIST = [];
 for (const slug of SLUGS) {
   const entry = { alpha: {}, white: {} };
   for (const view of VIEWS) {
-    entry.alpha[view] = `refs/${slug}/${FILES[view]}`;
-    entry.white[view] = `refs/${slug}/${WHITE[view]}`;
+    entry.alpha[view] = `${slug}/${FILES[view]}`;
+    entry.white[view] = `${slug}/${WHITE[view]}`;
   }
   REFS[slug] = entry;
   for (const view of VIEWS) REF_LIST.push({ slug, view, url: entry.alpha[view] });
 }
 
 export const MAP = {
-  world: 'refs/map/world.webp',
+  world: 'map/world.webp',
   regions: Array.from({ length: 8 }, (_, i) => ({
-    main: `refs/map/r0${i + 1}.webp`,
-    details: Array.from({ length: 8 }, (_, j) => `refs/map/r0${i + 1}_0${j + 1}.webp`),
+    main: `map/r0${i + 1}.webp`,
+    details: Array.from({ length: 8 }, (_, j) => `map/r0${i + 1}_0${j + 1}.webp`),
   })),
 };
