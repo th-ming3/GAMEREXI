@@ -264,9 +264,118 @@ function skyIslands(group) {                      // R8 Tiên Giới
   }
   kit.build(group);
 }
+
+// ---------------------------------------------------------------- per-point real landmarks
+function kw(name) {
+  const n = (name || '').toLowerCase();
+  if (/cổng|thành|quan/.test(n)) return 'gate';
+  if (/tháp|chăm/.test(n)) return 'cham';
+  if (/đền|miếu|thánh|tự/.test(n)) return 'temple';
+  if (/thuyền|bến|cảng/.test(n)) return 'boat';
+  if (/hang|động/.test(n)) return 'cave';
+  if (/thác/.test(n)) return 'falls';
+  if (/tuyết|đỉnh|núi/.test(n)) return 'peak';
+  if (/lửa|dung nham|hắc sơn/.test(n)) return 'volcano';
+  if (/cây đa|đại thụ/.test(n)) return 'banyan';
+  if (/ruộng|bậc thang/.test(n)) return 'terrace';
+  if (/đảo bay|tiên giới|lầu/.test(n)) return 'sky';
+  if (/chợ|làng|nhà/.test(n)) return 'house';
+  if (/bia|rùa/.test(n)) return 'stele';
+  if (/đền|đàn|tế/.test(n)) return 'altar';
+  if (/suối|hồ|đầm/.test(n)) return 'lake';
+  return 'house';
+}
+function landmarkAt(group, d) {
+  const kind = kw(d.name);
+  const y = terrainHeight(d.x, d.z);
+  const g = new THREE.Group();
+  g.position.set(d.x, Math.max(y, SEA + .2), d.z);
+  const kit = new Kit();
+  if (kind === 'gate') {
+    kit.def('w', g_geo('unitBox'), M.rock);
+    kit.add('w', place(0, 1.6, 0, 0, 8, 3.2, 1.2));
+    for (const cx of [-2.6, 0, 2.6]) {
+      const arch = new THREE.Mesh(new THREE.TorusGeometry(1.15, .26, 6, 16, Math.PI), M.rock);
+      arch.position.set(cx, 3.2, 0); g.add(arch);
+    }
+    kit.add('w', place(0, 4.1, 0, 0, 8.4, .3, 1.4));           // beam
+    const r = new THREE.Group();
+    simpleTileRoof(r, 9, 2.4, 1.3);
+    r.position.y = 4.25; g.add(r);
+  } else if (kind === 'cham') {
+    const t = new THREE.Mesh(lathe([[.001,0],[3.4,0],[2.8,1.6],[2.2,6],[2.0,8.4],[2.8,9.2],[2.2,10],[.001,10.2]], 8), M.redRock);
+    t.castShadow = true; g.add(t);
+  } else if (kind === 'temple' || kind === 'altar') {
+    g.add(box(5, 2.6, 4, M.rock, 0, 1.5, 0));
+    const r = new THREE.Group(); simpleTileRoof(r, 6, 5, 1.8); r.position.y = 2.8; g.add(r);
+  } else if (kind === 'boat') {
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(2.2, .5, 6), M.wood);
+    hull.position.y = .2; g.add(hull);
+    const sail = new THREE.Mesh(new THREE.PlaneGeometry(3, 4), new THREE.MeshStandardMaterial({ color: '#d9b380', side: THREE.DoubleSide }));
+    sail.position.set(0, 2.4, 0); g.add(sail);
+  } else if (kind === 'cave') {
+    const arch = new THREE.Mesh(new THREE.TorusGeometry(3, 1.4, 8, 20, Math.PI), M.rock);
+    arch.position.y = 1.4; g.add(arch);
+    g.add(box(6, .4, 6, M.rock, 0, .2, 0));
+  } else if (kind === 'falls') {
+    const f = new THREE.Mesh(new THREE.PlaneGeometry(4, 12), M.water);
+    f.position.set(0, 5, 0); g.add(f);
+    g.add(box(8, 1, 8, M.rock, 0, .5, 2));
+  } else if (kind === 'peak') {
+    g.add(cone(7, 16, M.rock, 0, 0, 0, 7));
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(3, 5.5, 7), M.snow);
+    cap.position.y = 13; g.add(cap);
+  } else if (kind === 'volcano') {
+    const v = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 8, 14, 8, 1, true), M.rock);
+    v.position.y = 7; g.add(v);
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 1.8, 1.4, 8), M.lava);
+    c.position.y = 14; g.add(c);
+  } else if (kind === 'banyan') {
+    const trunk = new THREE.Mesh(lathe([[.001,0],[2.6,0],[2.2,3],[1.6,7],[.9,9],[.001,9.4]], 10), M.wood);
+    trunk.castShadow = true; g.add(trunk);
+    kit.def('leaf', g_geo('leafIco'), M.leaf);
+    for (let i = 0; i < 18; i++) {
+      const a = i / 18 * 6.28, ls = 2.5 + (i % 3);
+      kit.add('leaf', place(Math.sin(a) * 3.5, 9.5 + (i % 4) * 1.2, Math.cos(a) * 3.5, a, ls, ls * .7, ls), leafColors[i % 4]);
+    }
+  } else if (kind === 'terrace') {
+    for (let i = 0; i < 4; i++) {
+      const b = sweep([[-4, 0], [4, 0], [4, .3], [-4, .3]], [[-6, 4 + i * 2], [6, 4 + i * 2]], { y: i * 1.2 });
+      const m = new THREE.Mesh(b, M.grass); g.add(m);
+    }
+  } else if (kind === 'sky') {
+    const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(5, 1), M.rock);
+    rock.scale.set(1, .5, 1); rock.position.y = -2; g.add(rock);
+    g.add(box(4, 2.4, 3, M.tile, 0, 1.4, 0));
+    const rf = new THREE.Mesh(new THREE.ConeGeometry(3.4, 2.8, 4), M.gold);
+    rf.rotation.y = Math.PI / 4; rf.position.y = 3.8; g.add(rf);
+    g.position.y += 60;   // floating
+  } else if (kind === 'stele') {
+    const turtle = new THREE.Mesh(new THREE.SphereGeometry(1.2, 12, 8), M.rock);
+    turtle.scale.set(1.3, .5, 1); turtle.position.y = .6; g.add(turtle);
+    g.add(box(1, 2.6, .4, M.rock, 0, 1.8, 0));
+  } else if (kind === 'lake') {
+    const l = new THREE.Mesh(new THREE.CircleGeometry(5, 24), M.water);
+    l.rotation.x = -Math.PI / 2; l.position.y = .1; g.add(l);
+  } else {  // house
+    g.add(box(5.5, 2.4, 4, new THREE.MeshStandardMaterial({ color: '#e0cf9e', roughness: .95 }), 0, 1.4, 0));
+    const r = new THREE.Group(); simpleTileRoof(r, 6.4, 4.8, 1.6); r.position.y = 2.6; g.add(r);
+  }
+  kit.build(g);
+  group.add(g);
+}
+function g_geo(n) { return new THREE.BoxGeometry(1, 1, 1); }
+function simpleTileRoof(group, w, d, h) {
+  const geo = new THREE.CylinderGeometry(.01, Math.min(w, d) / Math.SQRT2, h, 4, 1);
+  const m = new THREE.Mesh(geo, M.tile);
+  m.rotation.y = Math.PI / 4; m.scale.set(1, 1, d / w); m.position.y = h / 2;
+  m.castShadow = true; group.add(m);
+}
+
 function detailBoards(group) {                   // 64 detail points as floating preview boards
   const loader = new THREE.TextureLoader();
   for (const d of DETAILS) {
+    landmarkAt(group, d);
     const tex = loader.load(d.img);
     tex.colorSpace = THREE.SRGBColorSpace;
     const mat = new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: .05, side: THREE.DoubleSide, roughness: .9 });
