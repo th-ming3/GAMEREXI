@@ -35473,7 +35473,6 @@ if (!window.__GAME && consented) {
     liteApplied = true;
     liteMeshes.forEach(function (p) { p[0].count = Math.max(30, Math.floor(p[0].count * p[1])); });
     renderer.setPixelRatio(1);
-    renderer.shadowMap.enabled = false;
   }
   function tick() {
     var dtRaw = clock.getDelta();
