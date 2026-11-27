@@ -23620,10 +23620,17 @@ window.__REAL_ASSETS = window.__createRealAssets();
       cap.position.set(ws[0], hillY(ws[0], ws[1]) + 1.16, ws[1]); vilGrp.add(cap);
     });
     [[9.2, -13.6], [14.6, -10.5]].forEach(function (gp) {
-      var pil = new THREE.Mesh(new THREE.BoxGeometry(0.62, 2.35, 0.62), MAT.stoneLight);
-      pil.position.set(gp[0], hillY(gp[0], gp[1]) + 1.15, gp[1]); vilGrp.add(pil);
-      var capP = new THREE.Mesh(new THREE.SphereGeometry(0.24, 6, 6), MAT.stoneLight);
-      capP.position.set(gp[0], hillY(gp[0], gp[1]) + 2.45, gp[1]); vilGrp.add(capP);
+      var gyP = hillY(gp[0], gp[1]);
+      var pBase = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.36, 0.84), MAT.mossStone);
+      pBase.position.set(gp[0], gyP + 0.18, gp[1]); vilGrp.add(pBase);
+      var pil = new THREE.Mesh(new THREE.BoxGeometry(0.56, 2.05, 0.56), MAT.stone);
+      pil.position.set(gp[0], gyP + 1.38, gp[1]); vilGrp.add(pil);
+      var cornice = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.18, 0.76), MAT.mossStone);
+      cornice.position.set(gp[0], gyP + 2.48, gp[1]); vilGrp.add(cornice);
+      var capRoof = new THREE.Mesh(new THREE.ConeGeometry(0.46, 0.28, 4), MAT.roofRed);
+      capRoof.rotation.y = Math.PI / 4; capRoof.position.set(gp[0], gyP + 2.71, gp[1]); vilGrp.add(capRoof);
+      var badge = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.72, 0.62), MAT.lacquerRed);
+      badge.position.set(gp[0], gyP + 1.48, gp[1]); vilGrp.add(badge);
     });
     /* Lối bước đá lát + giếng cổ trong sân làng + 2 chum nước & cờ hội */
     for (var si = 0; si < 7; si++) {
@@ -25166,8 +25173,8 @@ window.__initCombat = function (gardenRoot) {
       rpg.weaponLv = Math.max(1, Math.min(5, savedRpg.weaponLv || 1));
       if (savedRpg.talismans) rpg.talismans = savedRpg.talismans;
     }
-  } catch (eR) {}
-  function saveRpg() { try { localStorage.setItem('canhdongRpg', JSON.stringify(rpg)); } catch (eR) {} }
+  } catch (eR) { }
+  function saveRpg() { try { localStorage.setItem('canhdongRpg', JSON.stringify(rpg)); } catch (eR) { } }
   function getRpgStats() {
     var tl = rpg.talismans || {};
     return {
@@ -25237,34 +25244,34 @@ window.__initCombat = function (gardenRoot) {
     ];
     bagModal.innerHTML =
       '<div style="width:min(540px,90vw);padding:20px 24px;border-radius:16px;background:rgba(22,19,16,.95);border:1px solid rgba(226,192,122,.45);box-shadow:0 22px 60px rgba(0,0,0,.6)">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
-          '<div style="font:700 18px inherit;color:#ffd89a">HÀNH TRANG & RÈN NGỌC THƯƠNG</div>' +
-          '<button type="button" id="closeBagBtn" style="padding:4px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;cursor:pointer">Đóng (I)</button>' +
-        '</div>' +
-        '<div style="margin-bottom:12px;padding:8px 12px;border-radius:10px;background:rgba(42,36,24,.65);display:flex;justify-content:space-between">' +
-          '<span>✦ Linh Thạch: <b style="color:#4ef7d4">' + rpg.essence + '</b></span>' +
-          '<span>❀ Thảo Dược: <b style="color:#7effa2">' + rpg.herbs + '</b></span>' +
-          '<span>⚔ Đòn cộng thêm: <b style="color:#ffd89a">+' + st.dmgBonus.toFixed(1) + '</b></span>' +
-        '</div>' +
-        '<div style="padding:10px 12px;border-radius:10px;border:1px solid rgba(78,247,212,.3);background:rgba(20,52,44,.42);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">' +
-          '<div><b>Ngọc Thương Cấp ' + rpg.weaponLv + '/5</b><div style="font-size:12px;opacity:.8">Tăng sát thương cơ bản và kỹ năng (+1.2 mỗi cấp)</div></div>' +
-          (rpg.weaponLv < 5
-            ? '<button type="button" id="upWeaponBtn" style="padding:6px 12px;border-radius:8px;border:1px solid #4ef7d4;background:rgba(22,110,86,.65);color:#dffcf3;cursor:pointer;font-weight:700">Rèn (' + wCost + ' ✦)</button>'
-            : '<span style="color:#ffd89a;font-weight:700">TỐI ĐA</span>') +
-        '</div>' +
-        '<div style="padding:10px 12px;border-radius:10px;border:1px solid rgba(115,245,145,.3);background:rgba(26,64,34,.38);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">' +
-          '<div><b>Bình Thảo Dược Hồi Sinh</b><div style="font-size:12px;opacity:.8">Phím [4] hồi nhanh +45 Máu giữa trận</div></div>' +
-          '<button type="button" id="buyHerbBtn" style="padding:6px 12px;border-radius:8px;border:1px solid #7effa2;background:rgba(32,94,48,.65);color:#d7ffe0;cursor:pointer;font-weight:700">+1 (10 ✦)</button>' +
-        '</div>' +
-        '<div style="font-weight:700;color:#ffe2a6;margin-bottom:6px">Ngọc Bội Pháp Bảo</div>' +
-        items.map(function (it) {
-          var owned = !!tl[it.k];
-          return '<div style="padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">' +
-            '<div><b>' + it.name + '</b><div style="font-size:12px;opacity:.78">' + it.desc + '</div></div>' +
-            (owned ? '<span style="color:#4ef7d4;font-weight:700">ĐANG ĐEO</span>'
-              : '<button type="button" data-talis="' + it.k + '" style="padding:5px 11px;border-radius:8px;border:1px solid #ffd89a;background:rgba(120,86,28,.55);color:#fff0c9;cursor:pointer;font-weight:700">Chế (' + it.cost + ' ✦)</button>') +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+      '<div style="font:700 18px inherit;color:#ffd89a">HÀNH TRANG & RÈN NGỌC THƯƠNG</div>' +
+      '<button type="button" id="closeBagBtn" style="padding:4px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;cursor:pointer">Đóng (I)</button>' +
+      '</div>' +
+      '<div style="margin-bottom:12px;padding:8px 12px;border-radius:10px;background:rgba(42,36,24,.65);display:flex;justify-content:space-between">' +
+      '<span>✦ Linh Thạch: <b style="color:#4ef7d4">' + rpg.essence + '</b></span>' +
+      '<span>❀ Thảo Dược: <b style="color:#7effa2">' + rpg.herbs + '</b></span>' +
+      '<span>⚔ Đòn cộng thêm: <b style="color:#ffd89a">+' + st.dmgBonus.toFixed(1) + '</b></span>' +
+      '</div>' +
+      '<div style="padding:10px 12px;border-radius:10px;border:1px solid rgba(78,247,212,.3);background:rgba(20,52,44,.42);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">' +
+      '<div><b>Ngọc Thương Cấp ' + rpg.weaponLv + '/5</b><div style="font-size:12px;opacity:.8">Tăng sát thương cơ bản và kỹ năng (+1.2 mỗi cấp)</div></div>' +
+      (rpg.weaponLv < 5
+        ? '<button type="button" id="upWeaponBtn" style="padding:6px 12px;border-radius:8px;border:1px solid #4ef7d4;background:rgba(22,110,86,.65);color:#dffcf3;cursor:pointer;font-weight:700">Rèn (' + wCost + ' ✦)</button>'
+        : '<span style="color:#ffd89a;font-weight:700">TỐI ĐA</span>') +
+      '</div>' +
+      '<div style="padding:10px 12px;border-radius:10px;border:1px solid rgba(115,245,145,.3);background:rgba(26,64,34,.38);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">' +
+      '<div><b>Bình Thảo Dược Hồi Sinh</b><div style="font-size:12px;opacity:.8">Phím [4] hồi nhanh +45 Máu giữa trận</div></div>' +
+      '<button type="button" id="buyHerbBtn" style="padding:6px 12px;border-radius:8px;border:1px solid #7effa2;background:rgba(32,94,48,.65);color:#d7ffe0;cursor:pointer;font-weight:700">+1 (10 ✦)</button>' +
+      '</div>' +
+      '<div style="font-weight:700;color:#ffe2a6;margin-bottom:6px">Ngọc Bội Pháp Bảo</div>' +
+      items.map(function (it) {
+        var owned = !!tl[it.k];
+        return '<div style="padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">' +
+          '<div><b>' + it.name + '</b><div style="font-size:12px;opacity:.78">' + it.desc + '</div></div>' +
+          (owned ? '<span style="color:#4ef7d4;font-weight:700">ĐANG ĐEO</span>'
+            : '<button type="button" data-talis="' + it.k + '" style="padding:5px 11px;border-radius:8px;border:1px solid #ffd89a;background:rgba(120,86,28,.55);color:#fff0c9;cursor:pointer;font-weight:700">Chế (' + it.cost + ' ✦)</button>') +
           '</div>';
-        }).join('') +
+      }).join('') +
       '</div>';
     document.getElementById('closeBagBtn').onclick = toggleBag;
     var uwb = document.getElementById('upWeaponBtn');
@@ -30815,10 +30822,12 @@ if (!window.__GAME && consented) {
       frame.position.y = 1.62; stg.add(frame);
       var lanternCore = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.28, 6), postGlow);
       lanternCore.position.y = 1.80; stg.add(lanternCore);
-      [-0.14, 0.14].forEach(function (ox) { [-0.14, 0.14].forEach(function (oz) {
-        var bar = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.30, 0.04), postWood);
-        bar.position.set(ox, 1.80, oz); stg.add(bar);
-      }); });
+      [-0.14, 0.14].forEach(function (ox) {
+        [-0.14, 0.14].forEach(function (oz) {
+          var bar = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.30, 0.04), postWood);
+          bar.position.set(ox, 1.80, oz); stg.add(bar);
+        });
+      });
       var cap = new THREE.Mesh(new THREE.ConeGeometry(0.38, 0.22, 4), postWood);
       cap.rotation.y = Math.PI / 4; cap.position.y = 2.06; cap.castShadow = true; stg.add(cap);
       var fin = new THREE.Mesh(new THREE.OctahedronGeometry(0.07, 0), postGold);
@@ -31929,8 +31938,8 @@ window.__initAdventure = function () {
   var waypoints = [];
   window.__waypoints = waypoints;
   (window.__REGION.waypoints || []).forEach(function (def, wIdx) {
-    var wx = def.id === 'r01' ? 11.5 : def.x;
-    var wz = def.id === 'r01' ? -11.5 : def.z;
+    var wx = def.id === 'r01' ? 7.8 : def.x;
+    var wz = def.id === 'r01' ? -5.5 : def.z;
     var group = new THREE.Group();
     var rockMat = new THREE.MeshStandardMaterial({ color: 0x6f7465, roughness: 0.88, flatShading: true });
     var trimMat = new THREE.MeshStandardMaterial({ color: 0x9aa089, roughness: 0.72 });
@@ -33134,7 +33143,7 @@ window.__createHeroine = function () {
     if (indoorMode) { indoorMode = false; if (indoorRoom) indoorRoom.visible = false; if (window.__cabinGroup) window.__cabinGroup.visible = true; }
     if (caveMode) { caveMode = false; if (window.__caveRoom) window.__caveRoom.visible = false; if (window.__caveGroup) window.__caveGroup.visible = true; }
     var wv = window.__garden ? window.__garden.localToWorld(new THREE.Vector3(wx, 0, wz)) : new THREE.Vector3(wx, 0, wz);
-    var baseH = window.__hillY ? window.__hillY(wx, wz) : 0;
+    var baseH = hillY2(wx, wz);
     pPos.x = wv.x; pPos.z = wv.z;
     if (typeof wyOpt === 'number' && wyOpt > baseH + 4) {
       flyMode = true; pY = Math.max(1.0, wyOpt - baseH); pPos.y = wyOpt;
@@ -33504,6 +33513,7 @@ window.__createHeroine = function () {
     }
     var bobY = isSwimming ? (diving ? 0 : Math.sin(swimT * 2.0) * 0.055) : (moving2 && onGround ? Math.abs(Math.sin(walkT)) * 0.035 : Math.sin(walkT) * 0.012);
     charG.position.set(pl.x, gy2 + pY + bobY, pl.z);
+    if (!flyMode) pPos.y = gy2 + pY;
     if (fbLegs) { var swF = (moving2 && !flyMode) ? Math.sin(walkT * 2) * 0.5 : 0; fbLegs[0].rotation.x = swF; fbLegs[1].rotation.x = -swF; }
     var targetRoll = (isSwimming && moving2) ? Math.sin(swimT * 2.2) * 0.24 : (dashT > 0 ? 0.24 : 0);
     charG.rotation.z += (targetRoll - charG.rotation.z) * Math.min(1, dt * 9);
