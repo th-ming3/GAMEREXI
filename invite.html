@@ -261,7 +261,7 @@ window.__REGION = (function () {
     var dIsle7 = Math.hypot(sx - (rx7 + 3.7), sz - (rz7 + 21.0));
     var sinkhole = -14.0 * (1 - smooth(d7, 48, 62));
     var centerIsle7 = 16.0 * Math.exp(-(dIsle7 * dIsle7) / 180);
-    var northOpen = sz < cz7 + 22 ? 1.0 : mix(1.0, 0.14, smooth(sz - (cz7 + 22), 0, 26));
+    var northOpen = sz < cz7 + 6 ? 1.0 : mix(1.0, 0.0, smooth(sz - (cz7 + 6), 0, 24));
     var rim7 = 52.0 * northOpen * Math.exp(-Math.pow((d7 - 70) / 19, 2));
     var h07 = 4.5 + rim7 + sinkhole + centerIsle7 + 2.4 * Math.sin(sx * 0.06 + sz * 0.05);
 
@@ -273,8 +273,8 @@ window.__REGION = (function () {
 
     /* San phẳng nhẹ nền sân các cụm di tích chính trên dốc núi để công trình không hẫng chân */
     if (w.r02 > 0.25) {
-      var dP2 = Math.hypot(x - 221.0, z + 1480.8);
-      if (dP2 < 88.0) landH = mix(landH, 108.0, 1.0 - smooth(dP2, 46.0, 88.0));
+      var dP2 = Math.hypot(x - 221.0, z + 1450.0);
+      if (dP2 < 135.0) landH = mix(landH, 54.0, 1.0 - smooth(dP2, 75.0, 135.0));
     }
     if (w.r03 > 0.25) {
       var dP3 = Math.hypot(x - 1831.5, z - 780.3);
@@ -289,11 +289,11 @@ window.__REGION = (function () {
       if (dP6 < 46.0) landH = mix(landH, 24.0, 1.0 - smooth(dP6, 20.0, 46.0));
     }
 
-    /* Cắt sông ngòi (rộng ~40m theo tỷ lệ gấp 5 lần) */
+    /* Cắt sông ngòi gọn lòng suối (không làm ngập lan ra đồng bằng cỏ) */
     var rd = riverDist(x, z) / S;
-    if (rd < 10.5 && landH < 72.0) {
-      var rCut = (1 - smooth(rd, 2.8, 10.5)) * (1 - spawnFlat * 0.92);
-      landH = mix(landH, -5.5, rCut * 0.90);
+    if (rd < 5.2 && landH < 72.0) {
+      var rCut = (1 - smooth(rd, 1.6, 5.2)) * (1 - spawnFlat * 0.92);
+      landH = mix(landH, -3.5, rCut * 0.88);
     }
 
     /* Làm phẳng nhẹ quan lộ */
@@ -21355,7 +21355,7 @@ window.__initMegaLandmarks = function (gardenRoot) {
     [-115, 0, 115].forEach(function (ox, idx) {
       var wz = -205 + Math.abs(ox) * 0.28;
       addM(sg, new THREE.BoxGeometry(idx === 1 ? 34 : 24, 152, 14), M.fall, ox, 72, wz, 0.10, 0, 0);
-      addM(sg, new THREE.DodecahedronGeometry(28, 1), M.cloud, ox, 4, wz + 18, 0, 0, 0, 1.8, 0.42, 1.4);
+      addM(sg, new THREE.CylinderGeometry(20, 26, 2.0, 12), M.cloud, ox, 0.6, wz + 16);
     });
     [-85, 85, 0].forEach(function (ax, ai) {
       var az = ai === 2 ? 75 : -25;
