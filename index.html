@@ -26759,6 +26759,203 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
   return window.__DAIVIET_LANDMARKS;
 };
 
+/* ============================================================
+ * CANH DONG — NPC COGNITION (ý thức tự chủ có guardrail)
+ * Kiến trúc 2 tầng (theo nghiên cứu LLM+FSM 2026):
+ *   Tầng mềm  : LLM (Kilo keyless) → JSON {say, mood, intent, gesture}
+ *   Tầng cứng : FSM + ruleTags → validate intent theo stage quest,
+ *                personality, quan hệ với player. Sai → fallback script.
+ * Nguyên tắc: LLM không bao giờ sửa world state trực tiếp. Mọi intent
+ *             phải nằm trong enum + allowlist của stage hiện tại.
+ * Không gọi mạng trên hot path: chỉ khi player nói, hoặc nhịp tự nghĩ
+ * (mỗi 18-30s), có cooldown全局 + cache theo (npc, stage, mood, event).
+ * ============================================================ */
+(function () {
+  'use strict';
+  if (window.__NPC_BRAIN) return;
+
+  var ENDPOINT = 'https://ai-gateway.kilo.ai/api/v1/chat/completions';
+  var MODELS = ['particle-ai/particle-1:free', 'openrouter/free'];
+  var TIMEOUT_MS = 8000;
+  var GLOBAL_COOLDOWN = 3500;
+
+  var INTENTS = ['look', 'warn', 'point', 'calm', 'ask', 'remember', 'refuse'];
+  var GESTURES = ['nod', 'wave', 'think', 'point', 'idle'];
+  var MOODS = ['neutral', 'hopeful', 'worried', 'curious', 'guarded'];
+
+  var ALLOW = {
+    0: ['look', 'ask', 'calm', 'point'],
+    1: ['look', 'ask', 'point', 'warn'],
+    2: ['look', 'warn', 'point', 'ask'],
+    3: ['look', 'warn', 'calm', 'remember'],
+    4: ['look', 'calm', 'remember', 'ask'],
+    5: ['look', 'calm', 'remember', 'warn']
+  };
+
+  // Cá tính + mối quan hệ: khác nhau này khiến cùng 1 event, 4 NPC nói khác nhau.
+  var PERSONA = {
+    tam: { voice: 'Kỹ sư实测, thích số liệu, nói ngắn, hay tự sửa lại chính mình', bias: 'worried', trust: 0.45 },
+    ba_man: { voice: 'Bà giữ ký ức lũ, nói chậm, hay nhắc đường sơ tán, dễ xúc động', bias: 'worried', trust: 0.6 },
+    hoa: { voice: 'Ngư dân bến Hồ Gương, nói trực, hay hỏi cá về chưa', bias: 'curious', trust: 0.4 },
+    lam: { voice: 'Người ghi chép, không kết luận thay ai, luôn phân biệt dấu vết và ý kiến', bias: 'neutral', trust: 0.5 }
+  };
+
+  var cache = Object.create(null);
+  var lastCall = 0;
+  var modelIndex = 0;
+  var pending = false;
+  var memory = Object.create(null); // ký ức ngắn mỗi NPC: tối đa 6 câu
+
+  function stage() {
+    var s = window.__questState ? window.__questState() : { stage: 0 };
+    return Math.max(0, Math.min(5, s.stage | 0));
+  }
+
+  function rem(v, fallback) {
+    return INTENTS.indexOf(v) >= 0 ? v : fallback;
+  }
+
+  function clampText(s, max) {
+    s = String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+    return s.slice(0, max || 180);
+  }
+
+  function remember(id, line) {
+    if (!memory[id]) memory[id] = [];
+    memory[id].push(clampText(line, 140));
+    if (memory[id].length > 6) memory[id].shift();
+  }
+
+  // Parse tolerant: model free đôi khi trả JSON cụt / có text bao quanh.
+  function parseBrain(raw) {
+    var out = { say: '', mood: '', intent: '', gesture: '' };
+    try {
+      var j = JSON.parse(raw);
+      out.say = j.say || j.text || '';
+      out.mood = j.mood || '';
+      out.intent = j.intent || '';
+      out.gesture = j.gesture || '';
+      return out;
+    } catch (e) { /* rơi sang regex */ }
+    function grab(key) {
+      var m = new RegExp('"' + key + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"').exec(raw);
+      if (!m) return '';
+      try { return JSON.parse('"' + m[1] + '"'); } catch (e) { return m[1]; }
+    }
+    out.say = grab('say') || grab('text');
+    out.mood = grab('mood');
+    out.intent = grab('intent');
+    out.gesture = grab('gesture');
+    return out;
+  }
+
+  function buildPrompt(npc, event, playerLine) {
+    var p = PERSONA[npc.info.id] || PERSONA.tam;
+    var st = stage();
+    var hist = (memory[npc.info.id] || []).slice(-3).join(' | ') || 'chưa nói gì';
+    var sys = 'Bạn là ' + npc.info.name + ', ' + npc.info.role + ' trong game Cánh Đồng. '
+      + 'Giọng: ' + p.voice + '. Giai đoạn nhiệm vụ: ' + st + '/5. '
+      + 'Bạn có ý thức riêng: được phân vân, đổi ý, phản ứng với cách玩家 nói, nhưng KHÔNG đổi mục tiêu nhiệm vụ và KHÔNG rời khỏi vai. '
+      + 'Trả về MỘT JSON object, không giải thích, không markdown, tối đa 2 câu tiếng Việt: '
+      + '{"say":"...","mood":"' + MOODS.join('|') + '","intent":"' + INTENTS.join('|') + '","gesture":"' + GESTURES.join('|') + '"}';
+    var userText = 'Sự kiện: ' + (event || 'đứng yên quan sát')
+      + '. Người chơi vừa nói: ' + (playerLine ? clampText(playerLine, 120) : '(không nói)')
+      + '. Lời bạn nói trước đó: ' + hist
+      + '. Bạn đang cảm thấy: ' + (npc.mood || p.bias) + '.';
+    return { sys: sys, user: userText };
+  }
+
+  function fetchBrain(npc, event, playerLine) {
+    if (pending || Date.now() - lastCall < GLOBAL_COOLDOWN) return Promise.resolve(null);
+    var st = stage();
+    var key = npc.info.id + '|' + st + '|' + (npc.mood || '') + '|' + (event || '') + '|' + clampText(playerLine || '', 60);
+    if (cache[key]) return Promise.resolve(cache[key]);
+
+    pending = true;
+    lastCall = Date.now();
+    var pr = buildPrompt(npc, event, playerLine);
+    var model = MODELS[modelIndex % MODELS.length];
+
+    function call(m, attempt) {
+      var body = JSON.stringify({
+        model: m,
+        messages: [{ role: 'system', content: pr.sys }, { role: 'user', content: pr.user }],
+        max_tokens: 300,
+        temperature: 0.55
+      });
+      var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var timer = setTimeout(function () { if (ctl) ctl.abort(); }, TIMEOUT_MS);
+      return fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body,
+        signal: ctl ? ctl.signal : undefined,
+        cache: 'no-store'
+      }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }).then(function (j) {
+        var raw = j && j.choices && j.choices[0] && j.choices[0].message
+          ? (j.choices[0].message.content || '') : '';
+        if (!raw || !raw.trim()) throw new Error('empty content');
+        var brain = parseBrain(raw);
+        if (!brain.say) throw new Error('no say');
+        return brain;
+      }).catch(function (e) {
+        if (attempt < MODELS.length - 1) {
+          modelIndex++;
+          return call(MODELS[modelIndex % MODELS.length], attempt + 1);
+        }
+        return null;
+      }).then(function (res) {
+        clearTimeout(timer);
+        return res;
+      });
+    }
+
+    return call(model, 0).then(function (brain) {
+      pending = false;
+      if (brain) {
+        var allowed = ALLOW[st] || ALLOW[0];
+        var intent = rem(brain.intent, 'look');
+        if (allowed.indexOf(intent) < 0) intent = allowed[0]; // FSM guardrail
+        brain.intent = intent;
+        brain.mood = MOODS.indexOf(brain.mood) >= 0 ? brain.mood : (PERSONA[npc.info.id] || PERSONA.tam).bias;
+        brain.gesture = GESTURES.indexOf(brain.gesture) >= 0 ? brain.gesture : 'idle';
+        brain.say = clampText(brain.say, 180);
+        cache[key] = brain;
+        remember(npc.info.id, brain.say);
+      }
+      return brain;
+    });
+  }
+
+  function fallback(npc, event) {
+    var st = stage();
+    var p = PERSONA[npc.info.id] || PERSONA.tam;
+    var line = st >= 4 ? npc.info.late : npc.info.first;
+    if (event === 'player_near' && st >= 2) line = 'Đi chậm thôi, mình còn phải giữ ' + (st >= 4 ? 'lời hứa với bến này' : 'vạch nước an toàn') + '.';
+    return { say: clampText(line, 180), mood: p.bias, intent: st >= 3 ? 'remember' : 'look', gesture: 'idle', fallback: true };
+  }
+
+  /* API công khai */
+  window.__NPC_BRAIN = {
+    think: function (npc, event, playerLine) {
+      return fetchBrain(npc, event, playerLine).then(function (b) { return b || fallback(npc, event); });
+    },
+    fallback: fallback,
+    applyMood: function (npc, mood) {
+      npc.mood = mood || 'neutral';
+      // Mood đổi thì speed nhịp thở/cử chỉ trong mixers (nếu có) — không sửa physics.
+      if (npc.group && npc.group.userData) npc.group.userData.mood = npc.mood;
+    },
+    remember: remember,
+    state: function () { return { stage: stage(), cached: Object.keys(cache).length, model: MODELS[modelIndex % MODELS.length], pending: pending }; },
+    INTENTS: INTENTS,
+    MOODS: MOODS
+  };
+})();
+
 /* NPC hiện trường: 4 nhân vật GLB có khung xương và animation thật (idle / look_around / wave), đứng vững trên mặt đất. */
 window.__initNPCs = function (gardenRoot) {
   if (window.__NPC_SYSTEM) return window.__NPC_SYSTEM;
@@ -26894,6 +27091,7 @@ window.__initNPCs = function (gardenRoot) {
   });
 
   var _npcTickN = 0;
+  var _npcThinkT = 0;
   window.__updateNpcMixers = function (dt) {
     var d = Math.min(0.05, dt || 0.016);
     var p = localPlayer();
@@ -26904,6 +27102,8 @@ window.__initNPCs = function (gardenRoot) {
       if (p && Math.hypot(mx.info.x - p.x, mx.info.z - p.z) > 28 && (_npcTickN % 12) !== 0) continue;
       mx.mixer.update(d);
     }
+    _npcThinkT += dt || 0.016;
+    if (_npcThinkT > 22) { _npcThinkT = 0; if (window.__npcSelfThink) window.__npcSelfThink(); }
   };
 
   var _npcV = new THREE.Vector3();
@@ -26926,6 +27126,28 @@ window.__initNPCs = function (gardenRoot) {
   }
 
   var currentId = null;
+  var brain = window.__NPC_BRAIN;
+  var thinking = false;
+
+  function showBrain(npc, result) {
+    if (!npc || !result) return;
+    nameEl.textContent = npc.info.name;
+    roleEl.textContent = npc.info.role + (result.fallback ? '' : '  · đang nghĩ');
+    textEl.textContent = result.say || '';
+    panel.style.display = 'block';
+    if (brain && brain.applyMood) brain.applyMood(npc, result.mood);
+    if (result.gesture === 'wave' || result.gesture === 'nod') {
+      var m = null;
+      for (var i = 0; i < mixers.length; i++) if (mixers[i].info === npc.info) { m = mixers[i]; break; }
+      if (m) {
+        var act = result.gesture === 'wave' && m.wave ? m.wave : m.look;
+        if (act) { act.reset().fadeIn(0.2).play(); setTimeout(function () { act.fadeOut(0.5); }, 1100); }
+      }
+    }
+    if (window.__a11ySay) window.__a11ySay(npc.info.name + ': ' + result.say);
+    if (window.__sfx) window.__sfx.chime();
+  }
+
   function tryTalk() {
     var npc = nearest();
     if (!npc) {
@@ -26939,12 +27161,53 @@ window.__initNPCs = function (gardenRoot) {
     var state = window.__questState ? window.__questState() : { stage: 0 };
     var late = (state.stage || 0) >= 4;
     nameEl.textContent = npc.info.name;
-    roleEl.textContent = npc.info.role;
-    textEl.textContent = late ? npc.info.late : npc.info.first;
+    roleEl.textContent = npc.info.role + '  · đang nghĩ…';
+    textEl.textContent = '…';
     panel.style.display = 'block';
-    if (window.__sfx) window.__sfx.chime();
+
+    if (!brain || thinking) {
+      textEl.textContent = late ? npc.info.late : npc.info.first;
+      return true;
+    }
+    thinking = true;
+    brain.think(npc, 'player_talk', 'Xin chào, bạn đang làm gì thế?').then(function (result) {
+      thinking = false;
+      if (currentId === npc.info.id) showBrain(npc, result);
+    }).catch(function () {
+      thinking = false;
+      if (currentId === npc.info.id) textEl.textContent = late ? npc.info.late : npc.info.first;
+    });
     return true;
   }
+
+  /* NPC tự nghĩ — nhịp chậm, có cooldown trong brain, không lặp cứng.
+     Chỉ tự nói khi player ở gần và panel đang ẩn, để không gián đoạn hội thoại. */
+  var selfTimer = 0;
+  function selfThink() {
+    if (!brain || panel.style.display === 'block' || thinking) return;
+    var npc = nearest();
+    if (!npc) return;
+    var st = stageNow();
+    var event = st >= 4 ? 'water_settled' : (st >= 2 ? 'water_changing' : 'morning');
+    thinking = true;
+    brain.think(npc, event, '').then(function (result) {
+      thinking = false;
+      if (result && !result.fallback && nearest() === npc && panel.style.display !== 'block') {
+        currentId = npc.info.id;
+        showBrain(npc, result);
+        setTimeout(function () {
+          if (currentId === npc.info.id && panel.style.display === 'block') {
+            panel.style.display = 'none'; currentId = null;
+          }
+        }, 6500);
+      }
+    }).catch(function () { thinking = false; });
+  }
+  function stageNow() {
+    var s = window.__questState ? window.__questState() : { stage: 0 };
+    return Math.max(0, Math.min(5, s.stage | 0));
+  }
+  window.__npcSelfThink = selfThink;
 
   var _lastNpcHint = '';
   setInterval(function () {
