@@ -22172,8 +22172,8 @@ window.__createRealAssets = function () {
       model.position.set(-ctr.x * k, -box.min.y * k, -ctr.z * k);
       model.traverse(function (o) {
         if (o.isMesh) {
-          o.castShadow = true;
-          o.receiveShadow = true;
+          o.castShadow = false;
+          o.receiveShadow = false;
           if (o.material) {
             var ms = Array.isArray(o.material) ? o.material : [o.material];
             ms.forEach(function (m) { if (m) { m.roughness = Math.max(0.45, m.roughness || 0.7); } });
@@ -22669,7 +22669,7 @@ window.__REAL_ASSETS = window.__createRealAssets();
   function applyGlbMaterials(root) {
     root.traverse(function (o) {
       if (!o.isMesh) return;
-      o.castShadow = true;
+      o.castShadow = false;
       o.receiveShadow = true;
       var hasVCol = !!(o.geometry && o.geometry.attributes && o.geometry.attributes.color);
       var mats = Array.isArray(o.material) ? o.material : [o.material];
@@ -26807,7 +26807,7 @@ window.__initNPCs = function (gardenRoot) {
   ];
 
   var panel = document.createElement('div');
-  panel.style.cssText = 'position:fixed;left:50%;bottom:110px;transform:translateX(-50%);z-index:80;width:min(560px,86vw);display:none;padding:14px 18px;border-radius:14px;background:rgba(20,18,15,.92);color:#f6efe0;font:15px/1.55 "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;box-shadow:0 12px 36px rgba(0,0,0,.42);border:1px solid rgba(226,192,122,.34);backdrop-filter:blur(10px)';
+  panel.style.cssText = 'position:fixed;left:50%;bottom:110px;transform:translateX(-50%);z-index:80;width:min(560px,86vw);display:none;padding:14px 18px;border-radius:14px;background:rgba(20,18,15,.94);color:#f6efe0;font:15px/1.55 "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;box-shadow:0 12px 36px rgba(0,0,0,.42);border:1px solid rgba(226,192,122,.34)';
   var nameEl = document.createElement('div');
   nameEl.style.cssText = 'font-weight:700;color:#ffd89a;margin-bottom:4px;letter-spacing:.02em';
   var roleEl = document.createElement('div');
@@ -26828,7 +26828,7 @@ window.__initNPCs = function (gardenRoot) {
     var mRim = new THREE.MeshStandardMaterial({ color: 0x9b6e3c, roughness: 0.72 });
     var cone = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.145, 20, 1, true), mStraw);
     cone.position.set(0, 0.19, 0.0);
-    cone.castShadow = true;
+    cone.castShadow = false;
     hatGroup.add(cone);
     var rim = new THREE.Mesh(new THREE.TorusGeometry(0.275, 0.008, 6, 20), mRim);
     rim.rotation.x = Math.PI / 2;
@@ -26856,11 +26856,12 @@ window.__initNPCs = function (gardenRoot) {
       model.traverse(function (o) {
         if (!headNode && o.isBone && /head$/i.test(o.name)) headNode = o;
         if (o.isMesh) {
-          o.castShadow = true;
-          o.receiveShadow = true;
+          o.castShadow = false;
+          o.receiveShadow = false;
           var mats = Array.isArray(o.material) ? o.material : [o.material];
           mats.forEach(function (m) {
             if (!m) return;
+            m.side = THREE.FrontSide;
             m.roughness = 0.72;
             m.metalness = 0.05;
             if (info.tint && m.color) m.color.multiply(new THREE.Color(info.tint));
@@ -26898,28 +26899,40 @@ window.__initNPCs = function (gardenRoot) {
     }
   }
 
+  var _npcBlobGeo = new THREE.CircleGeometry(0.42, 12);
+  var _npcBlobMat = new THREE.MeshBasicMaterial({ color: 0x16140f, transparent: true, opacity: 0.24, depthWrite: false });
   DATA.forEach(function (info) {
     var holder = new THREE.Group();
     var y = (window.__hillY ? window.__hillY(info.x, info.z) : 0) + (info.plaza ? 0.08 : 0.01);
     holder.position.set(info.x, y, info.z);
     holder.rotation.y = info.yaw;
+    var shBlob = new THREE.Mesh(_npcBlobGeo, _npcBlobMat);
+    shBlob.rotation.x = -Math.PI / 2; shBlob.position.y = 0.02;
+    holder.add(shBlob);
     gardenRoot.add(holder);
     loadAnimatedNpc(info, holder);
     npcs.push({ info: info, group: holder });
   });
 
+  var _npcTickN = 0;
   window.__updateNpcMixers = function (dt) {
     var d = Math.min(0.05, dt || 0.016);
+    var p = localPlayer();
+    _npcTickN++;
     for (var i = 0; i < mixers.length; i++) {
-      mixers[i].mixer.update(d);
+      var mx = mixers[i];
+      if (!mx.primed) { mx.primed = true; mx.mixer.update(d); continue; }
+      if (p && Math.hypot(mx.info.x - p.x, mx.info.z - p.z) > 28 && (_npcTickN % 12) !== 0) continue;
+      mx.mixer.update(d);
     }
   };
 
+  var _npcV = new THREE.Vector3();
   function localPlayer() {
     if (!window.__playerPos || !gardenRoot) return null;
-    var v = new THREE.Vector3(window.__playerPos.x, 0, window.__playerPos.z);
-    gardenRoot.worldToLocal(v);
-    return v;
+    _npcV.set(window.__playerPos.x, 0, window.__playerPos.z);
+    gardenRoot.worldToLocal(_npcV);
+    return _npcV;
   }
 
   function nearest() {
@@ -26954,10 +26967,14 @@ window.__initNPCs = function (gardenRoot) {
     return true;
   }
 
+  var _lastNpcHint = '';
   setInterval(function () {
     var npc = nearest();
-    if (npc) {
-      hint.textContent = 'E — trò chuyện với ' + npc.info.name;
+    var txt = npc ? ('E — trò chuyện với ' + npc.info.name) : '';
+    if (txt === _lastNpcHint) return;
+    _lastNpcHint = txt;
+    if (txt) {
+      hint.textContent = txt;
       hint.style.opacity = '1';
     } else hint.style.opacity = '0';
   }, 180);
@@ -26976,7 +26993,7 @@ window.__initWaterState = function (gardenRoot) {
 
   var hud = document.createElement('div');
   hud.id = 'waterStateHud';
-  hud.style.cssText = 'position:fixed;left:16px;top:126px;z-index:55;padding:7px 12px;border-radius:10px;background:rgba(20,18,15,.74);border:1px solid rgba(226,192,122,.34);color:#f6efe0;font:600 12.5px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;pointer-events:none;backdrop-filter:blur(8px)';
+  hud.style.cssText = 'position:fixed;left:16px;top:126px;z-index:55;padding:7px 12px;border-radius:10px;background:rgba(20,18,15,.84);border:1px solid rgba(226,192,122,.34);color:#f6efe0;font:600 12.5px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;pointer-events:none';
   document.body.appendChild(hud);
   function layoutWaterHud() {
     var mob = window.innerWidth < 768;
@@ -26992,7 +27009,7 @@ window.__initWaterState = function (gardenRoot) {
   refreshHud();
 
   var hint = document.createElement('div');
-  hint.style.cssText = 'position:fixed;left:50%;bottom:116px;transform:translateX(-50%);z-index:79;padding:6px 13px;border-radius:999px;background:rgba(20,18,15,.84);border:1px solid rgba(226,192,122,.4);color:#ffd89a;font:600 12.5px "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;opacity:0;transition:opacity .15s;pointer-events:none;backdrop-filter:blur(8px)';
+  hint.style.cssText = 'position:fixed;left:50%;bottom:116px;transform:translateX(-50%);z-index:79;padding:6px 13px;border-radius:999px;background:rgba(20,18,15,.88);border:1px solid rgba(226,192,122,.4);color:#ffd89a;font:600 12.5px "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;opacity:0;transition:opacity .15s;pointer-events:none';
   document.body.appendChild(hint);
 
   var valveGroup = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel('valve', { height: 1.4 }) : new THREE.Group();
@@ -27015,11 +27032,12 @@ window.__initWaterState = function (gardenRoot) {
     window.__waterState = state;
   }
 
+  var _wLpV = new THREE.Vector3();
   function nearestValve() {
     if (!window.__playerPos) return false;
-    var p = new THREE.Vector3(window.__playerPos.x, 0, window.__playerPos.z);
-    gardenRoot.worldToLocal(p);
-    return Math.hypot(p.x - vx, p.z - vz) < 2.6;
+    _wLpV.set(window.__playerPos.x, 0, window.__playerPos.z);
+    gardenRoot.worldToLocal(_wLpV);
+    return Math.hypot(_wLpV.x - vx, _wLpV.z - vz) < 2.6;
   }
 
   function tryToggle() {
@@ -27034,10 +27052,15 @@ window.__initWaterState = function (gardenRoot) {
     return true;
   }
 
+  hint.textContent = 'E — đổi mực nước';
+  var _lastValveShow = null;
   setInterval(function () {
     if (!bases) applyWater();
-    hint.textContent = 'E — đổi mực nước';
-    hint.style.opacity = nearestValve() ? '1' : '0';
+    var nearV = nearestValve();
+    if (nearV !== _lastValveShow) {
+      _lastValveShow = nearV;
+      hint.style.opacity = nearV ? '1' : '0';
+    }
   }, 180);
 
   applyWater();
@@ -27051,12 +27074,12 @@ window.__createCombatHud = function (C) {
   /* Thanh Hành Động chiến thuật + Huy hiệu Mục Tiêu Lock-on */
   var bar = document.createElement('div');
   bar.id = 'combatActionHud';
-  bar.style.cssText = 'position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:58;display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 10px;border-radius:14px;background:rgba(16,15,13,.88);border:1px solid rgba(226,192,122,.38);color:#f6efe0;font:600 12px/1.3 "Segoe UI",system-ui,sans-serif;backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(0,0,0,.45);max-width:calc(100vw - 16px)';
+  bar.style.cssText = 'position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:58;display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 10px;border-radius:14px;background:rgba(16,15,13,.90);border:1px solid rgba(226,192,122,.38);color:#f6efe0;font:600 12px/1.3 "Segoe UI",system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.45);max-width:calc(100vw - 16px)';
   bar.innerHTML =
     '<div id="cLockPill" style="display:none;width:100%;padding:3px 9px;border-radius:8px;background:rgba(28,46,40,.85);border:1px solid rgba(78,247,212,.45);color:#aefce8;font-size:11px;justify-content:space-between;align-items:center"><span id="cLockName"></span><span id="cLockInfo"></span></div>' +
     '<div style="display:flex;align-items:center;gap:10px;width:100%;justify-content:space-between">' +
-    '<div style="flex:1;min-width:92px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Máu</span><span id="cHpTxt">100/100</span></div><div style="height:6px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden"><div id="cHpFill" style="height:100%;width:100%;background:linear-gradient(90deg,#e04b3f,#44c986);transition:width .12s"></div></div></div>' +
-    '<div style="flex:1;min-width:92px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Thể lực</span><span id="cStTxt">100</span></div><div style="height:6px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden"><div id="cStFill" style="height:100%;width:100%;background:linear-gradient(90deg,#d99a32,#ffe178);transition:width .08s"></div></div></div>' +
+    '<div style="flex:1;min-width:92px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Máu</span><span id="cHpTxt">100/100</span></div><div style="height:6px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden"><div id="cHpFill" style="height:100%;width:100%;background:linear-gradient(90deg,#e04b3f,#44c986)"></div></div></div>' +
+    '<div style="flex:1;min-width:92px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Thể lực</span><span id="cStTxt">100</span></div><div style="height:6px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden"><div id="cStFill" style="height:100%;width:100%;background:linear-gradient(90deg,#d99a32,#ffe178)"></div></div></div>' +
     '<div id="cEnemyTxt" style="font-size:11px;color:#e8d3a3;white-space:nowrap">Kẻ địch: 8</div>' +
     '</div>' +
     '<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;max-width:100%">' +
@@ -27086,7 +27109,7 @@ window.__createCombatHud = function (C) {
   /* Modal Hành Trang — Rèn Ngọc Thương & Chế Ngọc Bội [I] */
   var bagModal = document.createElement('div');
   bagModal.id = 'rpgBagModal';
-  bagModal.style.cssText = 'position:fixed;inset:0;z-index:135;display:none;align-items:center;justify-content:center;background:rgba(10,14,12,.72);backdrop-filter:blur(8px);font:14px/1.55 "Segoe UI",system-ui,sans-serif;color:#f6efe0';
+  bagModal.style.cssText = 'position:fixed;inset:0;z-index:135;display:none;align-items:center;justify-content:center;background:rgba(10,14,12,.84);font:14px/1.55 "Segoe UI",system-ui,sans-serif;color:#f6efe0';
   document.body.appendChild(bagModal);
 
   function renderBagModal() {
@@ -27173,9 +27196,17 @@ window.__createCombatHud = function (C) {
 
   function getRpgStats() { return C.getRpgStats(); }
   function saveRpg() { C.saveRpg(); }
+  var _lastHudKey = '';
   function refreshHud() {
     var st = C.getHudState();
     var now = performance.now();
+    var c1 = Math.max(0, Math.ceil((st.skillCd.s1 - now) / 1000));
+    var c2 = Math.max(0, Math.ceil((st.skillCd.s2 - now) / 1000));
+    var c3 = Math.max(0, Math.ceil((st.skillCd.s3 - now) / 1000));
+    var shLeft = st.sanctuaryLeft > 0 ? st.sanctuaryLeft.toFixed(0) : '';
+    var key = Math.round(st.hp) + '|' + st.maxHp + '|' + Math.round(st.stamina) + '|' + st.alive + '|' + st.kills + '|' + st.lockName + '|' + c1 + '|' + c2 + '|' + c3 + '|' + rpg.herbs + '|' + rpg.essence + '|' + shLeft;
+    if (key === _lastHudKey) return;
+    _lastHudKey = key;
     var hpFill = document.getElementById("cHpFill");
     var stFill = document.getElementById("cStFill");
     var hpTxt = document.getElementById("cHpTxt");
@@ -27195,17 +27226,17 @@ window.__createCombatHud = function (C) {
         lockEl.style.display = "none";
       }
     }
-    if (st.sanctuaryLeft > 0) {
+    if (shLeft) {
       var sh = document.getElementById("cShieldTxt");
-      if (sh) sh.textContent = "Kết Giới " + st.sanctuaryLeft.toFixed(0) + "s";
+      if (sh) sh.textContent = "Kết Giới " + shLeft + "s";
     } else {
       var sh2 = document.getElementById("cShieldTxt");
       if (sh2) sh2.textContent = "";
     }
     var b1 = document.getElementById("btnSk1"), b2 = document.getElementById("btnSk2"), b3 = document.getElementById("btnSk3");
-    if (b1) { var c1 = Math.max(0, Math.ceil((st.skillCd.s1 - now) / 1000)); b1.textContent = c1 > 0 ? "[1] " + c1 + "s" : "[1] Xuyên Thủy"; b1.style.opacity = c1 > 0 ? ".52" : "1"; }
-    if (b2) { var c2 = Math.max(0, Math.ceil((st.skillCd.s2 - now) / 1000)); b2.textContent = c2 > 0 ? "[2] " + c2 + "s" : "[2] Thủy Nộ"; b2.style.opacity = c2 > 0 ? ".52" : "1"; }
-    if (b3) { var c3 = Math.max(0, Math.ceil((st.skillCd.s3 - now) / 1000)); b3.textContent = c3 > 0 ? "[3] " + c3 + "s" : "[3] Thần Ngọc (" + rpg.herbs + ")"; b3.style.opacity = c3 > 0 ? ".52" : "1"; }
+    if (b1) { b1.textContent = c1 > 0 ? "[1] " + c1 + "s" : "[1] Xuyên Thủy"; b1.style.opacity = c1 > 0 ? ".52" : "1"; }
+    if (b2) { b2.textContent = c2 > 0 ? "[2] " + c2 + "s" : "[2] Thủy Nộ"; b2.style.opacity = c2 > 0 ? ".52" : "1"; }
+    if (b3) { b3.textContent = c3 > 0 ? "[3] " + c3 + "s" : "[3] Thần Ngọc (" + rpg.herbs + ")"; b3.style.opacity = c3 > 0 ? ".52" : "1"; }
     var hBtn = document.getElementById("btnHerb"), bagBtn = document.getElementById("btnBag");
     if (hBtn) { hBtn.textContent = "[Q] Dược (" + rpg.herbs + ")"; hBtn.style.opacity = rpg.herbs > 0 ? "1" : ".5"; }
     if (bagBtn) bagBtn.textContent = "[I] Rèn · " + rpg.essence;
@@ -27254,10 +27285,13 @@ window.__createCombatVfx = function (C) {
     return new THREE.CanvasTexture(c);
   })();
 
-  function spawnSlashArc(lx, ly, lz, yaw, tiltZ, colorHex, radius, arcRad, dur) {
-    var segs = 20, span = arcRad || Math.PI * 0.92;
-    var rIn = (radius || 2.1) * 0.42, rOut = radius || 2.1;
-    var pos = [], uvs = [], idx = [];
+  var _slashGeoCache = {};
+  function getSlashGeo(radius, arcRad) {
+    var span = arcRad || Math.PI * 0.92;
+    var rOut = radius || 2.1, rIn = rOut * 0.42;
+    var key = Math.round(span * 100) + '_' + Math.round(rOut * 20);
+    if (_slashGeoCache[key]) return _slashGeoCache[key];
+    var segs = 16, pos = [], uvs = [], idx = [];
     for (var i = 0; i <= segs; i++) {
       var u = i / segs;
       var a = -span * 0.5 + u * span;
@@ -27272,27 +27306,60 @@ window.__createCombatVfx = function (C) {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
     geo.setIndex(idx);
-    var mat = new THREE.MeshBasicMaterial({
-      map: crescentTex, color: colorHex || 0x56f5d0, transparent: true, opacity: 0.96,
-      blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false
-    });
-    var mesh = new THREE.Mesh(geo, mat);
+    _slashGeoCache[key] = geo;
+    return geo;
+  }
+  var slashPool = [];
+  for (var sli = 0; sli < 6; sli++) {
+    var sMesh = new THREE.Mesh(
+      getSlashGeo(2.15, Math.PI * 0.92),
+      new THREE.MeshBasicMaterial({ map: crescentTex, color: 0x56f5d0, transparent: true, opacity: 0.96, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false })
+    );
+    sMesh.rotation.order = 'YXZ';
+    sMesh.visible = false;
+    gardenRoot.add(sMesh);
+    slashPool.push(sMesh);
+  }
+  function spawnSlashArc(lx, ly, lz, yaw, tiltZ, colorHex, radius, arcRad, dur) {
+    var span = arcRad || Math.PI * 0.92;
+    var mesh = null;
+    for (var i = 0; i < slashPool.length; i++) {
+      if (!slashPool[i].visible) { mesh = slashPool[i]; break; }
+    }
+    if (!mesh) mesh = slashPool[0];
+    mesh.geometry = getSlashGeo(radius || 2.15, span);
+    mesh.material.color.setHex(colorHex || 0x56f5d0);
+    mesh.material.opacity = 0.96;
     mesh.position.set(lx, ly + 0.95, lz);
-    mesh.rotation.order = 'YXZ';
     mesh.rotation.set(0.1, (yaw || 0) - Math.PI * 0.5, tiltZ || 0);
-    gardenRoot.add(mesh);
+    mesh.scale.setScalar(0.92);
+    mesh.visible = true;
     slashArcs.push({ mesh: mesh, age: 0, dur: dur || 0.24, spin: span > Math.PI * 1.5 });
   }
 
+  var _sparkGeo = new THREE.BoxGeometry(0.06, 0.06, 0.24);
+  var sparkPool = [];
+  for (var sppi = 0; sppi < 32; sppi++) {
+    var spM = new THREE.Mesh(_sparkGeo, new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
+    spM.visible = false;
+    gardenRoot.add(spM);
+    sparkPool.push(spM);
+  }
   function spawnHitSparks(lx, ly, lz, colorHex, count) {
-    var n = count || 12;
-    var pGeo = new THREE.BoxGeometry(0.06, 0.06, 0.24);
+    var n = Math.min(count || 10, 12);
     for (var i = 0; i < n; i++) {
-      var sm = new THREE.Mesh(pGeo, new THREE.MeshBasicMaterial({ color: colorHex || 0xffe27a, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
+      var sm = null;
+      for (var j = 0; j < sparkPool.length; j++) {
+        if (!sparkPool[j].visible) { sm = sparkPool[j]; break; }
+      }
+      if (!sm) break;
+      sm.material.color.setHex(colorHex || 0xffe27a);
+      sm.material.opacity = 1;
+      sm.scale.setScalar(1);
       sm.position.set(lx, ly + 0.85, lz);
       var a = Math.random() * 6.283, sp = 3.5 + Math.random() * 4.5, vy = 2.0 + Math.random() * 3.5;
       sm.rotation.set(Math.random(), a, 0);
-      gardenRoot.add(sm);
+      sm.visible = true;
       sparks.push({ mesh: sm, vx: Math.cos(a) * sp, vy: vy, vz: Math.sin(a) * sp, age: 0, dur: 0.34 });
     }
   }
@@ -27368,29 +27435,56 @@ window.__createCombatVfx = function (C) {
     }, 860);
   }
 
+  var _vfxLpV = new THREE.Vector3();
   function localPlayer() {
     if (!window.__playerPos) return null;
-    var p = new THREE.Vector3(window.__playerPos.x, 0, window.__playerPos.z);
-    gardenRoot.worldToLocal(p);
-    return p;
+    _vfxLpV.set(window.__playerPos.x, 0, window.__playerPos.z);
+    gardenRoot.worldToLocal(_vfxLpV);
+    return _vfxLpV;
   }
   function dist2d(a, b) { return Math.hypot(a.x - b.x, a.z - b.z); }
 
+  var _shockGeo = new THREE.RingGeometry(0.3, 0.55, 24);
+  var shockPool = [];
+  for (var shi = 0; shi < 6; shi++) {
+    var rM = new THREE.Mesh(_shockGeo, new THREE.MeshBasicMaterial({ color: 0x4ef7d4, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
+    rM.rotation.x = -Math.PI / 2;
+    rM.visible = false;
+    gardenRoot.add(rM);
+    shockPool.push(rM);
+  }
   function spawnShockwave(lx, ly, lz, colorHex, maxR, dur) {
-    var ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.3, 0.55, 28),
-      new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false })
-    );
-    ring.rotation.x = -Math.PI / 2;
+    var ring = null;
+    for (var i = 0; i < shockPool.length; i++) {
+      if (!shockPool[i].visible) { ring = shockPool[i]; break; }
+    }
+    if (!ring) ring = shockPool[0];
+    ring.material.color.setHex(colorHex || 0x4ef7d4);
+    ring.material.opacity = 0.9;
+    ring.scale.setScalar(1);
     ring.position.set(lx, ly + 0.12, lz);
-    gardenRoot.add(ring);
+    ring.visible = true;
     shockwaves.push({ mesh: ring, age: 0, dur: dur || 0.42, maxR: maxR || 4.0 });
   }
 
+  var _enTickN = 0;
   /* VFX tick (shockwaves, projectiles, enemy mixers) */
   window.__updateEnemyMixers = function (dt) {
     var d = Math.min(0.05, dt || 0.016);
-    for (var i = 0; i < mixers.length; i++) mixers[i].update(d);
+    var pl = localPlayer();
+    _enTickN++;
+    for (var i = 0; i < mixers.length; i++) {
+      var item = mixers[i];
+      if (item && item.mx) {
+        var e = item.enemy;
+        if (e && e.hp <= 0) continue;
+        if (!item.primed) { item.primed = true; item.mx.update(d); continue; }
+        if (pl && e && Math.hypot(e.group.position.x - pl.x, e.group.position.z - pl.z) > 28 && (_enTickN % 12) !== 0) continue;
+        item.mx.update(d);
+      } else if (item && item.update) {
+        item.update(d);
+      }
+    }
   };
   window.__updateCombatVfx = function (dt) {
     var d = Math.min(0.05, dt || 0.016);
@@ -27419,8 +27513,7 @@ window.__createCombatVfx = function (C) {
       sw.age += d;
       var k = sw.age / sw.dur;
       if (k >= 1) {
-        gardenRoot.remove(sw.mesh);
-        sw.mesh.geometry.dispose(); sw.mesh.material.dispose();
+        sw.mesh.visible = false;
         shockwaves.splice(si, 1);
       } else {
         sw.mesh.scale.setScalar(1 + k * sw.maxR);
@@ -27432,7 +27525,7 @@ window.__createCombatVfx = function (C) {
       sa.age += d;
       var ak = sa.age / sa.dur;
       if (ak >= 1) {
-        gardenRoot.remove(sa.mesh); sa.mesh.geometry.dispose(); sa.mesh.material.dispose();
+        sa.mesh.visible = false;
         slashArcs.splice(ai2, 1);
       } else {
         sa.mesh.rotation.y += d * (sa.spin ? 18.0 : 5.5);
@@ -27445,7 +27538,7 @@ window.__createCombatVfx = function (C) {
       spk.age += d;
       var sk2 = spk.age / spk.dur;
       if (sk2 >= 1) {
-        gardenRoot.remove(spk.mesh); spk.mesh.material.dispose();
+        spk.mesh.visible = false;
         sparks.splice(ski, 1);
       } else {
         spk.vy -= 12.0 * d;
@@ -27456,10 +27549,8 @@ window.__createCombatVfx = function (C) {
         spk.mesh.material.opacity = 1 - sk2;
       }
     }
-    /* Dùng vệt chém Vầng Trăng Anime (slashArcs) làm VFX chém chính, ẩn dải đa giác thô */
-    trailMesh.visible = false;
-
     /* Vòng Lock-on phát sáng xoay quanh mục tiêu đang khóa */
+    var p = localPlayer();
     var lockPos = getTargetWorldPos(C.getLockedTarget());
     if (lockPos && p) {
       if (Math.hypot(p.x - lockPos.x, p.z - lockPos.z) > 25) C.clearLockedTarget();
@@ -27558,7 +27649,7 @@ window.__createCombatEnemies = function (C) {
         if (!acts.walk) acts.walk = acts.idle;
         acts.idle.play();
         eObj.mixer = mx; eObj.actions = acts; eObj.curAnim = acts.idle;
-        mixers.push(mx);
+        mixers.push({ mx: mx, enemy: eObj, primed: false });
       })
       : (window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel(info.asset, { height: info.height }) : new THREE.Group());
 
@@ -27680,8 +27771,8 @@ window.__createCombatEnemies = function (C) {
           if (e.info.ranged) {
             var invD = 1 / (d || 1);
             var pm = new THREE.Mesh(
-              new THREE.SphereGeometry(0.18, 10, 8),
-              new THREE.MeshBasicMaterial({ color: 0x7eff5a })
+              (C._projGeo || (C._projGeo = new THREE.SphereGeometry(0.18, 8, 6))),
+              (C._projMat || (C._projMat = new THREE.MeshBasicMaterial({ color: 0x7eff5a })))
             );
             var gy = window.__hillY ? window.__hillY(e.group.position.x, e.group.position.z) : 0;
             pm.position.set(e.group.position.x, gy + 0.85, e.group.position.z);
@@ -27770,11 +27861,12 @@ window.__initCombat = function (gardenRoot) {
     return t.hp > 0 ? t.group.position : null;
   }
 
+  var _cLpV = new THREE.Vector3();
   function localPlayer() {
     if (!window.__playerPos) return null;
-    var p = new THREE.Vector3(window.__playerPos.x, 0, window.__playerPos.z);
-    gardenRoot.worldToLocal(p);
-    return p;
+    _cLpV.set(window.__playerPos.x, 0, window.__playerPos.z);
+    gardenRoot.worldToLocal(_cLpV);
+    return _cLpV;
   }
   function dist2d(a, b) { return Math.hypot(a.x - b.x, a.z - b.z); }
 
@@ -28202,7 +28294,7 @@ window.__initBoss = function (gardenRoot) {
   var defeated = false, lastHit = -1000, staggerUntil = 0;
 
   var hud = document.createElement('div');
-  hud.style.cssText = 'position:fixed;left:50%;top:58px;transform:translateX(-50%);z-index:56;width:min(380px,78vw);padding:9px 14px;border-radius:12px;background:rgba(18,14,12,.86);border:1px solid rgba(255,150,90,.42);color:#f6efe0;font:600 12.5px/1.45 "Segoe UI",system-ui,sans-serif;pointer-events:none;display:none;backdrop-filter:blur(10px)';
+  hud.style.cssText = 'position:fixed;left:50%;top:58px;transform:translateX(-50%);z-index:56;width:min(380px,78vw);padding:9px 14px;border-radius:12px;background:rgba(18,14,12,.90);border:1px solid rgba(255,150,90,.42);color:#f6efe0;font:600 12.5px/1.45 "Segoe UI",system-ui,sans-serif;pointer-events:none;display:none';
   document.body.appendChild(hud);
 
   var bx = -38, bz = -36, by = window.__hillY ? window.__hillY(bx, bz) : 0;
@@ -28224,7 +28316,7 @@ window.__initBoss = function (gardenRoot) {
     var pil = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.58, 3.2 + (ai % 2) * 1.1, 6), arenaMat);
     pil.position.set(ax, ay + 1.4, az);
     pil.rotation.set((ai % 2 ? 0.08 : -0.06), aa, 0.05);
-    pil.castShadow = true; pil.receiveShadow = true;
+    pil.castShadow = false; pil.receiveShadow = true;
     gardenRoot.add(pil);
   }
 
@@ -28247,26 +28339,35 @@ window.__initBoss = function (gardenRoot) {
   aoeFill.visible = false;
   gardenRoot.add(aoeFill);
 
+  var _bLpV = new THREE.Vector3();
   function localPlayer() {
     if (!window.__playerPos) return null;
-    var p = new THREE.Vector3(window.__playerPos.x, 0, window.__playerPos.z);
-    gardenRoot.worldToLocal(p);
-    return p;
+    _bLpV.set(window.__playerPos.x, 0, window.__playerPos.z);
+    gardenRoot.worldToLocal(_bLpV);
+    return _bLpV;
   }
   function dist2d(a, b) { return Math.hypot(a.x - b.x, a.z - b.z); }
 
+  var _lastBossHtml = '', _lastBossVis = false;
   function refresh() {
     var p = localPlayer();
     var near = !defeated && p && dist2d(p, group.position) < 28;
-    hud.style.display = near ? 'block' : 'none';
+    if (near !== _lastBossVis) {
+      _lastBossVis = near;
+      hud.style.display = near ? 'block' : 'none';
+    }
     if (!near) return;
     var core = (state === 'RECOVER' || performance.now() < staggerUntil) ? ' · <b style="color:#4ef7d4">CORE HỞ (x2 DMG)</b>' : '';
     var pct = Math.max(0, Math.round((hp / maxHp) * 100));
     var stg = Math.min(100, Math.round(stagger));
-    hud.innerHTML =
+    var html =
       '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span><b>B-01 Người Gác Mạch</b> · Pha ' + phase + '/3</span><span>' + hp + '/' + maxHp + core + '</span></div>' +
       '<div style="height:7px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;margin-bottom:3px"><div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#ff4a3d,#ffb84d)"></div></div>' +
       '<div style="height:4px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden"><div style="height:100%;width:' + stg + '%;background:#4ef7d4"></div></div>';
+    if (html !== _lastBossHtml) {
+      _lastBossHtml = html;
+      hud.innerHTML = html;
+    }
   }
 
   function setPhase() {
@@ -29112,29 +29213,42 @@ window.__initCampaign = function (gardenRoot) {
       }
     });
     var dist = p && markers.length ? d2(p, markers[0].x, markers[0].z) : -1;
+    var mw = window.__CAM_ARROW_V || (window.__CAM_ARROW_V = new THREE.Vector3());
     if (p && markers.length && window.CAM && window.TARGET) {
       var m0 = markers[0];
-      var mw = gardenRoot.localToWorld(new THREE.Vector3(m0.x, 0, m0.z));
+      mw.set(m0.x, 0, m0.z);
+      gardenRoot.localToWorld(mw);
       var camF = Math.atan2(window.TARGET.z - window.CAM.z, window.TARGET.x - window.CAM.x);
       var mA = Math.atan2(mw.z - window.CAM.z, mw.x - window.CAM.x);
       var rel = mA - camF;
       while (rel > Math.PI) rel -= 2 * Math.PI;
       while (rel < -Math.PI) rel += 2 * Math.PI;
-      arrow.style.transform = 'rotate(' + (-rel * 180 / Math.PI) + 'deg)';
-      arrow.style.opacity = Math.abs(rel) < 0.5 ? '0.35' : '1';
-    } else {
+      var degStr = 'rotate(' + (-rel * 180 / Math.PI).toFixed(1) + 'deg)';
+      var opStr = Math.abs(rel) < 0.5 ? '0.35' : '1';
+      if (arrow._lastDeg !== degStr) { arrow._lastDeg = degStr; arrow.style.transform = degStr; }
+      if (arrow._lastOp !== opStr) { arrow._lastOp = opStr; arrow.style.opacity = opStr; }
+    } else if (arrow._lastOp !== '0') {
+      arrow._lastOp = '0';
       arrow.style.opacity = '0';
     }
-    hud.innerHTML = '<b>' + quest.ch + '</b> · ' + quest.id + '<br>' + quest.name +
+    var hudHtml = '<b>' + quest.ch + '</b> · ' + quest.id + '<br>' + quest.name +
       '<br><span style="font-weight:400">' + ob.text + '</span>' +
       '<br>Tiến độ: <b>' + (CS.prog[key] || 0) + '</b>/' + (ob.need || ob.marks.length || 1) +
       (dist >= 0 ? ' · ' + dist.toFixed(0) + 'm' : '');
+    if (hudHtml !== hud._lastHtml) {
+      hud._lastHtml = hudHtml;
+      hud.innerHTML = hudHtml;
+    }
     var a11y = window.__a11ySay;
     if (a11y) {
       var firstStep = (quest.id === 'Q-HOME-001')
         ? ' Bắc đầu: đứng gần van bên hồ rồi nhấn E.'
         : '';
-      a11y('Nhiệm vụ ' + quest.id + ', ' + quest.name + ', ' + ob.text + '.' + firstStep);
+      var sayMsg = 'Nhiệm vụ ' + quest.id + ', ' + quest.name + ', ' + ob.text + '.' + firstStep;
+      if (sayMsg !== hud._lastSay) {
+        hud._lastSay = sayMsg;
+        a11y(sayMsg);
+      }
     }
   }, 100);
 
@@ -29331,8 +29445,8 @@ window.__populateUnderwaterLife = function () {
     /* Lock */
     var lock = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.04), MAT.ironBand);
     lock.position.set(0, 0.18, 0.17); chest.add(lock);
-    /* Glow */
-    var glow = new THREE.PointLight(0xe8c842, LOW ? 0.3 : 0.5, 3, 2);
+    /* Glow (shader-safe: no dynamic PointLight toggle) */
+    var glow = new THREE.Object3D();
     glow.position.set(0, 0.35, 0); chest.add(glow);
     if (window.__addColliderBox) window.__addColliderBox(x, z, 0.52, 0.48, 0.40, 0, cy);
     return chest;
@@ -29377,7 +29491,7 @@ window.__populateUnderwaterLife = function () {
         var pearlM = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 7), MAT.pearl);
         pearlM.position.set(sfp.x, sfy + 0.04, sfp.z);
         underwaterRoot.add(pearlM);
-        var pearlGlow = new THREE.PointLight(0xf0eae0, LOW ? 0.2 : 0.4, 2, 2);
+        var pearlGlow = new THREE.Object3D();
         pearlGlow.position.copy(pearlM.position);
         underwaterRoot.add(pearlGlow);
       }
@@ -29419,7 +29533,7 @@ window.__populateUnderwaterLife = function () {
     crystal.userData = { underwaterCrystal: true, id: index, baseY: cy2 + 0.48, phase: index * 1.3 };
     underwaterRoot.add(crystal);
     underwaterCrystals.push(crystal);
-    var glow = new THREE.PointLight(0x52e4d2, LOW ? 0.35 : 0.65, 4.5, 2);
+    var glow = new THREE.Object3D();
     glow.position.set(cx2, cy2 + 0.75, cz2);
     underwaterRoot.add(glow);
     /* Crystal base pedestal */
@@ -29602,7 +29716,7 @@ window.__populateUnderwaterLife = function () {
     gVoid.position.set(grottoX, grottoY + 0.3, grottoZ - 0.15);
     underwaterRoot.add(gVoid);
     /* Glow from within */
-    var gLight = new THREE.PointLight(0x40c8a0, LOW ? 0.25 : 0.45, 3, 2);
+    var gLight = new THREE.Object3D();
     gLight.position.set(grottoX, grottoY + 0.4, grottoZ - 0.1);
     underwaterRoot.add(gLight);
   }
@@ -30945,7 +31059,7 @@ if (!window.__GAME && consented) {
 
     var core = new THREE.Mesh(new THREE.SphereGeometry(0.15, 18, 14), new THREE.MeshStandardMaterial({ color: F.core, roughness: 0.5, map: dotsTex, bumpMap: dotsTex, bumpScale: 0.15 }));
     core.scale.set(1, 0.62, 1);
-    core.castShadow = true;
+    core.castShadow = false;
     head.add(core);
 
     /* đĩa nhuỵ: hạt xoáy theo tỉ lệ vàng (phyllotaxis thật như cúc/hoa hướng dương) */
@@ -30998,7 +31112,7 @@ if (!window.__GAME && consented) {
         holder.rotation.y = (pi / R.n) * Math.PI * 2 + rand(-0.14, 0.14) + ri * 0.35;
         var pivot = new THREE.Group();
         var mesh = new THREE.Mesh(famGeo(fam, ri), familyMats[fam][pi % 3]);
-        mesh.castShadow = true;
+        mesh.castShadow = false;
         pivot.add(mesh);
         holder.add(pivot);
         head.add(holder);
@@ -33558,8 +33672,8 @@ if (!window.__GAME && consented) {
     function layoutAudioBtn() {
       var mob = window.innerWidth < 820;
       btn.style.cssText = mob
-        ? 'position:fixed;left:8px;top:240px;z-index:50;background:rgba(20,18,15,.80);border:1px solid rgba(226,192,122,.36);border-radius:999px;padding:5px 10px;font:600 11px/1.2 "Segoe UI",system-ui,sans-serif;color:#f6efe0;cursor:pointer;backdrop-filter:blur(6px)'
-        : 'position:fixed;left:18px;bottom:18px;z-index:40;background:rgba(255,252,246,.82);border:1px solid rgba(122,90,52,.28);border-radius:999px;padding:6px 14px;font:600 12px/1.2 "Segoe UI",system-ui,sans-serif;color:#5c4529;cursor:pointer;backdrop-filter:blur(6px)';
+        ? 'position:fixed;left:8px;top:240px;z-index:50;background:rgba(20,18,15,.86);border:1px solid rgba(226,192,122,.36);border-radius:999px;padding:5px 10px;font:600 11px/1.2 "Segoe UI",system-ui,sans-serif;color:#f6efe0;cursor:pointer'
+        : 'position:fixed;left:18px;bottom:18px;z-index:40;background:rgba(255,252,246,.90);border:1px solid rgba(122,90,52,.28);border-radius:999px;padding:6px 14px;font:600 12px/1.2 "Segoe UI",system-ui,sans-serif;color:#5c4529;cursor:pointer';
     }
     layoutAudioBtn(); window.addEventListener('resize', layoutAudioBtn);
     btn.addEventListener('click', function (ev) {
@@ -34534,7 +34648,7 @@ if (!window.__GAME && consented) {
         });
         o.castShadow = false; o.frustumCulled = false;
       });
-      rabbitSkinTargets.forEach(function (o) { if ((o.name || '').toLowerCase() === 'rabbit' && !o.userData.furFiberMesh) o.userData.furFiberMesh = addSkinnedFur(o, 9000); });
+      rabbitSkinTargets.forEach(function (o) { if ((o.name || '').toLowerCase() === 'rabbit' && !o.userData.furFiberMesh) o.userData.furFiberMesh = addSkinnedFur(o, 900); });
       rabbitTemplate.updateMatrixWorld(true);
       var bb = new THREE.Box3().setFromObject(rabbitTemplate), sz = bb.getSize(new THREE.Vector3()), bc = bb.getCenter(new THREE.Vector3());
       var sc = 1.42 / (sz.y || 1500); rabbitTemplate.scale.setScalar(sc);
@@ -34630,7 +34744,7 @@ if (!window.__GAME && consented) {
       var pp = window.__playerPos ? ppL() : null;
       for (var i = rabbitPool.length - 1; i >= 0; i--) {
         var rb = rabbitPool[i], dx = rb.ex - rb.sx, dz = rb.ez - rb.sz, total = Math.hypot(dx, dz) || .001;
-        if (rb.mixer) rb.mixer.update(dt);
+        if (rb.mixer && (!pp || Math.abs(pp.x - rb.m.position.x) + Math.abs(pp.z - rb.m.position.z) < 42)) rb.mixer.update(dt);
         var pdx = pp ? pp.x - rb.m.position.x : 100, pdz = pp ? pp.z - rb.m.position.z : 100;
         if (active && pdx * pdx + pdz * pdz < 5.5 && rb.startle <= 0 && rb.pause <= 0) rb.startle = 1.1;
         rb.startle = Math.max(0, rb.startle - dt);
@@ -34655,7 +34769,8 @@ if (!window.__GAME && consented) {
         var bob = (rb.current === 'sit' || rb.current === 'guard') ? Math.sin(W.elapsed * 2 + rb.seed) * .006 : 0;
         rb.m.position.y += bob;
         if (rb.t >= 1) {
-          rb.fade -= dt * .20; rb.m.traverse(function (o) { if (o.isMesh && o.material) { var mm = Array.isArray(o.material) ? o.material : [o.material]; mm.forEach(function (m) { m.transparent = true; m.opacity = Math.max(0, rb.fade); }); } });
+          rb.fade -= dt * .25;
+          rb.m.scale.setScalar(Math.max(0.01, rb.fade));
           if (rb.fade <= 0) { gardenRoot.remove(rb.m); if (rb.shadow) { gardenRoot.remove(rb.shadow); rb.shadow.geometry.dispose(); rb.shadow.material.dispose(); } if (rb.mixer) { rb.mixer.stopAllAction(); rb.mixer.uncacheRoot(rabbitTemplate); } if (rabbitTemplate && rabbitTemplate.parent === rb.m) rb.m.remove(rabbitTemplate); rabbitPool.splice(i, 1); }
         }
       }
@@ -34668,7 +34783,7 @@ if (!window.__GAME && consented) {
       for (var si2 = 0; si2 < 2; si2++) {
         var palS = slimePal[si2];
         var sg2 = new THREE.Group();
-        var bodyS = new THREE.Mesh(new THREE.SphereGeometry(0.37, 20, 14), new THREE.MeshPhysicalMaterial({ color: palS.body, roughness: 0.08, transparent: true, opacity: 0.56, clearcoat: 1.0, clearcoatRoughness: 0.08, sheen: 0.6, sheenColor: new THREE.Color(0xffffff), emissive: palS.body, emissiveIntensity: 0.07 }));
+        var bodyS = new THREE.Mesh(new THREE.SphereGeometry(0.37, 16, 12), new THREE.MeshStandardMaterial({ color: palS.body, roughness: 0.14, metalness: 0.05, transparent: true, opacity: 0.62, emissive: palS.body, emissiveIntensity: 0.08 }));
         bodyS.scale.set(1.02, 0.95, 1.02);
         bodyS.position.y = 0.35;
         sg2.add(bodyS);
