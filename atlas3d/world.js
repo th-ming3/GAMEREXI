@@ -5,16 +5,16 @@ import { Kit, place, lathe, arc, sweep, canvasTex, rng } from './kit.js';
 import { U } from './env.js';
 import { DETAILS } from './map_details.js';
 
-const R = 180;                 // main island radius, metres
+const R = 210;                 // main island radius, metres
 const SEA = 4;                // sea level y
 const rand = rng(2026);
 
 // ---------------------------------------------------------------- palettes / code textures
 const P = {
-  sea: '#3f9fb8', shallow: '#62c6c5', grass: '#6d9e4f', jungle: '#3f7e46',
+  sea: '#5ec8c9', shallow: '#8fe0da', grass: '#6d9e4f', jungle: '#3f7e46',
   rock: '#8d8775', redRock: '#a4513f', sand: '#d8c089', snow: '#eef3f4',
   lava: '#ff8a2b', cloud: '#f4f6f4', moss: '#5d7f4e', terrace: '#a9bb68',
-  tile: '#a24a34', gold: '#e0b45a', water: '#bfeaf0',
+  tile: '#a24a34', gold: '#e0b45a', water: '#aef0ea',
 };
 function speckle(g, w, h, n, colors, r) {
   for (let i = 0; i < n; i++) {
@@ -31,7 +31,7 @@ const grassTex = canvasTex(512, 512, (g, w, h) => {
 const rockTex = canvasTex(512, 512, (g, w, h) => {
   g.fillStyle = '#8d8775'; g.fillRect(0, 0, w, h);
   speckle(g, w, h, 4000, ['#a09a88', '#736e60', '#b3ad99', '#5f5b50'], rand);
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 140; i++) {
     g.strokeStyle = 'rgba(45,40,32,.25)'; g.lineWidth = 1 + rand() * 2;
     g.beginPath(); g.moveTo(rand() * w, rand() * h); g.lineTo(rand() * w, rand() * h); g.stroke();
   }
@@ -53,7 +53,7 @@ const M = {
   snow: new THREE.MeshStandardMaterial({ map: snowTex, roughness: .85 }),
   water: new THREE.MeshStandardMaterial({ color: P.water, roughness: .2, metalness: .4, transparent: true, opacity: .9 }),
   sea: new THREE.MeshStandardMaterial({ color: P.sea, roughness: .22, metalness: .35 }),
-  leaf: new THREE.MeshStandardMaterial({ color: P.jungle, roughness: .9, flatShading: true }),
+  leaf: new THREE.MeshStandardMaterial({ color: '#5da34a', roughness: .9, flatShading: true }),
   wood: new THREE.MeshStandardMaterial({ color: '#6b452d', roughness: .85 }),
   tile: new THREE.MeshStandardMaterial({ color: P.tile, roughness: .8 }),
   gold: new THREE.MeshStandardMaterial({ color: P.gold, metalness: .5, roughness: .4 }),
@@ -78,19 +78,22 @@ function tree(x, y, z, s, kit) {
       rand()*6.28, ls, ls*.8, ls), leafColors[(rand()*leafColors.length)|0]);
   }
 }
-const leafColors = ['#3f7e46','#4f9250','#356b3a','#6ba85b'].map(c => new THREE.Color(c));
+const leafColors = ['#5da34a','#6fbf58','#4e9440','#83cc6b'].map(c => new THREE.Color(c));
 
 // ---------------------------------------------------------------- terrain heightfield
 function terrainHeight(x, z) {
   const d = Math.hypot(x, z);
   if (d > R) return SEA - 6;
   const fall = Math.max(0, 1 - Math.pow(d / R, 4));
-  let h = 12 + fall * 18;
+  let h = 10 + fall * 10;
   // region hills
   const hills = [
-    [-90, -70, 24, 26], [-110, 20, 30, 22], [90, -80, 34, 28],
-    [110, 60, 30, 30], [70, 100, 42, 34], [-40, 110, 26, 20],
-    [0, 0, 18, 26], [60, -10, 12, 18],
+    [-120, -90, 30, 30],   // banyan cliff (top-left)
+    [-70, -30, 14, 34],    // terraces mid-left
+    [0, -10, 26, 36],      // central waterfall cliff
+    [30, 60, 12, 30],      // red ruins bottom-mid
+    [120, -60, 40, 34],    // snow range right
+    [-40, 90, 16, 26],     // mangrove islets bottom-left
   ];
   for (const [hx, hz, hh, hr] of hills) {
     const dd = Math.hypot(x - hx, z - hz);
@@ -110,8 +113,8 @@ function terrain(group) {
     const y = terrainHeight(x, z);
     pos.setY(i, y);
     if (y < SEA + 2) c.set(P.sand);
-    else if (y > 46) c.set(P.snow);
-    else if (y > 30) c.set(P.rock);
+    else if (y > 34) c.set(P.snow);
+    else if (y > 24) c.set(P.rock);
     else c.set(P.grass);
     col.push(c.r, c.g, c.b);
   }
@@ -139,7 +142,7 @@ function terraces(group) {                       // R1 ruộng bậc thang
   kit.build(group);
 }
 function greatBanyan(group) {                     // R2 Đại Thụ
-  const x = -110, z = 20, y = terrainHeight(x, z);
+  const x = -120, z = -90, y = terrainHeight(x, z);
   const trunk = new THREE.Mesh(lathe([
     [0.001, 0], [7, 0], [6.4, 5], [4.6, 14], [3.2, 24], [1.8, 32], [.001, 34]
   ], 14), M.wood);
@@ -153,9 +156,9 @@ function greatBanyan(group) {                     // R2 Đại Thụ
     rr.rotation.z = Math.sin(a) * .5; rr.rotation.x = -Math.cos(a) * .5;
     group.add(rr);
   }
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 140; i++) {
     const a = rand() * 6.28, d = 2 + rand() * 26;
-    const ls = 3 + rand() * 4;
+    const ls = 4.5 + rand() * 5;
     kit.add('leaf', place(x + Math.sin(a)*d, y + 32 + rand()*8 - d*.2, z + Math.cos(a)*d,
       rand()*6.28, ls, ls*.7, ls), leafColors[(rand()*4)|0]);
   }
@@ -163,7 +166,7 @@ function greatBanyan(group) {                     // R2 Đại Thụ
 }
 function chamTowers(group) {                      // R3 tháp Chăm
   const kit = new Kit().def('finial', new THREE.ConeGeometry(.6, 1.4, 6), M.gold);
-  for (const [x, z, h] of [[80, -70, 26], [96, -84, 20], [66, -92, 16]]) {
+  for (const [x, z, h] of [[30, 70, 18], [44, 84, 14], [18, 88, 12]]) {
     const y = terrainHeight(x, z);
     const t = new THREE.Mesh(lathe([
       [.001,0],[5,0],[4.4,2],[3.6,h*.5],[3.2,h*.78],[4,h*.86],[3.4,h*.94],[.001,h]
@@ -179,7 +182,7 @@ function mangrove(group) {                        // R4 rừng đước
     .def('leaf', new THREE.IcosahedronGeometry(1, 1), M.leaf);
   for (let i = 0; i < 60; i++) {
     const a = rand() * 6.28, d = 10 + rand() * 48;
-    const x = 110 + Math.sin(a)*d, z = 80 + Math.cos(a)*d;
+    const x = -50 + Math.sin(a)*d*0.8, z = 95 + Math.cos(a)*d*0.8;
     const y = SEA + .3 + rand()*1.5;
     kit.add('trunk', place(x, y+2.5, z));
     for (let k = 0; k < 5; k++) {
@@ -192,7 +195,7 @@ function mangrove(group) {                        // R4 rừng đước
   kit.build(group);
 }
 function snowPeaks(group) {                       // R5 Hoàng Liên
-  for (const [x, z, r, h] of [[70,-100,26,64],[92,-86,20,52],[54,-118,22,58]]) {
+  for (const [x, z, r, h] of [[130,-40,24,58],[152,-70,18,46],[110,-80,20,52]]) {
     const y = terrainHeight(x, z);
     group.add(cone(r, h, M.rock, x, y, z, 7));
     const cap = new THREE.Mesh(new THREE.ConeGeometry(r*.42, h*.34, 7), M.snow);
@@ -204,7 +207,7 @@ function snowPeaks(group) {                       // R5 Hoàng Liên
   }
 }
 function volcano(group) {                         // R6 Hắc Sơn
-  const x = -40, z = -110, y = terrainHeight(x, z);
+  const x = -10, z = 130, y = SEA;
   const coneGeo = new THREE.CylinderGeometry(6, 26, 46, 9, 1, true);
   const v = new THREE.Mesh(coneGeo, M.rock); v.position.set(x, y+23, z); group.add(v);
   const crater = new THREE.Mesh(new THREE.CylinderGeometry(6, 4, 2, 9), M.lava);
@@ -215,7 +218,7 @@ function volcano(group) {                         // R6 Hắc Sơn
   const lavaMesh = new THREE.Mesh(flow, M.lava); group.add(lavaMesh);
 }
 function sinkhole(group) {                        // R7 Thiên Khanh
-  const x = 0, z = 10, y = terrainHeight(x, z);
+  const x = 0, z = -20, y = terrainHeight(x, z);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(34, 5, 8, 48), M.rock);
   rim.rotation.x = Math.PI/2; rim.position.set(x, y+2, z); group.add(rim);
   for (let i = 0; i < 3; i++) {
@@ -227,11 +230,22 @@ function sinkhole(group) {                        // R7 Thiên Khanh
   const lake = new THREE.Mesh(new THREE.CircleGeometry(24, 48), M.water);
   lake.rotation.x = -Math.PI/2; lake.position.set(x, y+1, z); group.add(lake);
 }
+function meteorite(group) {
+  const m = new THREE.Mesh(new THREE.IcosahedronGeometry(9, 2), M.rock);
+  m.scale.set(1, .6, 1); m.position.set(90, 125, -60); m.rotation.set(.4, .8, .2);
+  group.add(m);
+  for (let i = 0; i < 8; i++) {
+    const crack = new THREE.Mesh(new THREE.BoxGeometry(6, .35, .5), M.lava);
+    crack.position.set(90 + (Math.random()-.5)*12, 125 + (Math.random()-.5)*7, -60 + (Math.random()-.5)*12);
+    crack.rotation.set(Math.random(), Math.random()*6, Math.random());
+    group.add(crack);
+  }
+}
 function skyIslands(group) {                      // R8 Tiên Giới
   const kit = new Kit().def('rock', new THREE.IcosahedronGeometry(1, 1), M.rock)
     .def('leaf', new THREE.IcosahedronGeometry(1, 1), M.leaf)
     .def('roof', new THREE.ConeGeometry(1, 1, 4), M.gold);
-  for (const [x, y, z, s] of [[60,108,-20,13],[105,92,-46,9],[22,120,-34,7]]) {
+  for (const [x, y, z, s] of [[-60,120,-60,14],[30,135,-90,10],[-110,105,-30,8],[60,110,-140,9]]) {
     const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 2), M.rock);
     rock.scale.set(1, .55, 1); rock.position.set(x, y, z); group.add(rock);
     const cap = new THREE.Mesh(new THREE.CylinderGeometry(s*.7, s*.8, 1.6, 12), M.grass);
@@ -242,7 +256,7 @@ function skyIslands(group) {                      // R8 Tiên Giới
     }
     // palace on top
     const p = box(s*.9, 3.2, s*.6, M.tile, x, y+s*.5+2.6, z); group.add(p);
-    const rf = new THREE.Mesh(new THREE.ConeGeometry(s*.8, 3.4, 4), M.gold);
+    const rf = new THREE.Mesh(new THREE.ConeGeometry(s*1.1, 4.6, 4), M.gold);
     rf.rotation.y = Math.PI/4; rf.position.set(x, y+s*.5+6, z); group.add(rf);
     // waterfall into the void
     const w = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 22), M.water);
@@ -256,14 +270,14 @@ function detailBoards(group) {                   // 64 detail points as floating
     const tex = loader.load(d.img);
     tex.colorSpace = THREE.SRGBColorSpace;
     const mat = new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: .05, side: THREE.DoubleSide, roughness: .9 });
-    const w = 9, h = 6;
+    const w = 6, h = 4;
     const board = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
-    board.position.set(d.x, terrainHeight(d.x, d.z) + 8, d.z);
+    board.position.set(d.x, terrainHeight(d.x, d.z) + 5.5, d.z);
     board.lookAt(0, terrainHeight(d.x, d.z) + 8, 0);
     board.castShadow = true; group.add(board);
     // post + base
     const post = new THREE.Mesh(new THREE.CylinderGeometry(.14, .18, 8, 6), M.wood);
-    post.position.set(d.x, terrainHeight(d.x, d.z) + 4, d.z); group.add(post);
+    post.position.set(d.x, terrainHeight(d.x, d.z) + 2.75, d.z); group.add(post);
     // name plate
     const cnv = document.createElement('canvas'); cnv.width = 512; cnv.height = 64;
     const g = cnv.getContext('2d');
@@ -272,22 +286,36 @@ function detailBoards(group) {                   // 64 detail points as floating
     g.fillText(d.region.toUpperCase() + '-' + d.num + ' · ' + d.name, 256, 42);
     const t = new THREE.CanvasTexture(cnv); t.colorSpace = THREE.SRGBColorSpace;
     const plate = new THREE.Mesh(new THREE.PlaneGeometry(9, 1.1), new THREE.MeshBasicMaterial({ map: t, transparent: true }));
-    plate.position.set(d.x, terrainHeight(d.x, d.z) + 14.6, d.z);
+    plate.position.set(d.x, terrainHeight(d.x, d.z) + 10.1, d.z);
     plate.lookAt(0, terrainHeight(d.x, d.z) + 14.6, 0);
     group.add(plate);
   }
 }
 function clouds(group) {
   const kit = new Kit().def('cloud', new THREE.IcosahedronGeometry(1, 1), M.cloud);
-  for (let i = 0; i < 28; i++) {
+  for (let i = 0; i < 60; i++) {
     const a = rand()*6.28, d = 40 + rand()*220;
     const s = 5 + rand()*12;
-    kit.add('cloud', place(Math.sin(a)*d, 95 + rand()*45, Math.cos(a)*d, rand()*6.28, s*1.8, s*.5, s), new THREE.Color('#ffffff'));
+    kit.add('cloud', place(Math.sin(a)*d, 60 + rand()*70, Math.cos(a)*d, rand()*6.28, s*2.2, s*.6, s), new THREE.Color('#ffffff'));
   }
   kit.build(group);
 }
+function bigWaterfalls(group) {
+  for (const [x, z, w] of [[-6, -34, 9], [12, -28, 7], [-20, -22, 5]]) {
+    const top = terrainHeight(x, z);
+    const fall = new THREE.Mesh(new THREE.PlaneGeometry(w, top - SEA + 6), M.water);
+    fall.position.set(x, SEA + (top - SEA) / 2, z);
+    fall.rotation.x = 0; fall.castShadow = false;
+    fall.material.transparent = true; fall.material.opacity = .8;
+    group.add(fall);
+    // foam ring at base
+    const foam = new THREE.Mesh(new THREE.CircleGeometry(w * .9, 24), M.cloud);
+    foam.rotation.x = -Math.PI / 2; foam.position.set(x, SEA + .3, z);
+    group.add(foam);
+  }
+}
 function waterfalls(group) {                     // central big falls (painting)
-  for (const [x, z] of [[-34, 56], [16, 62]]) {
+  for (const [x, z] of [[0, -30], [10, -18]]) {
     const y = terrainHeight(x, z);
     const w = new THREE.Mesh(new THREE.PlaneGeometry(10, 30), M.water);
     w.position.set(x, y+16, z); group.add(w);
@@ -317,7 +345,9 @@ export function buildWorld() {
   volcano(group);
   sinkhole(group);
   skyIslands(group);
+  meteorite(group);
   waterfalls(group);
+  bigWaterfalls(group);
   boatsAndMarket(group);
   detailBoards(group);
   clouds(group);
