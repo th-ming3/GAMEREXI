@@ -209,34 +209,34 @@ window.__REGION = (function () {
     var w = weights(x, z);
     var spawnFlat = 1 - smooth(Math.hypot(x, z), 28, 95);
 
-    /* 1. Đồng Bằng Kinh Kỳ & Ruộng Bậc Thang (r01) */
+    /* 1. Đồng Bằng Kinh Kỳ & Ruộng Bậc Thang Hoàng Thành (r01) */
     var dCitadel = Math.hypot(sx - (-62), sz - (-53));
-    var citadelHill = 13.5 * Math.exp(-(dCitadel * dCitadel) / 2200);
+    var citadelHill = 26.0 * Math.exp(-(dCitadel * dCitadel) / 3400);
     var dTerrace = Math.hypot(sx - 73, sz - 22);
-    var eastHill = 10.0 * Math.exp(-(dTerrace * dTerrace) / 2400);
+    var eastHill = 12.0 * Math.exp(-(dTerrace * dTerrace) / 2600);
     var r01Raw = 1.4 + citadelHill + eastHill + 1.6 * Math.sin(sx * 0.018 + 0.5) * Math.cos(sz * 0.018 + 0.3);
-    var r01Terrace = Math.floor(r01Raw * 0.85) / 0.85;
-    var h01 = mix(r01Raw, r01Terrace, 0.65) * (1 - spawnFlat * 0.95);
+    var r01Terrace = Math.floor(r01Raw * 0.52) / 0.52;
+    var h01 = mix(r01Raw, r01Terrace, 0.78) * (1 - spawnFlat * 0.95);
 
     /* 2. Đại Thụ Cây Đa Thần & Rừng Núi Đá Vôi (r02) */
     var r2 = R_MAP.r02 || { x: 78.0, z: -1287.0 };
     var rx2 = r2.x / S, rz2 = r2.z / S;
     var d2 = Math.hypot(sx - rx2, sz - rz2);
-    var karst = Math.pow(Math.max(0, Math.sin(sx * 0.036) * Math.cos(sz * 0.036)), 1.6) * 24.0;
-    var valley2 = -1.8 * Math.exp(-Math.pow((sx - rx2) / 38, 2));
-    var h02 = 3.2 + karst + valley2 + 15.0 * Math.exp(-(d2 * d2) / 2800);
+    var karst = Math.pow(Math.max(0, Math.sin(sx * 0.036) * Math.cos(sz * 0.036)), 1.7) * 52.0;
+    var valley2 = -1.5 * Math.exp(-Math.pow((sx - rx2) / 38, 2));
+    var h02 = 3.5 + karst + valley2 + 22.0 * Math.exp(-(d2 * d2) / 3200);
 
     /* 3. Bãi Biển Đá Đỏ & Tháp Chăm Cổ (r03) */
     var r3 = R_MAP.r03 || { x: 1989.0, z: 982.8 };
     var rx3 = r3.x / S, rz3 = r3.z / S;
     var dChampa = Math.hypot(sx - (rx3 - 31.5), sz - (rz3 - 40.5));
     var dOasis = Math.hypot(sx - (rx3 - 73.5), sz - (rz3 + 36.0));
-    var dune = 2.6 + 3.2 * Math.sin(sx * 0.025 + Math.sin(sz * 0.022)) + 1.0 * Math.cos(sz * 0.045);
-    var mesa3 = 16.5 * Math.exp(-(dChampa * dChampa) / 1450);
+    var dune = 2.6 + 4.2 * Math.sin(sx * 0.025 + Math.sin(sz * 0.022)) + 1.2 * Math.cos(sz * 0.045);
+    var mesa3 = 18.5 * Math.exp(-(dChampa * dChampa) / 1450);
     var oasisPit = -3.8 * Math.exp(-(dOasis * dOasis) / 260);
     var h03 = dune + mesa3 + oasisPit;
 
-    /* 4. Rừng Đước Ngập Mặn & Phế Tích Chìm (r04) — giữ đất rìa nổi rõ trên bán đảo, chỉ vịnh đước ngập */
+    /* 4. Rừng Đước Ngập Mặn & Phế Tích Chìm (r04) */
     var h04 = 0.65 + 1.15 * Math.sin(sx * 0.038 + 1.1) * Math.cos(sz * 0.041 - 0.6)
       + 0.45 * Math.sin(sx * 0.08 - sz * 0.07);
 
@@ -245,28 +245,30 @@ window.__REGION = (function () {
     var rx5 = r5.x / S, rz5 = r5.z / S;
     var d5 = Math.hypot(sx - (rx5 + 8), sz - (rz5 - 42));
     var dGlacial = Math.hypot(sx - (rx5 + 48.3), sz - (rz5 - 12.8));
-    var ridge5 = Math.pow(Math.abs(Math.sin(sx * 0.024 + sz * 0.019)), 1.35) * 20.0 + Math.abs(Math.cos(sx * 0.044 - sz * 0.036)) * 10.0;
+    var ridge5 = Math.pow(Math.abs(Math.sin(sx * 0.024 + sz * 0.019)), 1.35) * 34.0 + Math.abs(Math.cos(sx * 0.044 - sz * 0.036)) * 18.0;
     var glacialBasin = -18.0 * Math.exp(-(dGlacial * dGlacial) / 620);
-    var h05 = 7.5 + ridge5 + 36.0 * Math.exp(-(d5 * d5) / 5600) + glacialBasin;
+    var h05 = 10.5 + ridge5 + 72.0 * Math.exp(-(d5 * d5) / 6400) + glacialBasin;
 
-    /* 6. Hắc Sơn Núi Lửa Huyền Thiết (r06) — chóp Hỏa Sơn cao rực + miệng hố sụt rộng chứa hồ dung nham */
+    /* 6. Hắc Sơn Núi Lửa Huyền Thiết (r06) — khối đá núi lửa sắc cạnh */
     var r6 = R_MAP.r06 || { x: 1989.0, z: -1731.6 };
     var rx6 = r6.x / S, rz6 = r6.z / S;
     var d6 = Math.hypot(sx - (rx6 + 10.5), sz - (rz6 - 33.0));
-    var cone6 = 40.0 * Math.exp(-Math.pow(d6 / 52, 2));
-    var crater6 = -23.0 * Math.exp(-(d6 * d6) / 480);
-    var h06 = 5.5 + cone6 + crater6 + 3.2 * Math.abs(Math.sin(sx * 0.055) * Math.cos(sz * 0.052));
+    var cragJags6 = 1 + 0.35 * Math.sin(Math.atan2(sz - (rz6 - 33), sx - (rx6 + 10.5)) * 5.0);
+    var cone6 = 66.0 * cragJags6 * Math.exp(-Math.pow(d6 / 58, 2));
+    var crater6 = -28.0 * Math.exp(-(d6 * d6) / 480);
+    var h06 = 8.0 + cone6 + crater6 + 5.5 * Math.abs(Math.sin(sx * 0.065) * Math.cos(sz * 0.062));
 
-    /* 7. Thiên Khanh Sơn Đoòng & Vực Ngọc Bích (r07) — lòng chảo hố sụt sâu ôm quanh đảo bậc thang r7_01 */
+    /* 7. Thiên Khanh Sơn Đoòng & Vực Ngọc Bích (r07) — hõm vòng cung chữ U mở phía Nam */
     var r7 = R_MAP.r07 || { x: 2067.0, z: -257.4 };
     var rx7 = r7.x / S, rz7 = r7.z / S;
     var cx7 = rx7, cz7 = rz7 + 8.0;
     var d7 = Math.hypot((sx - cx7) * 0.92, (sz - cz7) * 1.12);
     var dIsle7 = Math.hypot(sx - (rx7 + 3.7), sz - (rz7 + 21.0));
-    var sinkhole = -12.5 * (1 - smooth(d7, 46, 58));
-    var centerIsle7 = 14.5 * Math.exp(-(dIsle7 * dIsle7) / 180);
-    var rim7 = 28.0 * Math.exp(-Math.pow((d7 - 68) / 18, 2));
-    var h07 = 4.5 + rim7 + sinkhole + centerIsle7 + 1.8 * Math.sin(sx * 0.06 + sz * 0.05);
+    var sinkhole = -14.0 * (1 - smooth(d7, 48, 62));
+    var centerIsle7 = 16.0 * Math.exp(-(dIsle7 * dIsle7) / 180);
+    var northOpen = sz < cz7 + 22 ? 1.0 : mix(1.0, 0.14, smooth(sz - (cz7 + 22), 0, 26));
+    var rim7 = 52.0 * northOpen * Math.exp(-Math.pow((d7 - 70) / 19, 2));
+    var h07 = 4.5 + rim7 + sinkhole + centerIsle7 + 2.4 * Math.sin(sx * 0.06 + sz * 0.05);
 
     /* 8. Tiên Giới Đảo Bay (nền đất/biển bên dưới vùng r08) */
     var h08 = 1.2 + 2.5 * Math.sin(sx * 0.03) * Math.cos(sz * 0.03);
@@ -277,7 +279,7 @@ window.__REGION = (function () {
     /* San phẳng nhẹ nền sân các cụm di tích chính trên dốc núi để công trình không hẫng chân */
     if (w.r02 > 0.25) {
       var dP2 = Math.hypot(x - 221.0, z + 1480.8);
-      if (dP2 < 58.0) landH = mix(landH, 62.0, 1.0 - smooth(dP2, 26.0, 58.0));
+      if (dP2 < 65.0) landH = mix(landH, Math.max(landH, 92.0), 1.0 - smooth(dP2, 28.0, 65.0));
     }
     if (w.r03 > 0.25) {
       var dP3 = Math.hypot(x - 1831.5, z - 780.3);
@@ -21151,12 +21153,13 @@ window.__createTerrain = function (context) {
   return { hillY: hillY, hillYWorld: hillYWorld, terrainColor: terrainColor, groundGeo: buildGroundGeometry() };
 };
 
-/* Horizon Mega-Silhouettes (Khop atlas_img_00.webp): Dai Thu Cay Da, Hac Son Nui Lua, Dinh Tuyet, Tien Gioi Thap Bay, Tam Thac Son Doong */
+/* Horizon Mega-Dioramas (Khop media_1795762496192_85a8b75e.webp): Ruong Bac Thang R01, Dai Thu & Da Voi R02, Thac Son Doong R07, Thap Cham & Da Do R03, Rung Duoc R04, Hac Son Nui Lua R06, Dinh Tuyet R05, Dao Bay Tien Gioi R08 & Cum May */
 window.__initMegaLandmarks = function (gardenRoot) {
   if (!gardenRoot || !window.THREE || window.__MEGA_LANDMARKS) return;
   var DATA = window.__WORLD_MAP_DATA;
   if (!DATA || !DATA.regions) return;
   var hillY = window.__hillY || function () { return 0; };
+  var SEA_Y = window.__REGION ? window.__REGION.SEA_LEVEL : -0.8;
   var gMega = new THREE.Group();
   gMega.name = 'megaLandmarks';
   gardenRoot.add(gMega);
@@ -21165,163 +21168,335 @@ window.__initMegaLandmarks = function (gardenRoot) {
     var r = DATA.regions.filter(function (x) { return x.id === id; })[0];
     return r ? { x: r.x, z: r.z } : { x: fx, z: fz };
   }
+  function addM(grp, geo, mat, x, y, z, rx, ry, rz, sx, sy, sz) {
+    var m = new THREE.Mesh(geo, mat);
+    m.position.set(x || 0, y || 0, z || 0);
+    if (rx || ry || rz) m.rotation.set(rx || 0, ry || 0, rz || 0);
+    if (sx !== undefined) m.scale.set(sx, sy === undefined ? sx : sy, sz === undefined ? sx : sz);
+    grp.add(m);
+    return m;
+  }
+  function mergeByMat(grp) {
+    grp.updateMatrixWorld(true);
+    var buckets = new Map();
+    grp.traverse(function (o) {
+      if (!o.isMesh || !o.geometry || !o.material) return;
+      var arr = buckets.get(o.material);
+      if (!arr) { arr = []; buckets.set(o.material, arr); }
+      arr.push(o);
+    });
+    var out = new THREE.Group();
+    buckets.forEach(function (list, mat) {
+      var vSum = 0, iSum = 0;
+      list.forEach(function (m) {
+        var g = m.geometry;
+        vSum += g.attributes.position.count;
+        iSum += g.index ? g.index.count : g.attributes.position.count;
+      });
+      var pos = new Float32Array(vSum * 3), nor = new Float32Array(vSum * 3);
+      var idx = new Uint32Array(iSum);
+      var vo = 0, io = 0, v3 = new THREE.Vector3(), n3 = new THREE.Vector3(), nm = new THREE.Matrix3();
+      list.forEach(function (m) {
+        var g = m.geometry, pa = g.attributes.position, na = g.attributes.normal;
+        nm.getNormalMatrix(m.matrixWorld);
+        for (var i = 0; i < pa.count; i++) {
+          v3.fromBufferAttribute(pa, i).applyMatrix4(m.matrixWorld);
+          pos[(vo + i) * 3] = v3.x; pos[(vo + i) * 3 + 1] = v3.y; pos[(vo + i) * 3 + 2] = v3.z;
+          if (na) n3.fromBufferAttribute(na, i).applyMatrix3(nm).normalize(); else n3.set(0, 1, 0);
+          nor[(vo + i) * 3] = n3.x; nor[(vo + i) * 3 + 1] = n3.y; nor[(vo + i) * 3 + 2] = n3.z;
+        }
+        if (g.index) {
+          for (var j = 0; j < g.index.count; j++) idx[io + j] = vo + g.index.getX(j);
+          io += g.index.count;
+        } else {
+          for (var k = 0; k < pa.count; k++) idx[io + k] = vo + k;
+          io += pa.count;
+        }
+        vo += pa.count;
+      });
+      var bg = new THREE.BufferGeometry();
+      bg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      bg.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+      bg.setIndex(new THREE.BufferAttribute(idx, 1));
+      out.add(new THREE.Mesh(bg, mat));
+    });
+    return out;
+  }
 
-  var mBark = new THREE.MeshStandardMaterial({ color: 0x5c3d24, roughness: 0.92, flatShading: true });
-  var mCrownA = new THREE.MeshStandardMaterial({ color: 0x2f6e2b, roughness: 0.85, flatShading: true });
-  var mCrownB = new THREE.MeshStandardMaterial({ color: 0x4f9434, roughness: 0.82, flatShading: true });
-  var mCrownSun = new THREE.MeshStandardMaterial({ color: 0x7cb842, roughness: 0.78, flatShading: true });
-  var mObsidian = new THREE.MeshStandardMaterial({ color: 0x242026, roughness: 0.92, flatShading: true });
-  var mLava = new THREE.MeshStandardMaterial({ color: 0xff6e1a, emissive: 0xff4500, emissiveIntensity: 1.7, roughness: 0.25 });
-  var mSmoke = new THREE.MeshStandardMaterial({ color: 0xf4dbd4, transparent: true, opacity: 0.62, roughness: 0.95, depthWrite: false });
-  var mSnow = new THREE.MeshStandardMaterial({ color: 0xf2f7fc, roughness: 0.62, flatShading: true });
-  var mGranite = new THREE.MeshStandardMaterial({ color: 0x505a62, roughness: 0.90, flatShading: true });
-  var mGold = new THREE.MeshStandardMaterial({ color: 0xe3ad2b, roughness: 0.42, metalness: 0.25 });
-  var mLacquer = new THREE.MeshStandardMaterial({ color: 0xa62e1e, roughness: 0.6 });
-  var mFall = new THREE.MeshStandardMaterial({ color: 0xdff8ff, emissive: 0x7ae2f5, emissiveIntensity: 0.55, transparent: true, opacity: 0.85 });
-  var mCloud = new THREE.MeshStandardMaterial({ color: 0xf7fbff, roughness: 0.95, transparent: true, opacity: 0.72, depthWrite: false });
+  /* Vật liệu thống nhất tông sơn minh họa Đại Việt rực rỡ */
+  var M = {
+    bark: new THREE.MeshStandardMaterial({ color: 0x5c3c22, roughness: 0.90, flatShading: true }),
+    crownDark: new THREE.MeshStandardMaterial({ color: 0x226829, roughness: 0.84, flatShading: true }),
+    crownMid: new THREE.MeshStandardMaterial({ color: 0x3b8f33, roughness: 0.82, flatShading: true }),
+    crownSun: new THREE.MeshStandardMaterial({ color: 0x74be3e, roughness: 0.78, flatShading: true }),
+    riceGold: new THREE.MeshStandardMaterial({ color: 0xc8bf2d, roughness: 0.82, flatShading: true }),
+    riceGreen: new THREE.MeshStandardMaterial({ color: 0x45922e, roughness: 0.84, flatShading: true }),
+    karst: new THREE.MeshStandardMaterial({ color: 0x627358, roughness: 0.90, flatShading: true }),
+    limestone: new THREE.MeshStandardMaterial({ color: 0x9b845e, roughness: 0.90, flatShading: true }),
+    redRock: new THREE.MeshStandardMaterial({ color: 0xb64526, roughness: 0.86, flatShading: true }),
+    terracotta: new THREE.MeshStandardMaterial({ color: 0x9e3822, roughness: 0.82, flatShading: true }),
+    stoneLight: new THREE.MeshStandardMaterial({ color: 0xd6cdb8, roughness: 0.85, flatShading: true }),
+    mossStone: new THREE.MeshStandardMaterial({ color: 0x5e7c4e, roughness: 0.88, flatShading: true }),
+    obsidian: new THREE.MeshStandardMaterial({ color: 0x262128, roughness: 0.92, flatShading: true }),
+    volcanicAsh: new THREE.MeshStandardMaterial({ color: 0x4b342d, roughness: 0.90, flatShading: true }),
+    lava: new THREE.MeshStandardMaterial({ color: 0xff7b1a, emissive: 0xff4800, emissiveIntensity: 1.85, roughness: 0.25 }),
+    smoke: new THREE.MeshStandardMaterial({ color: 0xf6dcd0, transparent: true, opacity: 0.68, roughness: 0.95, depthWrite: false }),
+    granite: new THREE.MeshStandardMaterial({ color: 0x4b5866, roughness: 0.88, flatShading: true }),
+    snow: new THREE.MeshStandardMaterial({ color: 0xf4f9ff, roughness: 0.58, flatShading: true }),
+    gold: new THREE.MeshStandardMaterial({ color: 0xe6af2e, roughness: 0.38, metalness: 0.25 }),
+    lacquer: new THREE.MeshStandardMaterial({ color: 0xb42f1e, roughness: 0.58 }),
+    roofBlue: new THREE.MeshStandardMaterial({ color: 0x265c8a, roughness: 0.52 }),
+    woodSail: new THREE.MeshStandardMaterial({ color: 0xd9a857, roughness: 0.80, side: THREE.DoubleSide }),
+    hullWood: new THREE.MeshStandardMaterial({ color: 0x6c4223, roughness: 0.86 }),
+    fall: new THREE.MeshStandardMaterial({ color: 0xe2fbff, emissive: 0x8ae8ff, emissiveIntensity: 0.58, transparent: true, opacity: 0.86 }),
+    cloud: new THREE.MeshStandardMaterial({ color: 0xfafcff, roughness: 0.92, flatShading: true })
+  };
 
-  /* 1. R02 — ĐẠI THỤ CÂY ĐA THẦN KHỔNG LỒ (~340m cao, đứng sau r02_01 không che miếu cổ) */
-  (function buildWorldBanyan() {
+  /* 1. R01 — ĐỒI RUỘNG BẬC THANG HOÀNG THÀNH + ĐẠI ĐIỆN SON VÀNG + TAM QUAN & TRE TRÚC */
+  (function buildCitadelTerraces() {
+    var cg = new THREE.Group(), cx = -310.5, cz = -264.0, cy = Math.max(8, hillY(cx, cz) - 48);
+    cg.position.set(cx, cy, cz);
+    for (var ti = 0; ti < 8; ti++) {
+      var rTop = 195 - ti * 17, rBot = rTop + 14;
+      addM(cg, new THREE.CylinderGeometry(rTop, rBot, 7.2, 20), ti % 2 ? M.riceGold : M.riceGreen, 0, ti * 6.4, 0);
+    }
+    var topY = 8 * 6.4 + 2;
+    addM(cg, new THREE.BoxGeometry(108, 12, 86), M.stoneLight, 0, topY, 0);
+    addM(cg, new THREE.BoxGeometry(82, 24, 58), M.lacquer, 0, topY + 18, -4);
+    addM(cg, new THREE.ConeGeometry(68, 22, 4), M.lacquer, 0, topY + 41, -4, 0, Math.PI / 4, 0, 1.25, 1, 0.92);
+    addM(cg, new THREE.BoxGeometry(58, 18, 42), M.lacquer, 0, topY + 42, -4);
+    addM(cg, new THREE.ConeGeometry(50, 20, 4), M.gold, 0, topY + 61, -4, 0, Math.PI / 4, 0, 1.22, 1, 0.92);
+    /* Đại lộ bậc thang đá dẫn xuống cổng Tam Quan */
+    addM(cg, new THREE.BoxGeometry(24, 14, 155), M.stoneLight, 0, topY * 0.45, 96, -0.35, 0, 0);
+    addM(cg, new THREE.BoxGeometry(64, 24, 14), M.stoneLight, 0, 10, 168);
+    addM(cg, new THREE.BoxGeometry(72, 16, 22), M.lacquer, 0, 28, 168);
+    addM(cg, new THREE.ConeGeometry(46, 16, 4), M.lacquer, 0, 43, 168, 0, Math.PI / 4, 0, 1.5, 1, 0.7);
+    /* Rừng trúc xanh đậm chân đồi */
+    for (var bi = 0; bi < 9; bi++) {
+      var bx = -125 + bi * 22, bz = 128 + (bi % 3) * 26;
+      addM(cg, new THREE.DodecahedronGeometry(26 + (bi % 2) * 8, 1), bi % 2 ? M.crownSun : M.crownMid, bx, 18, bz, 0, 0, 0, 1.0, 1.25, 1.0);
+    }
+    gMega.add(mergeByMat(cg));
+  })();
+
+  /* 2. R02 — ĐẠI THỤ CÂY ĐA THẦN KHỔNG LỒ (TÁN ~400M + RỄ CONG) & 6 ĐỈNH ĐÁ VÔI NHỌN */
+  (function buildWorldBanyanAndKarsts() {
     var r2 = regPos('r02', 78, -1287);
-    var bx = r2.x + 95, bz = r2.z - 335, by = hillY(bx, bz);
-    var bg = new THREE.Group();
-    bg.position.set(bx, by - 12, bz);
+    var bg = new THREE.Group(), bx = r2.x - 20, bz = r2.z - 125;
+    bg.position.set(bx, hillY(bx, bz) - 18, bz);
     for (var i = 0; i < 8; i++) {
       var a = (i / 8) * Math.PI * 2;
-      var root = new THREE.Mesh(new THREE.CylinderGeometry(11, 22, 165, 7), mBark);
-      root.position.set(Math.cos(a) * 34, 78, Math.sin(a) * 34);
-      root.rotation.z = Math.cos(a) * 0.24;
-      root.rotation.x = -Math.sin(a) * 0.24;
-      bg.add(root);
+      var crv = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(Math.cos(a) * 18, 145, Math.sin(a) * 18),
+        new THREE.Vector3(Math.cos(a + 0.12) * 44, 65, Math.sin(a + 0.12) * 44),
+        new THREE.Vector3(Math.cos(a + 0.2) * 95, -5, Math.sin(a + 0.2) * 95)
+      ]);
+      addM(bg, new THREE.TubeGeometry(crv, 7, 13, 6, false), M.bark);
     }
-    var core = new THREE.Mesh(new THREE.CylinderGeometry(32, 46, 195, 9), mBark);
-    core.position.y = 95; bg.add(core);
-    var puffs = [
-      [0, 232, 0, 148, 0.56, mCrownA], [-108, 206, 48, 98, 0.52, mCrownB], [116, 212, -38, 102, 0.52, mCrownB],
-      [-48, 258, -92, 92, 0.55, mCrownSun], [66, 268, 74, 84, 0.55, mCrownSun], [0, 294, 0, 76, 0.58, mCrownSun]
-    ];
-    puffs.forEach(function (pf) {
-      var c = new THREE.Mesh(new THREE.DodecahedronGeometry(pf[3], 1), pf[5]);
-      c.scale.set(1.24, pf[4], 1.2);
-      c.position.set(pf[0], pf[1], pf[2]);
-      bg.add(c);
+    addM(bg, new THREE.CylinderGeometry(36, 54, 240, 9), M.bark, 0, 120, 0);
+    var boughs = [[0, 278, 0, 175, 0.52, M.crownDark], [-135, 248, 52, 118, 0.50, M.crownMid], [142, 255, -42, 122, 0.50, M.crownMid],
+      [-55, 308, -110, 108, 0.54, M.crownSun], [75, 318, 86, 102, 0.54, M.crownSun], [0, 345, 0, 94, 0.56, M.crownSun]];
+    boughs.forEach(function (pf) {
+      addM(bg, new THREE.DodecahedronGeometry(pf[3], 1), pf[5], pf[0], pf[1], pf[2], 0, 0, 0, 1.24, pf[4], 1.18);
     });
-    for (var vi = 0; vi < 12; vi++) {
-      var va = vi * 0.52 + 0.2, vr = 78 + (vi % 3) * 28;
-      var vine = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.0, 138, 5), mBark);
-      vine.position.set(Math.cos(va) * vr, 138, Math.sin(va) * vr);
-      bg.add(vine);
+    for (var vi = 0; vi < 18; vi++) {
+      var va = vi * 0.35, vr = 88 + (vi % 3) * 34;
+      addM(bg, new THREE.CylinderGeometry(2.2, 1.1, 165, 5), M.bark, Math.cos(va) * vr, 165, Math.sin(va) * vr);
     }
-    gMega.add(bg);
+    /* 6 Ngọn Núi Đá Vôi Sugarloaf sừng sững bên trái và trung-bắc */
+    var karsts = [
+      [-620, 420, 130, 320], [-420, 160, 105, 255], [440, 120, 115, 265],
+      [620, -140, 95, 220], [-280, -320, 110, 275], [-850, 220, 120, 290]
+    ];
+    karsts.forEach(function (k, ki) {
+      var kx = bx + k[0], kz = bz + k[1], ky = Math.max(0, hillY(kx, kz) - 20) - bg.position.y;
+      addM(bg, new THREE.ConeGeometry(k[2], k[3], 7), M.karst, k[0], ky + k[3] * 0.45, k[1], 0, ki * 0.7, 0);
+      addM(bg, new THREE.DodecahedronGeometry(k[2] * 0.62, 1), M.crownMid, k[0], ky + k[3] * 0.72, k[1], 0, 0, 0, 1.0, 1.35, 1.0);
+    });
+    gMega.add(mergeByMat(bg));
   })();
 
-  /* 2. R06 — NÚI LỬA HẮC SƠN PHUN MẠCH DUNG NHAM RỰC SÁNG */
-  (function buildObsidianVolcano() {
+  /* 3. R07 — THIÊN KHANH SƠN ĐOÒNG HÌNH VÒNG CUNG MỞ NAM + 3 THÁC BẠC + PHẾ TÍCH LÒNG HỒ */
+  (function buildSonDoongAmphitheater() {
+    var r7 = regPos('r07', 2067, -257.4);
+    var sg = new THREE.Group(), cx = r7.x, cz = r7.z + 40;
+    sg.position.set(cx, 0, cz);
+    /* Vách đá vôi vòng cung chữ U (từ góc Tây sang Bắc sang Đông, mở về phía Nam) */
+    for (var i = 0; i <= 14; i++) {
+      var ang = Math.PI * 0.88 + (i / 14) * Math.PI * 1.24;
+      var rx = Math.cos(ang) * 265, rz = Math.sin(ang) * 235;
+      var hCliff = 148 + ((i % 3) * 26);
+      addM(sg, new THREE.CylinderGeometry(36, 68, hCliff, 7), M.limestone, rx, hCliff * 0.42, rz, 0, ang, 0);
+      addM(sg, new THREE.DodecahedronGeometry(46, 1), i % 2 ? M.crownMid : M.crownSun, rx, hCliff * 0.88, rz, 0, 0, 0, 1.25, 0.65, 1.15);
+    }
+    /* 3 Thác nước lớn đổ từ vách Bắc xuống hồ */
+    [-110, 0, 110].forEach(function (ox, idx) {
+      var wz = -222 + Math.abs(ox) * 0.28;
+      addM(sg, new THREE.BoxGeometry(idx === 1 ? 30 : 22, 138, 10), M.fall, ox, 66, wz);
+      addM(sg, new THREE.DodecahedronGeometry(26, 1), M.cloud, ox, 4, wz + 12, 0, 0, 0, 1.7, 0.42, 1.4);
+    });
+    /* Vòm đá rêu cổ & đảo nhỏ giữa hồ ngọc */
+    [-85, 85, 0].forEach(function (ax, ai) {
+      var az = ai === 2 ? 75 : -25;
+      addM(sg, new THREE.BoxGeometry(10, 28, 10), M.mossStone, ax - 14, 10, az);
+      addM(sg, new THREE.BoxGeometry(10, 28, 10), M.mossStone, ax + 14, 10, az);
+      addM(sg, new THREE.BoxGeometry(38, 10, 12), M.mossStone, ax, 26, az);
+    });
+    gMega.add(mergeByMat(sg));
+  })();
+
+  /* 4. R03 — VÁCH ĐÁ ĐỎ TẠC SẮC, 3 THÁP CHĂM & THUYỀN BUỒM CÁNH DƠI */
+  (function buildChampaCragsAndPort() {
+    var r3 = regPos('r03', 1989, 982.8);
+    var rg = new THREE.Group(); rg.position.set(r3.x, 0, r3.z);
+    for (var ci = 0; ci < 16; ci++) {
+      var ca = -Math.PI * 0.15 + (ci / 15) * Math.PI * 1.3;
+      var rad = 260 + (ci % 3) * 75, px = Math.cos(ca) * rad - 80, pz = Math.sin(ca) * rad * 0.68 - 40;
+      var sh = 55 + (ci % 4) * 28;
+      addM(rg, new THREE.ConeGeometry(34 + (ci % 3) * 12, sh, 5), M.redRock, px, sh * 0.38, pz, (ci % 2 ? 0.14 : -0.12), ca, (ci % 3 - 1) * 0.16);
+    }
+    /* 3 Tháp Chăm sừng sững trên vách đỏ */
+    [[-160, 48, -140, 1.15], [-95, 42, -90, 0.85], [-220, 44, -85, 0.88]].forEach(function (tp) {
+      var tx = tp[0], ty = tp[1], tz = tp[2], sc = tp[3];
+      for (var lv = 0; lv < 4; lv++) {
+        var bw = (32 - lv * 6) * sc, bh = 22 * sc;
+        addM(rg, new THREE.BoxGeometry(bw, bh, bw), M.terracotta, tx, ty + lv * bh * 0.92, tz);
+      }
+      addM(rg, new THREE.ConeGeometry(12 * sc, 24 * sc, 4), M.gold, tx, ty + 4 * 20 * sc, tz, 0, Math.PI / 4, 0);
+    });
+    /* 2 Thuyền buồm cánh dơi lớn trên vịnh xanh */
+    [[-340, SEA_Y + 2, 340, 0.55], [140, SEA_Y + 2, 290, -0.45]].forEach(function (bt) {
+      var bg = new THREE.Group(); bg.position.set(bt[0], bt[1], bt[2]); bg.rotation.y = bt[3];
+      addM(bg, new THREE.CylinderGeometry(14, 8, 68, 8), M.hullWood, 0, 4, 0, Math.PI / 2, 0, 0, 1, 1, 0.55);
+      addM(bg, new THREE.CylinderGeometry(1.8, 2.2, 72, 6), M.bark, 0, 38, -4);
+      addM(bg, new THREE.BoxGeometry(2.5, 56, 44), M.woodSail, 0, 42, 10, 0.14, 0, 0);
+      addM(bg, new THREE.BoxGeometry(2.2, 42, 32), M.woodSail, 0, 34, -20, -0.1, 0, 0);
+      rg.add(bg);
+    });
+    gMega.add(mergeByMat(rg));
+  })();
+
+  /* 5. R04 — RỪNG ĐƯỚC RỄ VÒM NGẬP NƯỚC & CỔNG ĐÁ RÊU ĐÔNG NAM */
+  (function buildMangroveLagoon() {
+    var r4 = regPos('r04', 4173, 842.4);
+    var mg = new THREE.Group(); mg.position.set(r4.x, SEA_Y, r4.z);
+    for (var mi = 0; mi < 14; mi++) {
+      var mx = ((mi % 5) - 2) * 195 + (mi % 2) * 45, mz = (Math.floor(mi / 5) - 1) * 185 + (mi % 3) * 35;
+      var sc = 0.85 + (mi % 3) * 0.28;
+      for (var ri = 0; ri < 6; ri++) {
+        var ra = (ri / 6) * Math.PI * 2;
+        addM(mg, new THREE.CylinderGeometry(4 * sc, 6 * sc, 46 * sc, 5), M.bark, mx + Math.cos(ra) * 16 * sc, 20 * sc, mz + Math.sin(ra) * 16 * sc, -Math.sin(ra) * 0.45, 0, Math.cos(ra) * 0.45);
+      }
+      addM(mg, new THREE.DodecahedronGeometry(46 * sc, 1), mi % 2 ? M.crownMid : M.crownSun, mx, 52 * sc, mz, 0, 0, 0, 1.3, 0.62, 1.25);
+    }
+    [[-140, 120], [180, -80], [290, 190], [-280, -140]].forEach(function (rp, ri) {
+      addM(mg, new THREE.BoxGeometry(14, 48, 14), M.mossStone, rp[0] - 20, 22, rp[1]);
+      addM(mg, new THREE.BoxGeometry(14, 48, 14), M.mossStone, rp[0] + 20, 22, rp[1]);
+      addM(mg, new THREE.BoxGeometry(62, 14, 16), M.mossStone, rp[0], 46, rp[1], 0, ri * 0.4, 0);
+    });
+    gMega.add(mergeByMat(mg));
+  })();
+
+  /* 6. R06 — NÚI LỬA HẮC SƠN ĐÁ LỞM CHỞM RỰC MẠCH DUNG NHAM (KHÔNG PHẢI HÌNH NÓN TRƠN) */
+  (function buildVolcanoMassif() {
     var r6 = regPos('r06', 1989, -1731.6);
-    var vx = r6.x + 52, vz = r6.z - 165, vy = hillY(vx, vz);
-    var vg = new THREE.Group();
-    vg.position.set(vx, Math.max(20, vy - 20), vz);
-    var cone = new THREE.Mesh(new THREE.CylinderGeometry(46, 215, 255, 14, 1, true), mObsidian);
-    cone.position.y = 127; vg.add(cone);
-    var crater = new THREE.Mesh(new THREE.CircleGeometry(45, 14), mLava);
-    crater.rotation.x = -Math.PI / 2; crater.position.y = 248; vg.add(crater);
-    for (var fi = 0; fi < 6; fi++) {
-      var arm = new THREE.Group();
-      arm.rotation.y = -(fi * (Math.PI / 3) + 0.3);
-      var vein = new THREE.Mesh(new THREE.BoxGeometry(11, 215, 14), mLava);
-      vein.position.set(126, 114, 0);
-      vein.rotation.z = 0.585;
-      arm.add(vein);
+    var vg = new THREE.Group(), vx = r6.x + 52, vz = r6.z - 155;
+    vg.position.set(vx, Math.max(20, hillY(vx, vz) - 35), vz);
+    /* 12 Khối đá núi lửa nhọn vát nghiêng chụm lại tạo chóp lởm chởm tự nhiên */
+    for (var i = 0; i < 12; i++) {
+      var a = (i / 12) * Math.PI * 2, rad = 85 + (i % 3) * 35;
+      var h = 230 + (i % 4) * 42;
+      addM(vg, new THREE.ConeGeometry(88 + (i % 2) * 26, h, 5), i % 3 === 0 ? M.volcanicAsh : M.obsidian,
+        Math.cos(a) * rad, h * 0.46, Math.sin(a) * rad,
+        -Math.sin(a) * 0.24, a, Math.cos(a) * 0.24);
+    }
+    /* Lõi miệng núi lửa & nhánh dung nham chẻ xuống sườn */
+    addM(vg, new THREE.DodecahedronGeometry(46, 0), M.lava, 0, 205, 0, 0, 0, 0, 1.3, 0.45, 1.1);
+    for (var fi = 0; fi < 5; fi++) {
+      var fa = 0.6 + fi * 1.15;
+      var arm = new THREE.Group(); arm.rotation.y = -fa;
+      addM(arm, new THREE.BoxGeometry(14, 185, 12), M.lava, 92, 130, 0, 0, 0, 0.56);
       vg.add(arm);
     }
-    for (var si = 0; si < 5; si++) {
-      var sm = new THREE.Mesh(new THREE.DodecahedronGeometry(30 + si * 11, 1), mSmoke);
-      sm.scale.set(1.4, 0.72, 1.3);
-      sm.position.set(si * 20, 275 + si * 46, -si * 14);
-      vg.add(sm);
+    for (var si = 0; si < 6; si++) {
+      addM(vg, new THREE.DodecahedronGeometry(34 + si * 12, 1), M.smoke, si * 28, 255 + si * 48, -si * 18, 0, 0, 0, 1.5, 0.72, 1.35);
     }
-    gMega.add(vg);
+    gMega.add(mergeByMat(vg));
   })();
 
-  /* 3. R05 — DÃY ĐỈNH TUYẾT HOÀNG LIÊN SẮC NHỌN TRONG BIỂN MÂY */
-  (function buildSnowAlps() {
+  /* 7. R05 — DÃY ĐỈNH TUYẾT HOÀNG LIÊN + ĐƯỜNG BẬC THANG + CỔ TỰ ĐỈNH VÀNG & NGÓI XANH */
+  (function buildSnowAlpsAndTemples() {
     var r5 = regPos('r05', 3993.6, -1123.2);
+    var ag = new THREE.Group(); ag.position.set(r5.x, 12, r5.z);
     var peaks = [
-      [r5.x + 20, r5.z - 180, 110, 215],
-      [r5.x - 160, r5.z - 90, 88, 168],
-      [r5.x + 190, r5.z - 60, 94, 182],
-      [r5.x + 40, r5.z + 110, 76, 138]
+      [15, -180, 145, 340], [-195, -90, 122, 275], [220, -60, 128, 295],
+      [60, 120, 108, 235], [-110, 130, 96, 195], [340, 80, 102, 225], [-310, -180, 110, 240]
     ];
     peaks.forEach(function (pk, idx) {
-      var pg = new THREE.Group();
-      pg.position.set(pk[0], 8, pk[1]);
-      var rock = new THREE.Mesh(new THREE.ConeGeometry(pk[2], pk[3], 6), mGranite);
-      rock.position.y = pk[3] * 0.5; rock.rotation.y = idx * 0.5; pg.add(rock);
-      var cap = new THREE.Mesh(new THREE.ConeGeometry(pk[2] * 0.56, pk[3] * 0.52, 6), mSnow);
-      cap.position.y = pk[3] * 0.76; cap.rotation.y = idx * 0.5; pg.add(cap);
-      if (idx === 0) {
-        var crest = new THREE.Mesh(new THREE.ConeGeometry(16, 22, 4), mGold);
-        crest.position.y = pk[3] + 8; crest.rotation.y = Math.PI / 4; pg.add(crest);
-      }
-      gMega.add(pg);
+      addM(ag, new THREE.ConeGeometry(pk[2], pk[3], 6), M.granite, pk[0], pk[3] * 0.45, pk[1], 0, idx * 0.5, 0);
+      addM(ag, new THREE.ConeGeometry(pk[2] * 0.58, pk[3] * 0.54, 6), M.snow, pk[0], pk[3] * 0.74, pk[1], 0, idx * 0.5, 0);
     });
+    /* Chùa Vàng trên đỉnh & Điện Ngói Xanh sườn Đông + Bậc đá uốn */
+    addM(ag, new THREE.BoxGeometry(52, 22, 38), M.lacquer, 15, 295, -180);
+    addM(ag, new THREE.ConeGeometry(44, 24, 4), M.gold, 15, 318, -180, 0, Math.PI / 4, 0);
+    addM(ag, new THREE.BoxGeometry(46, 20, 34), M.stoneLight, 340, 195, 80);
+    addM(ag, new THREE.ConeGeometry(40, 22, 4), M.roofBlue, 340, 216, 80, 0, Math.PI / 4, 0);
+    for (var st = 0; st < 8; st++) {
+      var stT = st / 7;
+      addM(ag, new THREE.BoxGeometry(22, 6, 48), M.stoneLight, 15 - Math.sin(stT * 2.5) * 45, 65 + stT * 215, 95 - stT * 255, 0.45, stT * 0.4, 0);
+    }
+    gMega.add(mergeByMat(ag));
   })();
 
-  /* 4. R07 — TAM THÁC SƠN ĐOÒNG & HỒ NGỌC BÍCH HÙNG VĨ */
-  (function buildSonDoongFalls() {
-    var r7 = regPos('r07', 2067, -257.4);
-    var cx = r7.x, cz = r7.z + 40;
-    [-68, 0, 68].forEach(function (ox, idx) {
-      var wf = new THREE.Mesh(new THREE.BoxGeometry(idx === 1 ? 26 : 18, 96, 8), mFall);
-      wf.position.set(cx + ox, 44, cz - 210 + Math.abs(ox) * 0.25);
-      gMega.add(wf);
-      var foam = new THREE.Mesh(new THREE.DodecahedronGeometry(18, 1), mCloud);
-      foam.scale.set(1.6, 0.45, 1.4);
-      foam.position.set(cx + ox, 2, cz - 204 + Math.abs(ox) * 0.25);
-      gMega.add(foam);
-    });
-  })();
-
-  /* 5. R08 — ĐẠI THÁP TIÊN GIỚI & THÁC MÂY TRẮNG THẤY TỪ XA */
+  /* 8. R08 — TIÊN GIỚI ĐẢO BAY LƠ LỬNG TRÊN TẦNG MÂY + THÁC BẠC & CUNG ĐIỆN HOÀNG KIM */
   (function buildSkyBeacons() {
-    var isles = window.__SKY_ISLES || [];
-    isles.forEach(function (isl, idx) {
-      var sg = new THREE.Group();
-      sg.position.set(isl.x, isl.y, isl.z);
-      var tier1 = new THREE.Mesh(new THREE.BoxGeometry(isl.id === 'main' ? 76 : 42, 22, isl.id === 'main' ? 56 : 32), mLacquer);
-      tier1.position.y = 11; sg.add(tier1);
-      var roof1 = new THREE.Mesh(new THREE.ConeGeometry(isl.id === 'main' ? 62 : 36, 28, 4), mGold);
-      roof1.rotation.y = Math.PI / 4; roof1.position.y = 32; sg.add(roof1);
-      if (isl.id === 'main' || isl.id === 'pagoda') {
-        var roof2 = new THREE.Mesh(new THREE.ConeGeometry(isl.id === 'main' ? 42 : 24, 24, 4), mGold);
-        roof2.rotation.y = Math.PI / 4; roof2.position.y = 54; sg.add(roof2);
+    var R8 = regPos('r08', 4953.0, -1965.6);
+    var heroIsles = [
+      { x: R8.x - 160, y: 475, z: R8.z - 60, r: 155, palace: true },
+      { x: R8.x + 280, y: 410, z: R8.z + 180, r: 112, palace: true },
+      { x: R8.x - 420, y: 430, z: R8.z + 240, r: 95, palace: false }
+    ];
+    var sg = new THREE.Group();
+    heroIsles.forEach(function (isl, idx) {
+      addM(sg, new THREE.CylinderGeometry(isl.r, isl.r * 0.88, 22, 9), M.crownMid, isl.x, isl.y, isl.z);
+      addM(sg, new THREE.ConeGeometry(isl.r * 0.96, isl.r * 1.45, 8), M.limestone, isl.x, isl.y - isl.r * 0.72, isl.z, Math.PI, idx * 0.7, 0);
+      addM(sg, new THREE.BoxGeometry(isl.r * 0.56, 22, isl.r * 0.42), M.lacquer, isl.x, isl.y + 20, isl.z);
+      addM(sg, new THREE.ConeGeometry(isl.r * 0.48, 28, 4), M.gold, isl.x, isl.y + 44, isl.z, 0, Math.PI / 4, 0);
+      if (isl.palace) {
+        addM(sg, new THREE.ConeGeometry(isl.r * 0.32, 22, 4), M.gold, isl.x, isl.y + 62, isl.z, 0, Math.PI / 4, 0);
       }
-      var colWF = new THREE.Mesh(new THREE.BoxGeometry(14, 210, 7), mFall);
-      colWF.position.set(0, -104, isl.r * 0.65); sg.add(colWF);
-      for (var ci = 0; ci < 3; ci++) {
-        var cl = new THREE.Mesh(new THREE.DodecahedronGeometry(46 + ci * 12, 1), mCloud);
-        cl.scale.set(2.2, 0.42, 1.6);
-        cl.position.set((ci - 1) * 58, -112 - (idx % 2) * 18, (ci % 2 - 0.5) * 42);
-        sg.add(cl);
-      }
-      gMega.add(sg);
+      addM(sg, new THREE.BoxGeometry(16, 265, 8), M.fall, isl.x - isl.r * 0.25, isl.y - 125, isl.z + isl.r * 0.65);
     });
+    gMega.add(mergeByMat(sg));
   })();
 
-  /* 6. CỤM MÂY TRẮNG VEN VỊNH & CHÂN NÚI ĐẠI VIỆT (giống atlas_img_00.webp) */
-  (function buildBayClouds() {
-    var cSpots = [
-      [-650, 145, 780], [-1150, 155, -240], [-320, 165, -920], [1180, 155, 1340],
-      [2720, 150, 1280], [3420, 165, -420], [4550, 175, -1420], [1080, 185, -1680]
-    ];
-    cSpots.forEach(function (cp, ci) {
+  /* 9. MÂY TRẮNG BỒNG BỀNH VIỀN TIỀN CẢNH & LƯNG NÚI (1 DRAW CALL INSTANCED) */
+  (function buildStorybookClouds() {
+    var cGeo = new THREE.DodecahedronGeometry(1, 1);
+    var spots = [];
+    // Tiền cảnh góc trái & góc phải (như viền mây trong tranh minh họa)
+    [[-680, 125, 1150, 210], [-350, 145, 1450, 240], [-980, 160, 720, 195],
+      [4450, 130, 1450, 220], [4920, 155, 1100, 245], [5250, 180, 520, 195],
+      // Biển mây chân Đỉnh Tuyết & Cây Đa & Hắc Sơn & Đảo Bay
+      [3520, 135, -880, 175], [4350, 148, -960, 185], [3920, 155, -1580, 165], [3980, 165, -720, 170],
+      [-450, 215, -1350, 175], [360, 235, -1720, 185], [1480, 265, -1950, 175], [2420, 240, -2100, 180],
+      [4790, 265, -1820, 195], [5220, 245, -1620, 165], [4520, 255, -1720, 155]
+    ].forEach(function (c) {
       for (var k = 0; k < 3; k++) {
-        var puff = new THREE.Mesh(new THREE.DodecahedronGeometry(55 + (k % 2) * 26, 1), mCloud);
-        puff.scale.set(2.3, 0.45, 1.5);
-        puff.position.set(cp[0] + (k - 1) * 68, cp[1] + (k % 2) * 14, cp[2] + (ci % 2 ? k * 28 : -k * 24));
-        gMega.add(puff);
+        spots.push([c[0] + (k - 1) * c[3] * 0.65, c[1] + (k % 2) * 22, c[2] + (k - 1) * 38, c[3] * (0.72 + (k % 2) * 0.28)]);
       }
     });
+    var inst = new THREE.InstancedMesh(cGeo, M.cloud, spots.length);
+    var d = new THREE.Object3D();
+    spots.forEach(function (s, idx) {
+      d.position.set(s[0], s[1], s[2]);
+      d.scale.set(s[3] * 1.45, s[3] * 0.44, s[3] * 1.05);
+      d.rotation.set(0, idx * 0.6, 0);
+      d.updateMatrix();
+      inst.setMatrixAt(idx, d.matrix);
+    });
+    inst.instanceMatrix.needsUpdate = true;
+    gMega.add(inst);
   })();
 
   window.__MEGA_LANDMARKS = gMega;
@@ -21335,10 +21510,10 @@ window.__initTerrainEnvironment = function () {
   /* Biển Đông Hải, 5 Đảo Bay tạo hình vách đá gồ ghề + cầu vòm cong, và tầng mây */
   function buildWorldWaterAndSky() {
     var seaY = window.__REGION ? window.__REGION.SEA_LEVEL : -0.8;
-    var seaGeo = new THREE.PlaneGeometry(14000, 11000);
+    var seaGeo = new THREE.PlaneGeometry(38000, 32000);
     seaGeo.rotateX(-Math.PI / 2);
     var seaMat = new THREE.MeshStandardMaterial({
-      color: 0x1e7487, roughness: 0.24, metalness: 0.14, transparent: true, opacity: 0.86
+      color: 0x1696aa, roughness: 0.22, metalness: 0.10, transparent: true, opacity: 0.90
     });
     var seaMesh = new THREE.Mesh(seaGeo, seaMat);
     seaMesh.position.set(2100, seaY, -300);
@@ -29975,9 +30150,9 @@ if (!window.__GAME && consented) {
   var scene = new THREE.Scene();
   window.__scene3d = scene;
   window.__renderer = renderer; /* debug */
-  scene.fog = new THREE.Fog(0xcce4f6, 420, 4400);
+  scene.fog = new THREE.Fog(0xbfe4fa, 3400, 22000);
 
-  var camera = new THREE.PerspectiveCamera(46, 1, 0.1, 12000);
+  var camera = new THREE.PerspectiveCamera(46, 1, 0.1, 36000);
   window.__cam3d = camera; /* debug */
 
   /* ---- ánh sáng trời tự nhiên & shadow map ±42m theo người chơi ---- */
@@ -30009,12 +30184,12 @@ if (!window.__GAME && consented) {
     uTime: { value: 0 },
     uDay: { value: 1 },
     uSunDir: { value: new THREE.Vector3(-0.45, 0.68, -0.58).normalize() },
-    uZenith: { value: new THREE.Color(0x2a6cc2) },
-    uMid: { value: new THREE.Color(0x6ab5eb) },
-    uHorizon: { value: new THREE.Color(0xd8e8f5) }
+    uZenith: { value: new THREE.Color(0x1e66cc) },
+    uMid: { value: new THREE.Color(0x5db7f2) },
+    uHorizon: { value: new THREE.Color(0xdcf1ff) }
   };
   var skyDome = new THREE.Mesh(
-    new THREE.SphereGeometry(4200, 32, 20),
+    new THREE.SphereGeometry(28000, 32, 20),
     new THREE.ShaderMaterial({
       side: THREE.BackSide,
       depthWrite: false,
