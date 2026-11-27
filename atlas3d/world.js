@@ -266,6 +266,30 @@ function skyIslands(group) {                      // R8 Tiên Giới
 }
 
 // ---------------------------------------------------------------- per-point real landmarks
+
+
+const KIND_ALIAS = {
+  palace: 'temple', gate2: 'gate', banyanVillage: 'banyan', seaside: 'boat', pondBridge: 'falls', bambooCave: 'cave', waterwheel: 'house', valleyGate: 'gate',
+  treehouse: 'house', rootCave: 'cave', fallsShrine: 'falls', pondPagoda: 'temple', stiltHamlet: 'house', rockArches: 'cave', towerBridge: 'temple', bambooGarden: 'house',
+  chamCliff: 'cham', cliffStream: 'falls', oasis: 'lake', cliffMarket: 'house', beachShips: 'boat', desertRuins: 'house', lighthouse: 'peak', cliffRuins: 'cham',
+  stoneGatePond: 'lake', chalets: 'house', roundTemple: 'temple', treeIsland: 'banyan', stoneBridge: 'falls', lightTower: 'peak', rootPond: 'lake', templePond: 'temple',
+  iceLake: 'lake', snowPagoda: 'peak', goldPalace: 'sky', peakStele: 'stele',
+  volcanoVillage: 'volcano', lavaFalls: 'volcano', craterLake: 'lake', cloudTemple: 'sky', lavaBridge: 'volcano', longBridge: 'falls', floatingRock: 'sky',
+  fallsIsland: 'falls', rainbowFalls: 'falls', glowCave: 'cave', cliffPlatforms: 'house', koiPond: 'lake', sandBay: 'boat', cliffPagoda: 'temple', cliffTemple: 'temple',
+  skyTemple: 'sky', skyStream: 'sky', blossomIsle: 'sky', skyShip: 'boat', toriiIsle: 'sky', gateIsle: 'sky', archBridge: 'falls', junkShip: 'boat',
+};
+
+const FILE_KIND = {
+  r01_01:'palace', r01_02:'gate2', r01_03:'banyanVillage', r01_04:'seaside', r01_05:'pondBridge', r01_06:'bambooCave', r01_07:'waterwheel', r01_08:'valleyGate',
+  r02_01:'treehouse', r02_02:'rootCave', r02_03:'fallsShrine', r02_04:'pondPagoda', r02_05:'stiltHamlet', r02_06:'rockArches', r02_07:'towerBridge', r02_08:'bambooGarden',
+  r03_01:'chamCliff', r03_02:'cliffStream', r03_03:'oasis', r03_04:'cliffMarket', r03_05:'beachShips', r03_06:'desertRuins', r03_07:'lighthouse', r03_08:'cliffRuins',
+  r04_01:'stoneGatePond', r04_02:'chalets', r04_03:'roundTemple', r04_04:'treeIsland', r04_05:'stoneBridge', r04_06:'lightTower', r04_07:'rootPond', r04_08:'templePond',
+  r05_05:'iceLake', r05_06:'snowPagoda', r05_07:'goldPalace', r05_08:'peakStele',
+  r06_01:'volcanoVillage', r06_02:'lavaFalls', r06_03:'craterLake', r06_04:'cloudTemple', r06_05:'lavaBridge', r06_06:'longBridge', r06_07:'floatingRock', r06_08:'volcanoVillage',
+  r07_01:'fallsIsland', r07_02:'rainbowFalls', r07_03:'glowCave', r07_04:'cliffPlatforms', r07_05:'koiPond', r07_06:'sandBay', r07_07:'cliffPagoda', r07_08:'cliffTemple',
+  r08_01:'skyTemple', r08_02:'skyStream', r08_03:'blossomIsle', r08_04:'skyShip', r08_05:'toriiIsle', r08_06:'gateIsle', r08_07:'archBridge', r08_08:'junkShip',
+};
+
 function kw(name) {
   const n = (name || '').toLowerCase();
   if (/cổng|thành|quan/.test(n)) return 'gate';
@@ -286,7 +310,8 @@ function kw(name) {
   return 'house';
 }
 function landmarkAt(group, d) {
-  const kind = kw(d.name);
+  const key = d.region + '_' + String(d.num).padStart(2, '0');
+  const kind = KIND_ALIAS[FILE_KIND[key]] || FILE_KIND[key] || kw(d.name);
   const y = terrainHeight(d.x, d.z);
   const g = new THREE.Group();
   g.position.set(d.x, Math.max(y, SEA + .2), d.z);
@@ -357,7 +382,8 @@ function landmarkAt(group, d) {
   } else if (kind === 'lake') {
     const l = new THREE.Mesh(new THREE.CircleGeometry(5, 24), M.water);
     l.rotation.x = -Math.PI / 2; l.position.y = .1; g.add(l);
-  } else {  // house
+
+    } else {  // house
     g.add(box(5.5, 2.4, 4, new THREE.MeshStandardMaterial({ color: '#e0cf9e', roughness: .95 }), 0, 1.4, 0));
     const r = new THREE.Group(); simpleTileRoof(r, 6.4, 4.8, 1.6); r.position.y = 2.6; g.add(r);
   }
@@ -365,6 +391,7 @@ function landmarkAt(group, d) {
   group.add(g);
 }
 function g_geo(n) { return new THREE.BoxGeometry(1, 1, 1); }
+function landmarkAtKind(g, kit, kind, d) { /* fallback re-dispatch */ }
 function simpleTileRoof(group, w, d, h) {
   const geo = new THREE.CylinderGeometry(.01, Math.min(w, d) / Math.SQRT2, h, 4, 1);
   const m = new THREE.Mesh(geo, M.tile);
