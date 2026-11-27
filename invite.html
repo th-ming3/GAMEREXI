@@ -24372,13 +24372,36 @@ window.__initCombat = function (gardenRoot) {
   parryEl.style.cssText = 'position:fixed;inset:0;z-index:46;pointer-events:none;background:radial-gradient(ellipse at center, rgba(255,220,110,0) 45%, rgba(78,247,212,.45) 100%);opacity:0';
   document.body.appendChild(parryEl);
 
+  var _ftBannerSlot = 0;
+  var _ftDmgSlot = 0;
+  var _activeBannerEl = null;
   function floatText(txt, color, big) {
     var d = document.createElement('div');
     d.textContent = txt;
-    d.style.cssText = 'position:fixed;z-index:70;pointer-events:none;font:800 ' + (big ? 21 : 15) + 'px "Segoe UI",system-ui,sans-serif;color:' + color + ';text-shadow:0 2px 6px rgba(0,0,0,.75);left:' + (43 + Math.random() * 14) + '%;top:' + (38 + Math.random() * 10) + '%;transition:transform .85s ease-out,opacity .85s;';
+    var leftPct, topPct;
+    if (big && /^[^-\d+]/.test(String(txt || '').trim())) {
+      if (_activeBannerEl && _activeBannerEl.parentNode) _activeBannerEl.parentNode.removeChild(_activeBannerEl);
+      _activeBannerEl = d;
+      leftPct = 50;
+      topPct = 24 + (_ftBannerSlot % 2) * 4.5;
+      _ftBannerSlot++;
+      d.style.cssText = 'position:fixed;z-index:72;pointer-events:none;transform:translateX(-50%);font:800 18px "Segoe UI",system-ui,sans-serif;letter-spacing:.3px;color:' + color + ';text-shadow:0 2px 10px rgba(0,0,0,.9),0 0 12px rgba(0,0,0,.65);left:' + leftPct + '%;top:' + topPct + '%;white-space:nowrap;transition:transform .85s ease-out,opacity .85s;';
+    } else {
+      var lane = _ftDmgSlot % 4;
+      _ftDmgSlot++;
+      leftPct = 44 + (lane % 2 === 0 ? -2.5 : 3.5) + (Math.random() * 2 - 1);
+      topPct = 36 + lane * 5.2;
+      d.style.cssText = 'position:fixed;z-index:70;pointer-events:none;font:800 ' + (big ? 20 : 15) + 'px "Segoe UI",system-ui,sans-serif;color:' + color + ';text-shadow:0 2px 8px rgba(0,0,0,.85);left:' + leftPct.toFixed(1) + '%;top:' + topPct.toFixed(1) + '%;white-space:nowrap;transition:transform .82s ease-out,opacity .82s;';
+    }
     document.body.appendChild(d);
-    requestAnimationFrame(function () { d.style.transform = 'translateY(-48px)'; d.style.opacity = '0'; });
-    setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 880);
+    requestAnimationFrame(function () {
+      d.style.transform = (d === _activeBannerEl ? 'translate(-50%,-34px)' : 'translateY(-40px)');
+      d.style.opacity = '0';
+    });
+    setTimeout(function () {
+      if (_activeBannerEl === d) _activeBannerEl = null;
+      if (d.parentNode) d.parentNode.removeChild(d);
+    }, 860);
   }
 
   function localPlayer() {
@@ -24831,14 +24854,27 @@ window.__initCombat = function (gardenRoot) {
     });
   });
 
+  function isUiBlocked() {
+    if (window.__MENU_OPEN) return true;
+    if (bagModal && bagModal.style.display === 'flex') return true;
+    var qc = document.getElementById('questChronicleModal');
+    if (qc && qc.style.display === 'flex') return true;
+    var ch = document.getElementById('campaignChoice');
+    if (ch && ch.style.display !== 'none') return true;
+    var np = document.getElementById('npcPanel');
+    if (np && np.classList.contains('open')) return true;
+    return false;
+  }
+
   window.addEventListener('keydown', function (e) {
     var k = (e.key || '').toLowerCase();
+    if (k === 'i' && !window.__MENU_OPEN) { toggleBag(); return; }
+    if (isUiBlocked()) return;
     if (k === 'j') attack();
     else if (k === '1') useSkill(1);
     else if (k === '2') useSkill(2);
     else if (k === '3') useSkill(3);
     else if (k === '4') useHerb();
-    else if (k === 'i') toggleBag();
     else if (k === 'f') setGuard(true);
     else if (k === 'v' || e.key === 'Tab') { e.preventDefault(); toggleLockOn(); }
   });
@@ -24846,7 +24882,8 @@ window.__initCombat = function (gardenRoot) {
     if ((e.key || '').toLowerCase() === 'f') setGuard(false);
   });
   window.addEventListener('pointerdown', function (e) {
-    if (e.target.closest && e.target.closest('button, .hud, #combatActionHud, #adventureMap, .touchpad, .touchbtn')) return;
+    if (isUiBlocked()) return;
+    if (e.target.closest && e.target.closest('button, .hud, #combatActionHud, #adventureMap, #rpgBagModal, #questChronicleModal, #campaignChoice, #npcPanel, #campaignHud, .touchpad, .touchbtn, #menuOverlay, #pauseOverlay')) return;
     if (e.button === 0) attack();
     else if (e.button === 2) setGuard(true);
   });
@@ -26078,12 +26115,7 @@ window.__createUnderwaterWorld = function (context) {
     plant.userData.phase = wi * 0.7;
     underwaterRoot.add(plant); underwaterPlants.push(plant);
   }
-  for (var si = 0; si < 5; si++) {
-    var lightShaft = new THREE.Mesh(new THREE.PlaneGeometry(0.42, LAKE_DEPTH * 0.72), new THREE.MeshBasicMaterial({ color: 0x8be6d8, transparent: true, opacity: 0.03, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-    lightShaft.position.set(LAKE.x - 3 + si * 1.5, lakeBaseY - LAKE_DEPTH * 0.62, LAKE.z - 1.5 + (si % 2) * 2.4);
-    lightShaft.rotation.z = -0.16; lightShaft.rotation.y = 0.35;
-    underwaterRoot.add(lightShaft);
-  }
+  /* Lược bỏ dải sáng phẳng tam giác/chữ nhật gây vệt cứng dưới mặt nước — giữ đáy Hồ Gương trong vắt cùng tảo, tinh thể và di tích cổ */
 
   return function updateUnderwater(dt, elapsed) {
     for (var i = 0; i < underwaterCrystals.length; i++) {
@@ -27180,8 +27212,20 @@ if (!window.__GAME && consented) {
     var bendInfo = new Float32Array(TARGET_BLADES * 2);
     var count = 0;
 
+    function segDistG(px, pz, ax, az, bx, bz) {
+      var pax = px - ax, paz = pz - az, bax = bx - ax, baz = bz - az;
+      var h = Math.max(0, Math.min(1, (pax * bax + paz * baz) / (bax * bax + baz * baz || 1)));
+      return Math.hypot(pax - bax * h, paz - baz * h);
+    }
     function inCourtyardG(x, z) {
-      return (Math.abs(x) < 5.6 && z > -28 && z < 8.6) || (x > -3.8 && x < 6.4 && z > -0.2 && z < 8.6);
+      if (x > -2.5 && x < 5.3 && z > 0.3 && z < 7.3) return true;
+      if (Math.abs(x) < 2.7 && z > -27.5 && z < 2.8) return true;
+      if (Math.abs(x) < 5.6 && z > -28.8 && z < -22.2) return true;
+      if (Math.hypot(x - 15, z + 18) < 4.2) return true;
+      if (segDistG(x, z, -1.6, -5.2, -6.5, -5.4) < 1.55) return true;
+      if (segDistG(x, z, 2.0, -4.5, 12.8, -16.8) < 1.45) return true;
+      if (segDistG(x, z, -9.5, -4.0, -22.5, 12.2) < 1.45) return true;
+      return false;
     }
     for (var bi = 0; bi < TARGET_BLADES * 3 && count < TARGET_BLADES; bi++) {
       var angle = Math.random() * 6.28318;
@@ -27889,7 +27933,7 @@ if (!window.__GAME && consented) {
       arcA: rand(0.55, 0.85), arcW: rand(0.11, 0.17), arcP: rand(0, 6.283),
       w: eW, h: eH
     };
-    eg.position.set(rand(-8.5, -3.2) + egretLoose[edi][0], rand(3.05, 3.65), rand(-16.5, -13.5) + egretLoose[edi][1]);
+    eg.position.set(rand(-8.5, -3.2) + egretLoose[edi][0], rand(8.8, 10.6), rand(-24.0, -18.5) + egretLoose[edi][1]);
     gardenRoot.add(eg);
     egrets.push(eg);
   }
@@ -28031,7 +28075,8 @@ if (!window.__GAME && consented) {
     tiltPanel();
   });
   window.addEventListener('pointerdown', function (e) {
-    if (e.target && e.target.closest && e.target.closest('.panel, .topbar, .rail, .hint, a, button')) return;
+    if (window.__MENU_OPEN) return;
+    if (e.target && e.target.closest && e.target.closest('.panel, .topbar, .rail, .hint, #combatActionHud, #adventureMap, #rpgBagModal, #questChronicleModal, #campaignChoice, #npcPanel, #campaignHud, #menuOverlay, #pauseOverlay, a, button')) return;
     dragging = true;
     moved = 0;
     lastX = downX = e.clientX;
@@ -28261,12 +28306,12 @@ if (!window.__GAME && consented) {
       egb.material.opacity = fadeE;
       if (egb.position.x > 15) egb.position.x = -15;
       if (egb.position.x < -15) egb.position.x = 15;
-      /* kéo mềm về băng z/y thay vì gán cứng — không còn teleport khựng mắt */
+      /* kéo mềm về dải bay cao trên bầu trời (không bay ngang qua mặt ở sân Tam Quan) */
       var pullE = Math.min(1, dt * 2.5);
-      if (egb.position.z > -12.6) egb.position.z += (-13.4 - egb.position.z) * pullE;
-      if (egb.position.z < -17.4) egb.position.z += (-16.6 - egb.position.z) * pullE;
-      if (egb.position.y > 4.3) egb.position.y += (4.1 - egb.position.y) * pullE;
-      if (egb.position.y < 2.9) egb.position.y += (3.1 - egb.position.y) * pullE;
+      if (egb.position.z > -16.5) egb.position.z += (-18.5 - egb.position.z) * pullE;
+      if (egb.position.z < -28.0) egb.position.z += (-25.5 - egb.position.z) * pullE;
+      if (egb.position.y > 11.4) egb.position.y += (10.6 - egb.position.y) * pullE;
+      if (egb.position.y < 8.4) egb.position.y += (9.0 - egb.position.y) * pullE;
     }
     /* sương trôi */
     for (var ms2 = 0; ms2 < mists.length; ms2++) {
@@ -29637,7 +29682,7 @@ if (!window.__GAME && consented) {
     var hole2 = new THREE.Mesh(new THREE.PlaneGeometry(1.05, 1.15), new THREE.MeshBasicMaterial({ color: 0x07060a }));
     hole2.position.set(TOMB.x, tmY + 0.6, TOMB.z + 0.48);
     gardenRoot.add(hole2);
-    window.__landmarks = { cabin: CAB, rocks: RK, tomb: TOMB, lake: LAKE, den: window.__denPos, well: { x: -10.5, z: -27 }, bigTree: { x: 7, z: -20 } };
+    window.__landmarks = { cabin: CAB, rocks: RK, tomb: TOMB, lake: LAKE, den: window.__denPos, well: { x: -10.5, z: -27 }, bigTree: { x: 20, z: -28 } };
   })();
 
   /* Sân lát đá rêu vẽ trực tiếp trên shader địa hình + Lầu Thạch Đăng Đại Việt + Phướn đỏ + Đom đóm + Ruộng bậc thang */
@@ -29693,10 +29738,10 @@ if (!window.__GAME && consented) {
       gardenRoot.add(stg);
     });
 
-    /* Cặp cờ phướn Đại Việt tung bay hai bên cổng dẫn đường */
+    /* Cặp cờ phướn Đại Việt tung bay hai bên Cổng Tam Quan (không che Cầu Ngói / Tâm) */
     var bannerMat = new THREE.MeshStandardMaterial({ color: 0xb8241c, roughness: 0.72, side: THREE.DoubleSide });
     var banners = [];
-    [[-4.2, 0.5], [4.2, 0.5]].forEach(function (bp, bi) {
+    [[-5.2, -21.2], [5.2, -21.2]].forEach(function (bp, bi) {
       var by = hillY(bp[0], bp[1]);
       var bg = new THREE.Group();
       bg.position.set(bp[0], by, bp[1]);
@@ -29917,7 +29962,7 @@ if (!window.__GAME && consented) {
      huỷ (dispose) khi xa, cull ngoài frustum + tầm nhìn → bộ nhớ/draw-call không tăng dù map rộng cỡ nào */
   (function buildChunkSystem() {
     if (!window.__GAME) return;
-    var CHSZ = 16, GEN_R = LOW ? 38 : 50, KILL_R = LOW ? 48 : 62, VIEW_R = LOW ? 34 : 46, CENTER_R = 18;
+    var CHSZ = 16, GEN_R = LOW ? 42 : 54, KILL_R = LOW ? 52 : 66, VIEW_R = LOW ? 38 : 50, CENTER_R = 30;
     var chunkMap = {}, chunkList = [], genQueue = [], lastGenCX = NaN, lastGenCZ = NaN;
     /* ---- ĐƯỜNG ĐẤT: hàm world-space xác định — mọi chunk vẽ khớp liền mạch ---- */
     function pathZ(x) { return 15.5 + 5.2 * Math.sin(x * 0.085) + 3.1 * Math.sin(x * 0.041 + 2.0) - 12.5 * Math.exp(-(x * x) / 70); }
@@ -30261,9 +30306,9 @@ if (!window.__GAME && consented) {
     var shadowMatC = new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, opacity: 0.3, depthWrite: false });
     /* đồng bộ cao độ landmark theo WORLD-frame (terrain tile tính từ world sau xoay) */
     var lmSync = [];
-    /* CÂY CỔ THỤ landmark (7, −20): to gấp rưỡi, đá quấn gốc — điểm nhìn xa nhận ra */
+    /* CÂY CỔ THỤ landmark (20, −28): tách hẳn khỏi Miếu Cây Đa (15, -18) và sân Tam Quan */
     (function () {
-      var gx6 = 7, gz6 = -20, gy6 = hillY(gx6, gz6);
+      var gx6 = 20, gz6 = -28, gy6 = hillY(gx6, gz6);
       var gG = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel('broadleaf', { height: 12 }) : new THREE.Group();
       gG.userData.isBigTree = true;
       gG.position.set(gx6, gy6 - 0.05, gz6);
@@ -30449,8 +30494,8 @@ if (!window.__GAME && consented) {
         var tx2 = bx + rng() * CHSZ, tz2 = bz + rng() * CHSZ;
         var ppTree = window.__playerPos ? ppL() : null;
         if (onPathW(tx2, tz2, 2.0) || inCourtyard(tx2, tz2) || (Math.abs(tx2) < 9.5 && tz2 > -30 && tz2 < 8) || nearDen(tx2, tz2, 3.6) || lakeDepth(tx2, tz2) > 0.08
-          || Math.hypot(tx2 - 26, tz2 - 9) < 5.5 || Math.hypot(tx2 + 10.5, tz2 + 27) < 4.5 || Math.hypot(tx2 - 7, tz2 + 20) < 4.5
-          || Math.hypot(tx2 - .4, tz2 - 6.8) < 11 || (ppTree && Math.hypot(tx2 - ppTree.x, tz2 - ppTree.z) < 10)) continue;
+          || Math.hypot(tx2 - 26, tz2 - 9) < 5.5 || Math.hypot(tx2 + 10.5, tz2 + 27) < 4.5 || Math.hypot(tx2 - 20, tz2 + 28) < 5.5
+          || Math.hypot(tx2 - 15, tz2 + 18) < 5.0 || Math.hypot(tx2 - .4, tz2 - 6.8) < 11 || (ppTree && Math.hypot(tx2 - ppTree.x, tz2 - ppTree.z) < 10)) continue;
         if (window.__REGION && window.__REGION.coastDist && window.__REGION.coastDist(tx2, tz2) < 3.0) continue;
         var ty2 = hillY(tx2, tz2);
         if (ty2 < -0.25) continue;
@@ -30489,7 +30534,7 @@ if (!window.__GAME && consented) {
         var px2 = bx + rng() * CHSZ, pz2 = bz + rng() * CHSZ;
         if (onPathW(px2, pz2, 1.7) || nearDen(px2, pz2, 3.4) || lakeDepth(px2, pz2) > maxDepth || inCourtyard(px2, pz2)) continue;
         if (window.__REGION && window.__REGION.coastDist && window.__REGION.coastDist(px2, pz2) < 1.5) continue;
-        if (Math.hypot(px2 - 0.4, pz2 - 6.8) < 3.2 || Math.hypot(px2 - 26, pz2 - 9) < 5.2 || Math.hypot(px2 + 10.5, pz2 + 27) < 5 || Math.hypot(px2 - 7, pz2 + 20) < 5) continue;
+        if (Math.hypot(px2 - 0.4, pz2 - 6.8) < 3.2 || Math.hypot(px2 - 26, pz2 - 9) < 5.2 || Math.hypot(px2 + 10.5, pz2 + 27) < 5 || Math.hypot(px2 - 20, pz2 + 28) < 5.2 || Math.hypot(px2 - 15, pz2 + 18) < 4.8) continue;
         var pm = window.__REAL_ASSETS ? window.__REAL_ASSETS.makeModel(props[pi][0], props[pi][2]) : new THREE.Group();
         pm.position.set(px2, hillY(px2, pz2) - 0.03, pz2);
         pm.rotation.y = rng() * 6.283;
@@ -30601,7 +30646,7 @@ if (!window.__GAME && consented) {
         var bl1 = new THREE.Mesh(blGeoS, blMatS); bl1.position.set(-0.225, 0.35, 0.285); bl1.rotation.y = 0.35;
         var bl2 = new THREE.Mesh(blGeoS, blMatS); bl2.position.set(0.225, 0.35, 0.285); bl2.rotation.y = -0.35;
         sg2.add(e1, e2, glS, glS2, moS, bl1, bl2);
-        var sx0 = 3 + si2 * 10, sz0 = 12 + si2 * 17.5;
+        var sx0 = 9.5 + si2 * 6.5, sz0 = 12.5 + si2 * 9.5;
         sg2.position.set(sx0, hillY(sx0, sz0), sz0);
         gardenRoot.add(sg2);
         slimes.push({ g: sg2, body: bodyS, e1: e1, e2: e2, wx: sx0, wz: sz0, hopT: 0, hop: 1, dir: Math.random() * 6.283, squish: 0, blink: 2 + Math.random() * 3 });
@@ -30615,14 +30660,19 @@ if (!window.__GAME && consented) {
         var S = slimes[i];
         var dxp = ppx3 - S.g.position.x, dzp = ppz3 - S.g.position.z;
         var dPlayer = Math.sqrt(dxp * dxp + dzp * dzp);
-        if (dPlayer > 45) { S.g.position.set(ppx3 + 6 + Math.random() * 4, 0, ppz3 + 5 + Math.random() * 4); S.wx = S.g.position.x; S.wz = S.g.position.z; }
+        if (dPlayer > 45) {
+          var rxS = Math.max(8.5, Math.abs(ppx3) + 8.5) * (ppx3 < 0 ? -1 : 1), rzS = ppz3 + 6 + Math.random() * 4;
+          S.g.position.set(rxS, hillY(rxS, rzS), rzS); S.wx = rxS; S.wz = rzS;
+        }
         if (dPlayer < 0.9 && S.squish <= 0) { S.squish = 0.7; if (window.__sfx) window.__sfx.chime(); }
         if (S.squish > 0) S.squish -= dt;
         S.hopT -= dt;
         if (S.hop >= 1 && S.hopT <= 0) {
-          var ang = Math.random() * 6.283, r2 = 2.5 + Math.random() * 4;
-          S.wx = ppx3 + Math.cos(ang) * r2;
-          S.wz = ppz3 + Math.sin(ang) * r2;
+          var ang = Math.random() * 6.283, r2 = 3.5 + Math.random() * 5;
+          var candX = ppx3 + Math.cos(ang) * r2, candZ = ppz3 + Math.sin(ang) * r2;
+          if (Math.abs(candX) < 7.2 && candZ > -29 && candZ < 10.5) candX = candX >= 0 ? 8.2 : -8.2;
+          S.wx = candX;
+          S.wz = candZ;
           S.hopT = 1.2 + Math.random() * 2.2;
         }
         var dxw = S.wx - S.g.position.x, dzw = S.wz - S.g.position.z;
