@@ -26749,7 +26749,7 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
   'use strict';
   if (window.__NPC_BRAIN) return;
 
-  var ENDPOINT = 'https://ai-gateway.kilo.ai/api/v1/chat/completions';
+  var ENDPOINT = new URL('npc-llm', document.baseURI).href;
   var MODELS = ['particle-ai/particle-1:free', 'openrouter/free'];
   var TIMEOUT_MS = 8000;
   var GLOBAL_COOLDOWN = 3500;

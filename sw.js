@@ -1,4 +1,4 @@
-const CACHE = 'canhdong-38a955ba51bf';
+const CACHE = 'canhdong-ea1cfdfa3a60';
 const CORE = ['./game.html', './manifest.webmanifest', './assets/icons/icon-192.png', './assets/icons/icon-512.png'];
 
 self.addEventListener('install', event => {
@@ -13,7 +13,27 @@ self.addEventListener('activate', event => {
   );
 });
 
+const NPC_LLM = 'https://ai-gateway.kilo.ai/api/v1/chat/completions';
+
 self.addEventListener('fetch', event => {
+  // NPC cognition relay: page -> same-origin SW -> Kilo (SW không bị CORS page).
+  const relay = new URL(event.request.url);
+  if (relay.pathname === './npc-llm' || relay.pathname === '/npc-llm' || relay.pathname.endsWith('/npc-llm')) {
+    event.respondWith(
+      fetch(NPC_LLM, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: event.request.clone().text(),
+        cache: 'no-store'
+      }).then(r => new Response(r.body, {
+        status: r.status,
+        headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
+      })).catch(e => new Response(JSON.stringify({ error: String(e && e.message || e) }), {
+        status: 502, headers: { 'Content-Type': 'application/json; charset=utf-8' }
+      }))
+    );
+    return;
+  }
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
