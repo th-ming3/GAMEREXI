@@ -20798,11 +20798,14 @@ window.__createTerrain = function (context) {
           'vec3 biomeCol = diffuseColor.rgb;',
           'diffuseColor.rgb = mix(meadow, biomeCol * (0.72 + 0.44 * nMicro), regionMix * 0.82);',
           'float dPlaza = sdBox2D(tp - vec2(1.4, 3.8), vec2(3.5, 3.1));',
-          'float dAve = sdBox2D(tp - vec2(0.0, -11.2), vec2(2.35, 13.6));',
+          'float dAve = sdBox2D(tp - vec2(0.0, -13.0), vec2(2.45, 16.5));',
           'float dBridge = sdSeg2D(tp, vec2(-1.6, -5.2), vec2(-6.5, -5.4)) - 1.15;',
-          'float dBanyan = sdSeg2D(tp, vec2(2.0, -4.5), vec2(12.8, -16.8)) - 1.05;',
+          'float dBanyan = sdSeg2D(tp, vec2(2.0, -4.5), vec2(12.8, -15.5)) - 1.05;',
           'float dVillage = sdSeg2D(tp, vec2(-9.5, -4.0), vec2(-22.5, 12.2)) - 1.05;',
-          'float dStone = min(min(dPlaza, dAve), min(dBridge, min(dBanyan, dVillage)));',
+          'float dTomb = sdSeg2D(tp, vec2(-9.5, -6.5), vec2(-18.2, -17.2)) - 0.95;',
+          'float dHarbor = sdSeg2D(tp, vec2(-2.2, 6.2), vec2(-5.4, 22.8)) - 1.05;',
+          'float dPass = sdSeg2D(tp, vec2(20.0, -17.5), vec2(34.5, -28.0)) - 0.95;',
+          'float dStone = min(min(dPlaza, dAve), min(dBridge, min(dBanyan, min(dVillage, min(dTomb, min(dHarbor, dPass))))));',
           'float warp = (tFbm(tp * 0.65) - 0.5) * 0.72;',
           'float stoneMask = 1.0 - smoothstep(-0.18, 0.32, dStone + warp);',
           'if (stoneMask > 0.01) {',
@@ -22805,6 +22808,1033 @@ window.__REAL_ASSETS = window.__createRealAssets();
   window.__DAIVIET_MODELS = api;
 })();
 
+/* ============================================================================
+ * ĐẠI VIỆT KIẾN TRÚC & VI CẢNH CHI TIẾT (Đối chiếu 1:1 Regional Atlas r01..r08)
+ * - Kho Đạo Cụ Vi Mô dùng chung (đèn đá, sư tử đá, đỉnh đồng, xe ngựa, quán trà,
+ *   rừng trúc, 3 cọn nước quay, trâu nằm, giá giáo, cần trục mỏ, xe goòng, bậc rồng)
+ * - Tái hiện đầy đủ 8 tiểu khu Thung Lũng Kinh Kỳ quanh Spawn (atlas_img_01 & 09..16)
+ * - Tối ưu draw-call bằng mergeGroupByMaterial() để giữ FPS mượt trên mọi máy
+ * ============================================================================ */
+(function () {
+  if (typeof THREE === 'undefined') return;
+
+  function makeCanvasTex(w, h, repX, repY, fn) {
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    fn(c.getContext('2d'), w, h);
+    var t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(repX || 1, repY || 1);
+    return t;
+  }
+
+  /* Vật liệu thủ công có chiều sâu (rêu phong, gốm men, ngói âm dương, đá tạc, gỗ lim) */
+  var texTileRoof = makeCanvasTex(256, 256, 4, 3, function (g, w, h) {
+    g.fillStyle = '#8b2e19'; g.fillRect(0, 0, w, h);
+    var cols = 14, rows = 8, cw = w / cols, rh = h / rows;
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        var x = c * cw, y = r * rh;
+        var v = ((r * 13 + c * 7) % 19) - 9;
+        var gr = g.createLinearGradient(x, y, x + cw, y);
+        gr.addColorStop(0, 'rgb(' + (96 + v) + ',' + (32 + (v >> 1)) + ',' + (18 + (v >> 1)) + ')');
+        gr.addColorStop(0.5, 'rgb(' + (176 + v) + ',' + (66 + v) + ',' + (34 + (v >> 1)) + ')');
+        gr.addColorStop(1, 'rgb(' + (84 + v) + ',' + (28 + (v >> 1)) + ',' + (16 + (v >> 1)) + ')');
+        g.fillStyle = gr; g.fillRect(x, y, cw, rh - 1.5);
+        g.fillStyle = 'rgba(28,10,6,0.62)'; g.fillRect(x, y + rh - 2.5, cw, 2.5);
+      }
+    }
+    for (var i = 0; i < 36; i++) {
+      g.fillStyle = i % 3 ? 'rgba(62,95,38,0.20)' : 'rgba(240,180,100,0.12)';
+      g.beginPath(); g.arc((i * 71) % w, (i * 93) % h, 5 + (i % 7), 0, 6.283); g.fill();
+    }
+  });
+
+  var texAshlar = makeCanvasTex(256, 256, 3, 2, function (g, w, h) {
+    g.fillStyle = '#757468'; g.fillRect(0, 0, w, h);
+    var rows = 8, rh = h / rows;
+    for (var r = 0; r < rows; r++) {
+      var x = -((r % 2) * 26);
+      while (x < w) {
+        var bw = 36 + ((r * 19 + Math.floor(x) * 11) % 24);
+        var dt = ((r * 17 + Math.floor(x) * 7) % 28) - 14;
+        g.fillStyle = 'rgb(' + (134 + dt) + ',' + (132 + dt) + ',' + (116 + (dt >> 1)) + ')';
+        g.fillRect(x + 2, r * rh + 2, bw - 3, rh - 3);
+        g.fillStyle = 'rgba(38,38,32,0.58)';
+        g.fillRect(x, r * rh, bw, 2);
+        g.fillRect(x, r * rh, 2, rh);
+        x += bw;
+      }
+    }
+    for (var m = 0; m < 70; m++) {
+      g.fillStyle = m % 2 ? 'rgba(72,115,45,0.28)' : 'rgba(98,136,56,0.20)';
+      g.beginPath(); g.arc((m * 53) % w, (m * 89) % h, 4 + (m % 10), 0, 6.283); g.fill();
+    }
+  });
+
+  var texPlanks = makeCanvasTex(128, 128, 2, 3, function (g, w, h) {
+    g.fillStyle = '#6c492c'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 12; i++) {
+      var y = i * (h / 12);
+      g.fillStyle = i % 2 ? '#785334' : '#5e3f25';
+      g.fillRect(0, y, w, h / 12 - 1);
+      g.fillStyle = 'rgba(26,14,6,0.55)';
+      g.fillRect(0, y + h / 12 - 1.5, w, 1.5);
+    }
+  });
+
+  var texThatch = makeCanvasTex(128, 128, 2, 2, function (g, w, h) {
+    g.fillStyle = '#bfa05a'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 240; i++) {
+      g.fillStyle = i % 3 ? 'rgba(138,108,42,0.45)' : 'rgba(225,198,120,0.45)';
+      g.fillRect((i * 29) % w, (i * 47) % h, 2, 11 + (i % 8));
+    }
+  });
+
+  var MAT = {
+    stone: new THREE.MeshStandardMaterial({ map: texAshlar, roughness: 0.90, flatShading: true }),
+    stoneLight: new THREE.MeshStandardMaterial({ color: 0xc2beae, roughness: 0.84, flatShading: true }),
+    mossStone: new THREE.MeshStandardMaterial({ color: 0x627352, roughness: 0.94, flatShading: true }),
+    darkRock: new THREE.MeshStandardMaterial({ color: 0x2a272c, roughness: 0.94, flatShading: true }),
+    cliffStone: new THREE.MeshStandardMaterial({ color: 0x767464, roughness: 0.94, flatShading: true }),
+    wood: new THREE.MeshStandardMaterial({ map: texPlanks, roughness: 0.80 }),
+    darkWood: new THREE.MeshStandardMaterial({ color: 0x4b311d, roughness: 0.82 }),
+    lacquerRed: new THREE.MeshStandardMaterial({ color: 0xa2281c, roughness: 0.56 }),
+    roofRed: new THREE.MeshStandardMaterial({ map: texTileRoof, roughness: 0.72, side: THREE.DoubleSide }),
+    roofGold: new THREE.MeshStandardMaterial({ color: 0xdca428, roughness: 0.42, metalness: 0.25, side: THREE.DoubleSide }),
+    roofGreenMoss: new THREE.MeshStandardMaterial({ color: 0x4e7a34, roughness: 0.88, side: THREE.DoubleSide }),
+    wallCream: new THREE.MeshStandardMaterial({ color: 0xe6d4af, roughness: 0.88 }),
+    thatch: new THREE.MeshStandardMaterial({ map: texThatch, roughness: 0.92, side: THREE.DoubleSide }),
+    straw: new THREE.MeshStandardMaterial({ color: 0xd8b44c, roughness: 0.90 }),
+    riceGold: new THREE.MeshStandardMaterial({ color: 0xe0bd42, roughness: 0.88 }),
+    riceGreen: new THREE.MeshStandardMaterial({ color: 0x5c9a36, roughness: 0.88 }),
+    bamboo: new THREE.MeshStandardMaterial({ color: 0x639842, roughness: 0.72 }),
+    bambooDry: new THREE.MeshStandardMaterial({ color: 0xb99c58, roughness: 0.78 }),
+    foliage: new THREE.MeshStandardMaterial({ color: 0x458835, roughness: 0.86, flatShading: true }),
+    maiGold: new THREE.MeshStandardMaterial({ color: 0xf4c83c, emissive: 0x5c4200, emissiveIntensity: 0.22, roughness: 0.65 }),
+    blossom: new THREE.MeshStandardMaterial({ color: 0xf29cb8, roughness: 0.76 }),
+    lantern: new THREE.MeshStandardMaterial({ color: 0xffdf80, emissive: 0xff9f24, emissiveIntensity: 1.55, roughness: 0.3 }),
+    spiritCyan: new THREE.MeshStandardMaterial({ color: 0x7dfcf2, emissive: 0x20e6d0, emissiveIntensity: 1.8, roughness: 0.2 }),
+    fire: new THREE.MeshStandardMaterial({ color: 0xff9a28, emissive: 0xff4800, emissiveIntensity: 1.7, roughness: 0.3 }),
+    bronze: new THREE.MeshStandardMaterial({ color: 0x6a5c41, roughness: 0.48, metalness: 0.42 }),
+    gold: new THREE.MeshStandardMaterial({ color: 0xe5b23a, roughness: 0.36, metalness: 0.48 }),
+    ceramic: new THREE.MeshStandardMaterial({ color: 0x7b4c2e, roughness: 0.58 }),
+    porcelain: new THREE.MeshStandardMaterial({ color: 0xdbe9f2, roughness: 0.35 }),
+    bannerRed: new THREE.MeshStandardMaterial({ color: 0xc42820, roughness: 0.72, side: THREE.DoubleSide }),
+    buffalo: new THREE.MeshStandardMaterial({ color: 0x4d4a4c, roughness: 0.78 }),
+    horn: new THREE.MeshStandardMaterial({ color: 0xc2b9a5, roughness: 0.68 }),
+    waterFlow: new THREE.MeshStandardMaterial({ color: 0xbff5ff, emissive: 0x6cdce8, emissiveIntensity: 0.42, transparent: true, opacity: 0.80 }),
+    waterStream: new THREE.MeshStandardMaterial({ color: 0x38b6c4, emissive: 0x166d78, emissiveIntensity: 0.25, transparent: true, opacity: 0.86 }),
+    netRope: new THREE.MeshStandardMaterial({ color: 0x9c865f, roughness: 0.92, wireframe: true }),
+    iron: new THREE.MeshStandardMaterial({ color: 0x525860, roughness: 0.5, metalness: 0.55 })
+  };
+
+  /* Gộp các geometry tĩnh theo vật liệu để giảm tối đa số draw call */
+  function mergeGeos(list) {
+    if (!list.length) return null;
+    var hasUv = list.every(function (g) { return !!g.attributes.uv; });
+    var totalV = 0, totalI = 0;
+    list.forEach(function (g) {
+      totalV += g.attributes.position.count;
+      totalI += g.index ? g.index.count : g.attributes.position.count;
+    });
+    var pos = new Float32Array(totalV * 3);
+    var norm = new Float32Array(totalV * 3);
+    var uv = hasUv ? new Float32Array(totalV * 2) : null;
+    var idx = new Uint32Array(totalI);
+    var vOff = 0, iOff = 0;
+    for (var i = 0; i < list.length; i++) {
+      var g = list[i];
+      var p = g.attributes.position;
+      var n = g.attributes.normal;
+      var u = hasUv ? g.attributes.uv : null;
+      pos.set(p.array, vOff * 3);
+      if (n) norm.set(n.array, vOff * 3);
+      if (u && uv) uv.set(u.array, vOff * 2);
+      if (g.index) {
+        var gi = g.index.array;
+        for (var j = 0; j < gi.length; j++) idx[iOff + j] = gi[j] + vOff;
+        iOff += gi.length;
+      } else {
+        for (var k = 0; k < p.count; k++) idx[iOff + k] = k + vOff;
+        iOff += p.count;
+      }
+      vOff += p.count;
+      g.dispose();
+    }
+    var out = new THREE.BufferGeometry();
+    out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    out.setAttribute('normal', new THREE.BufferAttribute(norm, 3));
+    if (uv) out.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    out.setIndex(new THREE.BufferAttribute(idx, 1));
+    return out;
+  }
+
+  function mergeStaticGroup(root) {
+    root.updateMatrixWorld(true);
+    var invRoot = new THREE.Matrix4().copy(root.matrixWorld).invert();
+    var buckets = [], bucketMats = [], keepAnimated = [];
+    var toProcess = [];
+    root.traverse(function (o) {
+      if (o === root) return;
+      if (o.userData && o.userData.dynamicAnim) {
+        keepAnimated.push(o);
+        return;
+      }
+      var anc = o.parent;
+      while (anc && anc !== root) {
+        if (anc.userData && anc.userData.dynamicAnim) return;
+        anc = anc.parent;
+      }
+      if (o.isMesh && o.geometry && o.material && !Array.isArray(o.material)) {
+        toProcess.push(o);
+      }
+    });
+    var matMap = new Map();
+    toProcess.forEach(function (m) {
+      var g = m.geometry.clone();
+      var relM = new THREE.Matrix4().multiplyMatrices(invRoot, m.matrixWorld);
+      g.applyMatrix4(relM);
+      if (!g.attributes.normal) g.computeVertexNormals();
+      var idx = matMap.get(m.material);
+      if (idx === undefined) {
+        idx = buckets.length;
+        matMap.set(m.material, idx);
+        buckets.push([]);
+        bucketMats.push(m.material);
+      }
+      buckets[idx].push(g);
+    });
+    var merged = new THREE.Group();
+    merged.position.copy(root.position);
+    merged.rotation.copy(root.rotation);
+    merged.scale.copy(root.scale);
+    merged.name = root.name;
+    for (var b = 0; b < buckets.length; b++) {
+      var mg = mergeGeos(buckets[b]);
+      if (!mg) continue;
+      var mesh = new THREE.Mesh(mg, bucketMats[b]);
+      mesh.receiveShadow = true;
+      mesh.castShadow = bucketMats[b] !== MAT.waterStream && bucketMats[b] !== MAT.waterFlow;
+      merged.add(mesh);
+    }
+    keepAnimated.forEach(function (dyn) {
+      dyn.updateMatrixWorld(true);
+      var rel = new THREE.Matrix4().multiplyMatrices(invRoot, dyn.matrixWorld);
+      dyn.parent && dyn.parent.remove(dyn);
+      dyn.position.set(0, 0, 0); dyn.rotation.set(0, 0, 0); dyn.scale.set(1, 1, 1);
+      dyn.applyMatrix4(rel);
+      merged.add(dyn);
+    });
+    return merged;
+  }
+
+  /* ============================================================================
+   * 1. KHO ĐẠO CỤ VI MÔ CHI TIẾT (từng đèn đá, đỉnh đồng, rồng, xe ngựa, cọn nước)
+   * ============================================================================ */
+  function makeStoneLantern(scale) {
+    var s = scale || 1, g = new THREE.Group();
+    var base = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, 0.18, 6), MAT.stoneLight);
+    base.position.y = 0.09; g.add(base);
+    var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.72, 6), MAT.stone);
+    shaft.position.y = 0.54; g.add(shaft);
+    var tray = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.16, 0.12, 6), MAT.stoneLight);
+    tray.position.y = 0.96; g.add(tray);
+    var glow = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.26, 0.24), MAT.lantern);
+    glow.position.y = 1.15; g.add(glow);
+    [[-0.12, -0.12], [0.12, -0.12], [-0.12, 0.12], [0.12, 0.12]].forEach(function (p) {
+      var bar = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.28, 0.05), MAT.stone);
+      bar.position.set(p[0], 1.15, p[1]); g.add(bar);
+    });
+    var cap = new THREE.Mesh(new THREE.ConeGeometry(0.36, 0.26, 6), MAT.mossStone);
+    cap.position.y = 1.40; g.add(cap);
+    var fin = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), MAT.stoneLight);
+    fin.position.y = 1.56; g.add(fin);
+    g.scale.setScalar(s);
+    return g;
+  }
+
+  function makeGuardianLion(scale, moss) {
+    var s = scale || 1, g = new THREE.Group();
+    var mat = moss ? MAT.mossStone : MAT.stoneLight;
+    var ped1 = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.26, 1.15), MAT.stone);
+    ped1.position.y = 0.13; g.add(ped1);
+    var ped2 = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.22, 0.96), mat);
+    ped2.position.y = 0.37; g.add(ped2);
+    var body = new THREE.Mesh(new THREE.SphereGeometry(0.32, 8, 7), mat);
+    body.scale.set(0.88, 1.18, 1.15); body.position.set(0, 0.78, -0.05); g.add(body);
+    var chest = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 7), mat);
+    chest.position.set(0, 0.92, 0.14); g.add(chest);
+    var head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 9, 8), mat);
+    head.position.set(0, 1.24, 0.22); g.add(head);
+    var mane = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.08, 6, 10), MAT.stone);
+    mane.position.set(0, 1.22, 0.14); g.add(mane);
+    [-0.17, 0.17].forEach(function (px) {
+      var paw = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.10, 0.44, 6), mat);
+      paw.position.set(px, 0.68, 0.26); g.add(paw);
+    });
+    g.scale.setScalar(s);
+    return g;
+  }
+
+  function makeBronzeCauldron(scale) {
+    var s = scale || 1, g = new THREE.Group();
+    for (var i = 0; i < 3; i++) {
+      var a = i * 2.094;
+      var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.045, 0.45, 6), MAT.bronze);
+      leg.position.set(Math.cos(a) * 0.26, 0.22, Math.sin(a) * 0.26);
+      leg.rotation.z = -Math.cos(a) * 0.16; leg.rotation.x = Math.sin(a) * 0.16;
+      g.add(leg);
+    }
+    var bowl = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 8), MAT.bronze);
+    bowl.scale.set(1.05, 0.78, 1.05); bowl.position.y = 0.62; g.add(bowl);
+    var rim = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.045, 6, 12), MAT.bronze);
+    rim.rotation.x = Math.PI / 2; rim.position.y = 0.85; g.add(rim);
+    [-0.36, 0.36].forEach(function (hx) {
+      var ear = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.03, 6, 10, Math.PI), MAT.bronze);
+      ear.position.set(hx, 0.88, 0); g.add(ear);
+    });
+    var ember = new THREE.Mesh(new THREE.SphereGeometry(0.20, 8, 6), MAT.fire);
+    ember.scale.set(1, 0.45, 1); ember.position.y = 0.87; g.add(ember);
+    g.scale.setScalar(s);
+    return g;
+  }
+
+  function makeHorseCart(scale) {
+    var s = scale || 1, g = new THREE.Group();
+    var deck = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.14, 2.3), MAT.wood);
+    deck.position.y = 0.62; g.add(deck);
+    [-0.68, 0.68].forEach(function (sx) {
+      var side = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.42, 2.25), MAT.darkWood);
+      side.position.set(sx, 0.88, 0); g.add(side);
+      var wheel = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.055, 6, 14), MAT.darkWood);
+      wheel.rotation.y = Math.PI / 2; wheel.position.set(sx + (sx > 0 ? 0.14 : -0.14), 0.56, 0); g.add(wheel);
+      for (var k = 0; k < 4; k++) {
+        var sp = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.06, 5), MAT.wood);
+        sp.rotation.x = k * 0.785; sp.position.set(sx + (sx > 0 ? 0.14 : -0.14), 0.56, 0); g.add(sp);
+      }
+      var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 1.55, 5), MAT.darkWood);
+      shaft.rotation.x = Math.PI / 2 + 0.16; shaft.position.set(sx * 0.65, 0.44, 1.65); g.add(shaft);
+    });
+    var hood = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 2.15, 10, 1, false, 0, Math.PI), MAT.thatch);
+    hood.rotation.z = Math.PI / 2; hood.rotation.y = Math.PI / 2; hood.position.set(0, 1.08, -0.05); g.add(hood);
+    g.scale.setScalar(s);
+    return g;
+  }
+
+  function makeTeaStall(scale, useThatch) {
+    var s = scale || 1, g = new THREE.Group();
+    [[-1.15, -0.85], [1.15, -0.85], [-1.15, 0.85], [1.15, 0.85]].forEach(function (p) {
+      var col = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.075, 2.0, 6), MAT.darkWood);
+      col.position.set(p[0], 1.0, p[1]); g.add(col);
+    });
+    var roofMat = useThatch ? MAT.thatch : MAT.roofRed;
+    var rf = new THREE.Mesh(new THREE.ConeGeometry(1.95, 0.88, 4), roofMat);
+    rf.rotation.y = Math.PI / 4; rf.scale.set(1.15, 1, 0.92); rf.position.y = 2.38; g.add(rf);
+    var counter = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.12, 0.75), MAT.wood);
+    counter.position.set(0, 0.82, 0.15); g.add(counter);
+    [-0.9, 0.9].forEach(function (lx) {
+      var leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.82, 0.6), MAT.darkWood);
+      leg.position.set(lx, 0.41, 0.15); g.add(leg);
+    });
+    var pot = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), MAT.porcelain);
+    pot.position.set(-0.2, 0.96, 0.15); g.add(pot);
+    [0.12, 0.34, 0.56].forEach(function (cx) {
+      var cup = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.032, 0.07, 6), MAT.porcelain);
+      cup.position.set(cx, 0.91, 0.22); g.add(cup);
+    });
+    [-0.65, 0.65].forEach(function (sx) {
+      var stool = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.21, 0.42, 7), MAT.wood);
+      stool.position.set(sx, 0.21, 0.85); g.add(stool);
+    });
+    var jar = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), MAT.ceramic);
+    jar.scale.set(1, 1.25, 1); jar.position.set(-1.38, 0.26, 0.3); g.add(jar);
+    var lan = new THREE.Mesh(new THREE.SphereGeometry(0.14, 7, 6), MAT.lantern);
+    lan.position.set(1.05, 1.72, 0.82); g.add(lan);
+    g.scale.setScalar(s);
+    return g;
+  }
+
+  function makeBambooGrove(count, radius, minH, maxH, seedOff) {
+    var g = new THREE.Group();
+    var n = count || 32, R = radius || 6.5, h0 = minH || 4.8, h1 = maxH || 8.4;
+    var seed = 1091 + (seedOff || 0);
+    function rng() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+    for (var i = 0; i < n; i++) {
+      var a = (i / n) * 6.283 + (rng() - 0.5) * 0.4;
+      var rr = R * (0.28 + Math.sqrt(rng()) * 0.72);
+      var x = Math.cos(a) * rr, z = Math.sin(a) * rr;
+      var h = h0 + rng() * (h1 - h0);
+      var stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.095, h, 5), MAT.bamboo);
+      stalk.position.set(x, h * 0.5, z);
+      stalk.rotation.z = (rng() - 0.5) * 0.09;
+      stalk.rotation.x = (rng() - 0.5) * 0.09;
+      g.add(stalk);
+      for (var k = 0; k < 2; k++) {
+        var crown = new THREE.Mesh(new THREE.DodecahedronGeometry(0.55 + rng() * 0.45, 0), MAT.foliage);
+        crown.scale.set(1.3, 0.48, 1.3);
+        crown.position.set(x + (rng() - 0.5) * 0.5, h * (0.76 + k * 0.18), z + (rng() - 0.5) * 0.5);
+        g.add(crown);
+      }
+    }
+    return g;
+  }
+
+  function makeWaterwheelArray(count) {
+    var n = count || 3, root = new THREE.Group();
+    var flumeLen = (n - 1) * 3.8 + 4.4;
+    var flume = new THREE.Mesh(new THREE.BoxGeometry(flumeLen, 0.26, 0.52), MAT.bambooDry);
+    flume.position.set(0, 4.15, -0.35); root.add(flume);
+    var streamTop = new THREE.Mesh(new THREE.BoxGeometry(flumeLen - 0.2, 0.12, 0.34), MAT.waterFlow);
+    streamTop.position.set(0, 4.28, -0.35); root.add(streamTop);
+
+    for (var i = 0; i < n; i++) {
+      var wx = (i - (n - 1) * 0.5) * 3.8;
+      [-0.75, 0.75].forEach(function (pz) {
+        var stand = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 2.5, 5), MAT.darkWood);
+        stand.position.set(wx, 1.15, pz); root.add(stand);
+        var postF = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 4.3, 5), MAT.bambooDry);
+        postF.position.set(wx - 1.2, 2.1, -0.35); root.add(postF);
+      });
+      var wheel = new THREE.Group();
+      wheel.userData.dynamicAnim = 'wheel';
+      wheel.position.set(wx, 2.25, 0);
+      var rim1 = new THREE.Mesh(new THREE.TorusGeometry(1.75, 0.07, 6, 20), MAT.bambooDry);
+      rim1.position.z = -0.35; wheel.add(rim1);
+      var rim2 = new THREE.Mesh(new THREE.TorusGeometry(1.75, 0.07, 6, 20), MAT.bambooDry);
+      rim2.position.z = 0.35; wheel.add(rim2);
+      for (var sp = 0; sp < 8; sp++) {
+        var sa = (sp / 8) * Math.PI;
+        var spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 3.45, 5), MAT.bambooDry);
+        spoke.rotation.z = sa; spoke.position.z = 0; wheel.add(spoke);
+        var bucket = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.09, 0.72, 6), MAT.bamboo);
+        bucket.rotation.x = Math.PI / 2;
+        bucket.position.set(Math.cos(sa * 2) * 1.75, Math.sin(sa * 2) * 1.75, 0);
+        wheel.add(bucket);
+      }
+      root.add(wheel);
+      var splash = new THREE.Mesh(new THREE.BoxGeometry(0.45, 3.4, 0.32), MAT.waterFlow);
+      splash.position.set(wx + 0.1, 2.35, -0.35); root.add(splash);
+    }
+    return root;
+  }
+
+  function makeWaterBuffalo(scale) {
+    var s = scale || 1, g = new THREE.Group();
+    var body = new THREE.Mesh(new THREE.SphereGeometry(0.68, 10, 8), MAT.buffalo);
+    body.scale.set(1.0, 0.78, 1.55); body.position.set(0, 0.45, 0); g.add(body);
+    var head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.42, 0.65), MAT.buffalo);
+    head.position.set(0, 0.78, 1.05); head.rotation.x = 0.25; g.add(head);
+    [-1, 1].forEach(function (sx) {
+      var horn = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.055, 6, 10, Math.PI * 0.72), MAT.horn);
+      horn.position.set(sx * 0.32, 0.94, 0.95);
+      horn.rotation.y = sx * 0.95; horn.rotation.z = sx * -0.45;
+      g.add(horn);
+    });
+    g.scale.setScalar(s);
+    return g;
+  }
+
+  function makeSpearRack(scale) {
+    var s = scale || 1, g = new THREE.Group();
+    [-0.9, 0.9].forEach(function (px) {
+      var leg = new THREE.Mesh(new THREE.BoxGeometry(0.09, 1.65, 0.12), MAT.darkWood);
+      leg.position.set(px, 0.82, 0); g.add(leg);
+    });
+    var bar1 = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.08, 0.08), MAT.darkWood);
+    bar1.position.y = 1.25; g.add(bar1);
+    var bar2 = bar1.clone(); bar2.position.y = 0.35; g.add(bar2);
+    for (var i = 0; i < 6; i++) {
+      var sx = -0.68 + i * 0.27;
+      var sh = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.25, 5), MAT.wood);
+      sh.position.set(sx, 1.12, 0.05); g.add(sh);
+      var tip = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.24, 4), MAT.iron);
+      tip.position.set(sx, 2.34, 0.05); g.add(tip);
+    }
+    g.scale.setScalar(s);
+    return g;
+  }
+
+  function makeCrateAndJarSet(scale, withConicalHats) {
+    var s = scale || 1, g = new THREE.Group();
+    [[0, 0.32, 0, 0.64], [0.72, 0.28, 0.15, 0.56], [0.22, 0.88, 0.05, 0.50]].forEach(function (c) {
+      var box = new THREE.Mesh(new THREE.BoxGeometry(c[3], c[3], c[3]), MAT.wood);
+      box.position.set(c[0], c[1], c[2]); g.add(box);
+    });
+    [[-0.7, 0.2], [-1.15, -0.1]].forEach(function (jp) {
+      var jar = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 7), MAT.ceramic);
+      jar.scale.set(1, 1.25, 1); jar.position.set(jp[0], 0.28, jp[1]); g.add(jar);
+    });
+    if (withConicalHats) {
+      for (var hi = 0; hi < 4; hi++) {
+        var hat = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.20, 10), MAT.bambooDry);
+        hat.position.set(-0.65, 0.14 + hi * 0.12, 0.85); g.add(hat);
+      }
+    }
+    g.scale.setScalar(s);
+    return g;
+  }
+
+  function makeDryingNetRack(scale) {
+    var s = scale || 1, g = new THREE.Group();
+    [-1.4, 1.4].forEach(function (px) {
+      [-0.45, 0.45].forEach(function (pz) {
+        var p = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 2.1, 5), MAT.bambooDry);
+        p.position.set(px, 1.02, pz * 0.6); p.rotation.x = pz * 0.42; g.add(p);
+      });
+    });
+    var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.1, 6), MAT.bambooDry);
+    pole.rotation.z = Math.PI / 2; pole.position.y = 1.92; g.add(pole);
+    var net = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 1.45, 8, 5), MAT.netRope);
+    net.position.set(0, 1.18, 0.14); net.rotation.x = -0.18; g.add(net);
+    g.scale.setScalar(s);
+    return g;
+  }
+
+  function makeBonsaiPot(scale, golden) {
+    var s = scale || 1, g = new THREE.Group();
+    var plinth = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.45, 0.95), MAT.stoneLight);
+    plinth.position.y = 0.225; g.add(plinth);
+    var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 0.72, 6), MAT.darkWood);
+    trunk.position.y = 0.80; trunk.rotation.z = 0.22; g.add(trunk);
+    var folMat = golden ? MAT.maiGold : MAT.foliage;
+    [[0.15, 1.25, 0, 0.44], [-0.24, 1.08, 0.12, 0.34], [0.35, 1.05, -0.12, 0.30]].forEach(function (c) {
+      var crown = new THREE.Mesh(new THREE.DodecahedronGeometry(c[3], 0), folMat);
+      crown.scale.set(1.25, 0.68, 1.25); crown.position.set(c[0], c[1], c[2]); g.add(crown);
+    });
+    g.scale.setScalar(s);
+    return g;
+  }
+
+  function makeBalustradeSegment(len, posts) {
+    var g = new THREE.Group(), n = Math.max(2, posts || Math.ceil(len / 1.8));
+    var railT = new THREE.Mesh(new THREE.BoxGeometry(len, 0.14, 0.20), MAT.stoneLight);
+    railT.position.y = 0.78; g.add(railT);
+    var panel = new THREE.Mesh(new THREE.BoxGeometry(len - 0.16, 0.48, 0.12), MAT.stone);
+    panel.position.y = 0.44; g.add(panel);
+    for (var i = 0; i < n; i++) {
+      var px = -len * 0.5 + (i / (n - 1)) * len;
+      var post = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.92, 0.24), MAT.stoneLight);
+      post.position.set(px, 0.46, 0); g.add(post);
+      var cap = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 6), MAT.stoneLight);
+      cap.scale.set(1, 1.35, 1); cap.position.set(px, 0.98, 0); g.add(cap);
+    }
+    return g;
+  }
+
+  function makeDragonStaircase(width, steps, rise, runLen) {
+    var g = new THREE.Group(), W = width || 5.4, N = steps || 24, H = rise || 8.2, L = runLen || 19.0;
+    var stepD = L / N, stepH = H / N;
+    /* Đế dốc đá nguyên khối dưới bậc để nhìn nghiêng không bị rỗng */
+    var slopeLen = Math.hypot(L, H);
+    var rampUnder = new THREE.Mesh(new THREE.BoxGeometry(W - 0.2, 1.1, slopeLen), MAT.stone);
+    rampUnder.position.set(0, H * 0.5 - 0.42, -L * 0.5);
+    rampUnder.rotation.x = Math.atan2(H, L);
+    g.add(rampUnder);
+    for (var i = 0; i < N; i++) {
+      var st = new THREE.Mesh(new THREE.BoxGeometry(W, stepH * 1.4, stepD * 1.15), MAT.stoneLight);
+      st.position.set(0, (i + 0.5) * stepH, -(i + 0.5) * stepD);
+      g.add(st);
+    }
+    /* Hai lan can đá chéo & thân rồng uốn lượn dọc bậc thang */
+    var slopeAng = Math.atan2(H, L);
+    [-W * 0.5 - 0.16, W * 0.5 + 0.16].forEach(function (rx) {
+      var wall = new THREE.Mesh(new THREE.BoxGeometry(0.46, 1.35, slopeLen), MAT.stone);
+      wall.position.set(rx, H * 0.5 + 0.42, -L * 0.5);
+      wall.rotation.x = slopeAng;
+      g.add(wall);
+      for (var d = 0; d <= 5; d++) {
+        var f = d / 5;
+        var wave = Math.sin(f * Math.PI * 3) * 0.18;
+        var seg = new THREE.Mesh(new THREE.SphereGeometry(0.26, 7, 6), MAT.stoneLight);
+        seg.position.set(rx, f * H + 1.05 + wave, -f * L);
+        g.add(seg);
+      }
+      /* Đầu rồng đá tại chân cầu thang */
+      var dHead = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.52, 0.78), MAT.stoneLight);
+      dHead.position.set(rx, 0.95, 0.35); g.add(dHead);
+      var pearl = new THREE.Mesh(new THREE.SphereGeometry(0.15, 7, 6), MAT.gold);
+      pearl.position.set(rx, 0.85, 0.80); g.add(pearl);
+      if (dHead) {
+        var lan1 = makeStoneLantern(0.9); lan1.position.set(rx * 1.32, 0, -1.0); g.add(lan1);
+        var lan2 = makeStoneLantern(0.9); lan2.position.set(rx * 1.32, H * 0.5, -L * 0.5); g.add(lan2);
+      }
+    });
+    return g;
+  }
+
+  /* Quần thể Hoàng Thành Kinh Kỳ (2 lớp sân chầu + Đại Điện + 2 cánh Hành Lang + 3 Đỉnh Đồng + Mai Vàng) */
+  function makeImperialPalace(scale) {
+    var s = scale || 1, g = new THREE.Group();
+    var DM = window.__DAIVIET_MODELS;
+    var W = 24.0, D = 19.0;
+
+    /* Nền đá sân chầu */
+    var plat = new THREE.Mesh(new THREE.BoxGeometry(W, 1.4, D), MAT.stone);
+    plat.position.y = -0.7; g.add(plat);
+    var floor = new THREE.Mesh(new THREE.BoxGeometry(W - 0.6, 0.12, D - 0.6), MAT.stoneLight);
+    floor.position.y = 0.02; g.add(floor);
+
+    /* Lan can đá quanh sân */
+    var blL = makeBalustradeSegment(D - 1.0, 9); blL.rotation.y = Math.PI / 2; blL.position.set(-W * 0.5 + 0.35, 0.08, 0); g.add(blL);
+    var blR = makeBalustradeSegment(D - 1.0, 9); blR.rotation.y = Math.PI / 2; blR.position.set(W * 0.5 - 0.35, 0.08, 0); g.add(blR);
+    [-1, 1].forEach(function (side) {
+      var blF = makeBalustradeSegment(W * 0.5 - 3.6, 5);
+      blF.position.set(side * (W * 0.25 + 1.45), 0.08, D * 0.5 - 0.35); g.add(blF);
+    });
+
+    /* Bệ thượng điện phía sau */
+    var upper = new THREE.Mesh(new THREE.BoxGeometry(15.2, 0.85, 8.2), MAT.stoneLight);
+    upper.position.set(0, 0.425, -4.6); g.add(upper);
+    for (var ust = 0; ust < 4; ust++) {
+      var st = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.22, 0.38), MAT.stoneLight);
+      st.position.set(0, 0.11 + ust * 0.21, -0.45 - ust * 0.35); g.add(st);
+    }
+
+    /* Đại Điện 2 tầng mái cong rực rỡ */
+    var h1 = 3.4, hW = 13.4, hD = 6.6, zM = -4.8;
+    var core1 = new THREE.Mesh(new THREE.BoxGeometry(hW * 0.82, h1, hD * 0.72), MAT.lacquerRed);
+    core1.position.set(0, 0.85 + h1 * 0.5, zM); g.add(core1);
+    for (var ci = -5.8; ci <= 5.8; ci += 2.9) {
+      [-1, 1].forEach(function (sz) {
+        var col = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, h1, 7), MAT.lacquerRed);
+        col.position.set(ci, 0.85 + h1 * 0.5, zM + sz * hD * 0.45); g.add(col);
+      });
+    }
+    if (DM && DM.makeCurvedHipRoof) {
+      var rf1 = DM.makeCurvedHipRoof(hW + 2.4, hD + 2.0, 2.05, { roofMat: MAT.roofRed, bells: true });
+      rf1.position.set(0, 0.85 + h1 - 0.06, zM); g.add(rf1);
+      var core2 = new THREE.Mesh(new THREE.BoxGeometry(hW * 0.58, 2.35, hD * 0.50), MAT.lacquerRed);
+      core2.position.set(0, 0.85 + h1 + 2.15, zM); g.add(core2);
+      var rf2 = DM.makeCurvedHipRoof(hW * 0.78, hD * 0.78, 2.25, { roofMat: MAT.roofRed, bells: true, finialMat: MAT.gold });
+      rf2.position.set(0, 0.85 + h1 + 3.25, zM); g.add(rf2);
+    } else {
+      var boxRf = new THREE.Mesh(new THREE.ConeGeometry(hW * 0.68, 3.6, 4), MAT.roofRed);
+      boxRf.rotation.y = Math.PI / 4; boxRf.position.set(0, 0.85 + h1 + 1.8, zM); g.add(boxRf);
+    }
+
+    /* 2 dãy Hành Lang cánh Tả & Hữu treo đèn lồng */
+    [-1, 1].forEach(function (sx) {
+      var wing = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.75, 11.4), MAT.wallCream);
+      wing.position.set(sx * 9.8, 1.38, 1.4); g.add(wing);
+      if (DM && DM.makeCurvedHipRoof) {
+        var wrf = DM.makeCurvedHipRoof(3.8, 12.6, 1.45, { roofMat: MAT.roofRed });
+        wrf.position.set(sx * 9.6, 2.7, 1.4); g.add(wrf);
+      }
+      for (var lz = -3.2; lz <= 6.0; lz += 2.3) {
+        var wLan = new THREE.Mesh(new THREE.SphereGeometry(0.22, 6, 6), MAT.lantern);
+        wLan.position.set(sx * 8.2, 2.35, lz); g.add(wLan);
+      }
+    });
+
+    /* 3 Đỉnh Đồng Hương Án & 6 Chậu Mai Vàng + Tùng */
+    [-3.6, 0, 3.6].forEach(function (bx) {
+      var br = makeBronzeCauldron(1.35);
+      br.position.set(bx, 0.08, 3.2); g.add(br);
+    });
+    [[-6.2, 1.0, true], [6.2, 1.0, false], [-6.2, 5.4, false], [6.2, 5.4, true], [-3.2, -1.6, true], [3.2, -1.6, false]].forEach(function (bp) {
+      var pot = makeBonsaiPot(1.15, bp[2]);
+      pot.position.set(bp[0], 0.08, bp[1]); g.add(pot);
+    });
+
+    g.scale.setScalar(s);
+    return g;
+  }
+
+  /* Cổ Mộ Rừng Trúc (Gò đá rêu + cửa hầm ánh sáng lam + 2 Nghê Đá + bậc đá âm cấp) */
+  function makeTombChamber(scale) {
+    var s = scale || 1, g = new THREE.Group();
+    var mound = new THREE.Mesh(new THREE.DodecahedronGeometry(3.4, 1), MAT.mossStone);
+    mound.scale.set(1.25, 0.92, 1.15); mound.position.set(0, 1.85, -1.5); g.add(mound);
+    var rockL = new THREE.Mesh(new THREE.DodecahedronGeometry(2.0, 1), MAT.cliffStone);
+    rockL.position.set(-2.6, 1.0, -0.4); g.add(rockL);
+    var rockR = new THREE.Mesh(new THREE.DodecahedronGeometry(1.9, 1), MAT.cliffStone);
+    rockR.position.set(2.5, 0.95, -0.5); g.add(rockR);
+
+    [-1.25, 1.25].forEach(function (px) {
+      var pil = new THREE.Mesh(new THREE.BoxGeometry(0.55, 2.75, 0.65), MAT.mossStone);
+      pil.position.set(px, 1.38, 1.15); g.add(pil);
+    });
+    var lintel = new THREE.Mesh(new THREE.BoxGeometry(3.35, 0.65, 0.85), MAT.mossStone);
+    lintel.position.set(0, 2.85, 1.15); g.add(lintel);
+    var crest = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.55, 0.62), MAT.stoneLight);
+    crest.position.set(0, 3.35, 1.15); g.add(crest);
+
+    var voidIn = new THREE.Mesh(new THREE.BoxGeometry(1.9, 2.4, 0.5), MAT.darkRock);
+    voidIn.position.set(0, 1.2, 0.95); g.add(voidIn);
+    var spiritGlow = new THREE.Mesh(new THREE.SphereGeometry(0.32, 8, 6), MAT.spiritCyan);
+    spiritGlow.position.set(0, 1.65, 1.05); g.add(spiritGlow);
+
+    /* Bậc đá & lan can dẫn vào cửa hầm */
+    for (var st = 0; st < 4; st++) {
+      var step = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.22, 0.52), MAT.stone);
+      step.position.set(0, 0.11 + (3 - st) * 0.08, 1.6 + st * 0.50); g.add(step);
+    }
+    [-1.95, 1.95].forEach(function (lx) {
+      var lion = makeGuardianLion(0.85, true);
+      lion.position.set(lx, 0, 2.35); g.add(lion);
+      var lan = makeStoneLantern(0.82);
+      lan.position.set(lx * 1.3, 0, 3.8); g.add(lan);
+    });
+    g.scale.setScalar(s);
+    return g;
+  }
+
+  /* Cần trục khai khoáng & đường ray xe goòng (Hắc Sơn r06) */
+  function makeMineCrane(scale) {
+    var s = scale || 1, g = new THREE.Group();
+    [[-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]].forEach(function (p) {
+      var leg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.4, 0.18), MAT.darkWood);
+      leg.position.set(p[0], 1.7, p[1]); g.add(leg);
+    });
+    var mast = new THREE.Mesh(new THREE.BoxGeometry(0.32, 5.2, 0.32), MAT.wood);
+    mast.position.y = 2.6; g.add(mast);
+    var boom = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.26, 0.26), MAT.wood);
+    boom.position.set(1.5, 4.8, 0); boom.rotation.z = 0.42; g.add(boom);
+    var rope = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.4, 5), MAT.bambooDry);
+    rope.position.set(3.2, 4.3, 0); g.add(rope);
+    var basket = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.38, 0.55, 8), MAT.ceramic);
+    basket.position.set(3.2, 3.0, 0); g.add(basket);
+    var ore = new THREE.Mesh(new THREE.DodecahedronGeometry(0.45, 0), MAT.darkRock);
+    ore.position.set(3.2, 3.25, 0); g.add(ore);
+    g.scale.setScalar(s);
+    return g;
+  }
+
+  function makeMineRailAndCart(len) {
+    var L = len || 14.0, g = new THREE.Group();
+    [-0.45, 0.45].forEach(function (rx) {
+      var rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, L), MAT.iron);
+      rail.position.set(rx, 0.14, 0); g.add(rail);
+    });
+    for (var z = -L * 0.45; z <= L * 0.45; z += 0.85) {
+      var tie = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 0.16), MAT.darkWood);
+      tie.position.set(0, 0.05, z); g.add(tie);
+    }
+    var cart = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.72, 1.45), MAT.darkWood);
+    cart.position.set(0, 0.62, 0.5); g.add(cart);
+    var load = new THREE.Mesh(new THREE.DodecahedronGeometry(0.55, 0), MAT.darkRock);
+    load.scale.set(1, 0.75, 1.2); load.position.set(0, 1.0, 0.5); g.add(load);
+    return g;
+  }
+
+  window.__DAI_VIET_PROPS = {
+    MAT: MAT,
+    mergeStaticGroup: mergeStaticGroup,
+    makeStoneLantern: makeStoneLantern,
+    makeGuardianLion: makeGuardianLion,
+    makeBronzeCauldron: makeBronzeCauldron,
+    makeHorseCart: makeHorseCart,
+    makeTeaStall: makeTeaStall,
+    makeBambooGrove: makeBambooGrove,
+    makeWaterwheelArray: makeWaterwheelArray,
+    makeWaterBuffalo: makeWaterBuffalo,
+    makeSpearRack: makeSpearRack,
+    makeCrateAndJarSet: makeCrateAndJarSet,
+    makeDryingNetRack: makeDryingNetRack,
+    makeBonsaiPot: makeBonsaiPot,
+    makeBalustradeSegment: makeBalustradeSegment,
+    makeDragonStaircase: makeDragonStaircase,
+    makeImperialPalace: makeImperialPalace,
+    makeTombChamber: makeTombChamber,
+    makeMineCrane: makeMineCrane,
+    makeMineRailAndCart: makeMineRailAndCart
+  };
+
+  /* ============================================================================
+   * 2. XÂY TOÀN BỘ 8 TIỂU KHU THUNG LŨNG KINH KỲ QUANH SPAWN (r01)
+   * ============================================================================ */
+  window.__initKinhKyDiorama = function (gardenRoot, hillY, LAKE, waterY) {
+    if (!gardenRoot || window.__KINHKY_DIORAMA) return window.__KINHKY_DIORAMA;
+    var root = new THREE.Group();
+    root.name = 'kinhKyDiorama';
+    var DM = window.__DAIVIET_MODELS;
+    var RA = window.__REAL_ASSETS;
+    var animWheels = [];
+
+    /* ---- 1. CỔNG TAM QUAN + TƯỜNG THÀNH RĂNG CƯA + XE NGỰA + SƯ TỬ ĐÁ (r01_02) ---- */
+    var gateBaseY = hillY(0, -26);
+    var gateGrp = new THREE.Group();
+    [-1, 1].forEach(function (sx) {
+      var wall = new THREE.Mesh(new THREE.BoxGeometry(7.6, 4.1, 1.8), MAT.stone);
+      wall.position.set(sx * 9.3, gateBaseY + 2.0, -26); gateGrp.add(wall);
+      for (var mx = 0; mx < 4; mx++) {
+        var mer = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.65, 0.42), MAT.mossStone);
+        mer.position.set(sx * (6.2 + mx * 1.8), gateBaseY + 4.35, -25.4); gateGrp.add(mer);
+        var merB = mer.clone(); merB.position.z = -26.6; gateGrp.add(merB);
+      }
+      var fg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 2.8, 5), MAT.darkWood);
+      fg.position.set(sx * 8.4, gateBaseY + 5.2, -26); gateGrp.add(fg);
+      var cloth = new THREE.Mesh(new THREE.PlaneGeometry(0.65, 1.65), MAT.bannerRed);
+      cloth.position.set(sx * 8.4 + sx * 0.35, gateBaseY + 5.6, -26); gateGrp.add(cloth);
+    });
+    [-2.2, 2.2].forEach(function (lx) {
+      var lion = makeGuardianLion(0.95, false);
+      lion.position.set(lx, hillY(lx, -21.2), -21.2); gateGrp.add(lion);
+    });
+    var cart = makeHorseCart(1.08);
+    cart.position.set(-3.3, hillY(-3.3, -17.2), -17.2); cart.rotation.y = 0.28; gateGrp.add(cart);
+    [[-3.6, -15.0], [3.6, -15.0], [-4.4, -22.2], [4.4, -22.2]].forEach(function (lp) {
+      var lan = makeStoneLantern(0.92);
+      lan.position.set(lp[0], hillY(lp[0], lp[1]), lp[1]); gateGrp.add(lan);
+    });
+    root.add(mergeStaticGroup(gateGrp));
+
+    /* ---- 2. ĐỒI RUỘNG BẬC THANG + BẬC RỒNG LONG ĐẠO + HOÀNG THÀNH KINH KỲ (r01_01) ---- */
+    var palBaseY = gateBaseY;
+    var palRise = 8.2;
+    var palTopY = palBaseY + palRise;
+    var palGrp = new THREE.Group();
+    for (var ti = 0; ti < 6; ti++) {
+      var tFrac = ti / 5;
+      var tY = palBaseY + 0.55 + tFrac * (palRise - 0.8);
+      var rx = 25.0 - ti * 1.9, rz = 16.5 - ti * 1.1;
+      var ringGeo = new THREE.CylinderGeometry(rx, rx + 0.75, 1.55, 28);
+      var ring = new THREE.Mesh(ringGeo, ti % 2 ? MAT.riceGreen : MAT.foliage);
+      ring.scale.set(1.0, 1.0, rz / rx);
+      ring.position.set(0, tY - 0.65, -51.5 - ti * 1.1);
+      palGrp.add(ring);
+    }
+    var stairs = makeDragonStaircase(5.2, 24, palRise, 18.8);
+    stairs.position.set(0, palBaseY, -31.8);
+    palGrp.add(stairs);
+    var imperial = makeImperialPalace(1.05);
+    imperial.position.set(0, palTopY, -60.2);
+    palGrp.add(imperial);
+    root.add(mergeStaticGroup(palGrp));
+
+    /* ---- 3. THÁNH ĐỊA CÂY ĐA & LÀNG NHÀ BA GIAN CÓ TƯỜNG BAO (r01_03) ---- */
+    var vilGrp = new THREE.Group();
+    var vcX = 16.5, vcZ = -17.5, vy = hillY(vcX, vcZ);
+    /* Tường bao thấp bằng đá rêu quanh khuôn viên làng + đôi trụ cổng mở về sân chính */
+    var wSegs = [
+      [16.5, -24.5, 18.0, 0.52], /* Bắc */
+      [25.5, -17.5, 0.52, 14.5], /* Đông */
+      [8.2, -19.2, 0.52, 10.6],  /* Tây (bên trên cổng) */
+      [20.2, -10.5, 11.2, 0.52]  /* Nam-Đông (chừa cổng vào 10..14.5) */
+    ];
+    wSegs.forEach(function (ws) {
+      var seg = new THREE.Mesh(new THREE.BoxGeometry(ws[2], 1.15, ws[3]), MAT.stone);
+      seg.position.set(ws[0], hillY(ws[0], ws[1]) + 0.55, ws[1]); vilGrp.add(seg);
+      var cap = new THREE.Mesh(new THREE.BoxGeometry(ws[2] + 0.08, 0.14, ws[3] + 0.08), MAT.mossStone);
+      cap.position.set(ws[0], hillY(ws[0], ws[1]) + 1.16, ws[1]); vilGrp.add(cap);
+    });
+    [[9.2, -13.6], [14.6, -10.5]].forEach(function (gp) {
+      var pil = new THREE.Mesh(new THREE.BoxGeometry(0.62, 2.35, 0.62), MAT.stoneLight);
+      pil.position.set(gp[0], hillY(gp[0], gp[1]) + 1.15, gp[1]); vilGrp.add(pil);
+      var capP = new THREE.Mesh(new THREE.SphereGeometry(0.24, 6, 6), MAT.stoneLight);
+      capP.position.set(gp[0], hillY(gp[0], gp[1]) + 2.45, gp[1]); vilGrp.add(capP);
+    });
+    /* Lối bước đá lát + giếng cổ trong sân làng + 2 chum nước & cờ hội */
+    for (var si = 0; si < 7; si++) {
+      var sx = 11.5 + si * 0.65, sz = -12.0 - si * 0.72;
+      var pad = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.45, 0.08, 7), MAT.stoneLight);
+      pad.scale.set(1.3, 1, 0.9);
+      pad.position.set(sx, hillY(sx, sz) + 0.04, sz); vilGrp.add(pad);
+    }
+    var wellRing = new THREE.Mesh(new THREE.CylinderGeometry(0.88, 0.96, 0.72, 12, 1, true), MAT.stone);
+    wellRing.position.set(17.5, hillY(17.5, -12.8) + 0.36, -12.8); vilGrp.add(wellRing);
+    var wellWater = new THREE.Mesh(new THREE.CircleGeometry(0.82, 12), MAT.waterStream);
+    wellWater.rotation.x = -Math.PI / 2; wellWater.position.set(17.5, hillY(17.5, -12.8) + 0.46, -12.8); vilGrp.add(wellWater);
+    var vJars = makeCrateAndJarSet(0.95, false);
+    vJars.position.set(13.2, hillY(13.2, -16.2), -16.2); vilGrp.add(vJars);
+    var vLan1 = makeStoneLantern(0.85); vLan1.position.set(13.5, hillY(13.5, -12.4), -12.4); vilGrp.add(vLan1);
+    var vLan2 = makeStoneLantern(0.85); vLan2.position.set(19.5, hillY(19.5, -14.8), -14.8); vilGrp.add(vLan2);
+    root.add(mergeStaticGroup(vilGrp));
+
+    /* 3 Nhà Ba Gian gỗ cổ truyền xếp hình chữ U quanh gốc Đa (không merge để giữ model gốc mượt) */
+    if (DM && DM.makeNhaBaGian) {
+      [
+        { x: 11.2, z: -18.2, ry: 0.95, s: 0.46 },
+        { x: 18.2, z: -22.2, ry: 0.05, s: 0.46 },
+        { x: 22.8, z: -16.8, ry: -1.15, s: 0.46 }
+      ].forEach(function (h) {
+        var nha = DM.makeNhaBaGian(h.s);
+        nha.position.set(h.x, hillY(h.x, h.z), h.z);
+        nha.rotation.y = h.ry;
+        root.add(nha);
+      });
+    }
+
+    /* ---- 4. CỔ MỘ RỪNG TRÚC & BIA RÙA ĐÁ (-20, -18, r01_06) ---- */
+    var tombGrp = new THREE.Group();
+    var tbX = -20.0, tbZ = -18.5;
+    var grove = makeBambooGrove(42, 7.6, 5.2, 8.6, 3);
+    grove.position.set(tbX - 0.5, hillY(tbX, tbZ), tbZ - 1.2);
+    tombGrp.add(grove);
+    var tomb = makeTombChamber(1.05);
+    tomb.position.set(tbX + 0.5, hillY(tbX + 0.5, tbZ - 3.6), tbZ - 3.6);
+    tomb.rotation.y = 0.42;
+    tombGrp.add(tomb);
+    root.add(mergeStaticGroup(tombGrp));
+    if (RA) {
+      for (var fi = 0; fi < 5; fi++) {
+        var fa = (fi / 5) * 6.283;
+        var fern = RA.makeModel('fern', 0.95);
+        var fx = tbX + Math.cos(fa) * 5.2, fz = tbZ + Math.sin(fa) * 5.2;
+        fern.position.set(fx, hillY(fx, fz), fz); root.add(fern);
+      }
+    }
+
+    /* ---- 5. QUÁN TRÀ VEN CẦU & SAMPAN DƯỚI CẦU NGÓI (-7.5, -5.5, r01_05) ---- */
+    var teaGrp = new THREE.Group();
+    var tea = makeTeaStall(0.95, true);
+    tea.position.set(-4.2, hillY(-4.2, -9.2), -9.2); tea.rotation.y = 0.45; teaGrp.add(tea);
+    [[-4.8, -6.5], [-10.6, -4.6], [-5.2, -3.5]].forEach(function (lp) {
+      var bl = makeStoneLantern(0.84);
+      bl.position.set(lp[0], hillY(lp[0], lp[1]), lp[1]); teaGrp.add(bl);
+    });
+    var bridgeBam = makeBambooGrove(14, 2.2, 3.8, 6.2, 9);
+    bridgeBam.position.set(-11.8, hillY(-11.8, -8.8), -8.8); teaGrp.add(bridgeBam);
+    /* Thuyền nan có mái cói neo sát suối dưới gầm Cầu Ngói */
+    var sampanBr = new THREE.Group();
+    var spHull = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.22, 3.2, 6), MAT.darkWood);
+    spHull.rotation.x = Math.PI / 2; spHull.scale.set(1.2, 1, 0.55); spHull.position.y = 0.24; sampanBr.add(spHull);
+    var spHood = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 1.3, 8, 1, false, 0, Math.PI), MAT.thatch);
+    spHood.rotation.z = Math.PI / 2; spHood.rotation.y = Math.PI / 2; spHood.position.set(0, 0.46, -0.2); sampanBr.add(spHood);
+    sampanBr.position.set(-8.1, waterY + 0.02, 2.2); sampanBr.rotation.y = 0.15;
+    teaGrp.add(sampanBr);
+    root.add(mergeStaticGroup(teaGrp));
+
+    /* ---- 6. BẾN CẢNG THUYỀN BUỒM CÁNH DƠI (BỜ NAM HỒ GƯƠNG z = 23.8..28.8, r01_04) ---- */
+    var portGrp = new THREE.Group();
+    var deckY = waterY + 0.62;
+    /* Sàn cầu tàu chính 17.5m + 3 nhánh cầu vươn ra mặt hồ + cọc gỗ */
+    var mainQuay = new THREE.Mesh(new THREE.BoxGeometry(17.5, 0.28, 3.6), MAT.wood);
+    mainQuay.position.set(2.4, deckY, 24.4); portGrp.add(mainQuay);
+    for (var qx = -5.5; qx <= 10.5; qx += 2.6) {
+      var pile = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 2.2, 6), MAT.darkWood);
+      pile.position.set(qx, deckY - 0.85, 22.8); portGrp.add(pile);
+      var postTop = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.72, 6), MAT.darkWood);
+      postTop.position.set(qx, deckY + 0.35, 22.7); portGrp.add(postTop);
+    }
+    var pierXs = [-2.2, 2.4, 7.0];
+    pierXs.forEach(function (px) {
+      var finger = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.22, 4.8), MAT.wood);
+      finger.position.set(px, deckY - 0.05, 20.6); portGrp.add(finger);
+      [18.5, 20.6].forEach(function (pz) {
+        [-0.9, 0.9].forEach(function (ox) {
+          var p2 = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.12, 2.4, 6), MAT.darkWood);
+          p2.position.set(px + ox, deckY - 1.0, pz); portGrp.add(p2);
+        });
+      });
+    });
+    /* Kho Hàng & Quán Trà Đèn Lồng ngay sau cầu tàu (facing North over lake) */
+    var cratesPort = makeCrateAndJarSet(1.15, true);
+    cratesPort.position.set(-4.2, deckY + 0.14, 24.6); portGrp.add(cratesPort);
+    var netL = makeDryingNetRack(1.0);
+    netL.position.set(-6.5, hillY(-6.5, 25.0), 25.0); netL.rotation.y = 0.4; portGrp.add(netL);
+    var netR = makeDryingNetRack(1.0);
+    netR.position.set(10.6, hillY(10.6, 25.0), 25.0); netR.rotation.y = -0.35; portGrp.add(netR);
+    var portTea = makeTeaStall(1.15, false);
+    portTea.position.set(6.5, deckY + 0.14, 24.9); portTea.rotation.y = Math.PI; portGrp.add(portTea);
+    root.add(mergeStaticGroup(portGrp));
+    if (DM && DM.makeNhaBaGian && DM.makeBatwingJunkBoat) {
+      var warehouse = DM.makeNhaBaGian(0.44);
+      warehouse.position.set(-1.6, hillY(-1.6, 28.0), 28.0); warehouse.rotation.y = Math.PI; root.add(warehouse);
+      var dockTeaHouse = DM.makeNhaBaGian(0.44);
+      dockTeaHouse.position.set(5.4, hillY(5.4, 28.0), 28.0); dockTeaHouse.rotation.y = Math.PI; root.add(dockTeaHouse);
+      var boat2 = DM.makeBatwingJunkBoat(0.44);
+      boat2.position.set(0.2, waterY - 0.12, 18.2); boat2.rotation.y = 0.65; root.add(boat2);
+    }
+
+    /* ---- 7. LÀNG CỌN NƯỚC & RUỘNG BẬC THANG VÀNG + TRÂU NẰM (22, 12, r01_07) ---- */
+    var farmGrp = new THREE.Group();
+    /* Kênh suối tưới nhỏ phía Đông */
+    var brook = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.12, 16.0), MAT.waterStream);
+    brook.position.set(22.2, hillY(22.2, 12.0) + 0.08, 12.0); brook.rotation.y = 0.25; farmGrp.add(brook);
+    /* 4 thửa Ruộng Bậc Thang Lúa Vàng & Xanh uốn bên sườn Đông */
+    for (var rt = 0; rt < 4; rt++) {
+      var radR = 11.5 - rt * 2.1;
+      var ter = new THREE.Mesh(new THREE.CylinderGeometry(radR, radR + 0.65, 0.72, 16, 1, false, -0.5, 3.2), rt % 2 === 0 ? MAT.riceGold : MAT.riceGreen);
+      ter.position.set(29.5, hillY(29.5, 13.0) - 0.2 + rt * 0.68, 13.0); farmGrp.add(ter);
+    }
+    /* Kho sàn mái rơm + Đống Rơm vàng + Trâu nằm nghỉ + Cầu ván nhỏ */
+    var barnY = hillY(17.5, 11.5);
+    var barnDeck = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.22, 3.2), MAT.wood);
+    barnDeck.position.set(17.5, barnY + 0.55, 11.5); barnDeck.rotation.y = -0.35; farmGrp.add(barnDeck);
+    [[-1.6, -1.3], [1.6, -1.3], [-1.6, 1.3], [1.6, 1.3]].forEach(function (sp) {
+      var p = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.10, 2.2, 5), MAT.darkWood);
+      p.position.set(17.5 + sp[0], barnY + 1.0, 11.5 + sp[1]); farmGrp.add(p);
+    });
+    var barnBody = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.45, 2.6), MAT.bambooDry);
+    barnBody.position.set(17.5, barnY + 1.35, 11.5); barnBody.rotation.y = -0.35; farmGrp.add(barnBody);
+    var barnRoof = new THREE.Mesh(new THREE.ConeGeometry(2.85, 1.35, 4), MAT.thatch);
+    barnRoof.rotation.y = Math.PI / 4 - 0.35; barnRoof.position.set(17.5, barnY + 2.65, 11.5); farmGrp.add(barnRoof);
+    [[19.2, 8.8], [19.8, 9.5], [16.0, 14.5]].forEach(function (hp) {
+      var hay = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.95, 8), MAT.straw);
+      hay.position.set(hp[0], hillY(hp[0], hp[1]) + 0.45, hp[1]); farmGrp.add(hay);
+    });
+    var buf = makeWaterBuffalo(0.95);
+    buf.position.set(18.6, hillY(18.6, 15.8), 15.8); buf.rotation.y = -0.9; farmGrp.add(buf);
+    var footBr = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.18, 1.35), MAT.wood);
+    footBr.position.set(22.2, hillY(22.2, 18.2) + 0.28, 18.2); footBr.rotation.y = 0.25; farmGrp.add(footBr);
+    root.add(mergeStaticGroup(farmGrp));
+
+    /* Bộ 3 Cọn Nước quay giữ dynamicAnim tách riêng để xoay mượt */
+    var wheels = makeWaterwheelArray(3);
+    wheels.position.set(22.5, hillY(22.5, 11.5) - 0.35, 11.5);
+    wheels.rotation.y = Math.PI / 2 + 0.25;
+    root.add(wheels);
+    wheels.traverse(function (o) { if (o.userData && o.userData.dynamicAnim === 'wheel') animWheels.push(o); });
+
+    /* ---- 8. ẢI CỔNG ĐÁ RANH GIỚI MÂY ĐÔNG BẮC (37, -30, r01_08) ---- */
+    var passGrp = new THREE.Group();
+    var pX = 36.5, pZ = -29.5, pY = hillY(pX, pZ);
+    [-11.5, 11.5].forEach(function (cx) {
+      var cliff = new THREE.Mesh(new THREE.CylinderGeometry(3.8, 6.2, 18.0, 8), MAT.cliffStone);
+      cliff.position.set(pX + cx * 0.85, pY + 7.5, pZ - cx * 0.45); passGrp.add(cliff);
+      var capMoss = new THREE.Mesh(new THREE.DodecahedronGeometry(3.4, 0), MAT.foliage);
+      capMoss.scale.set(1.2, 0.5, 1.2); capMoss.position.set(pX + cx * 0.85, pY + 16.5, pZ - cx * 0.45); passGrp.add(capMoss);
+    });
+    if (DM && DM.makeTamQuanGate) {
+      var passGate = DM.makeTamQuanGate(0.88);
+      passGate.position.set(pX, pY, pZ); passGate.rotation.y = -0.58; root.add(passGate);
+    }
+    var rackL = makeSpearRack(1.0);
+    rackL.position.set(pX - 4.2, hillY(pX - 4.2, pZ + 5.2), pZ + 5.2); rackL.rotation.y = -0.45; passGrp.add(rackL);
+    var brazierPass = makeBronzeCauldron(1.25);
+    brazierPass.position.set(pX - 2.4, hillY(pX - 2.4, pZ + 5.6), pZ + 5.6); passGrp.add(brazierPass);
+    var guardTea = makeTeaStall(0.9, false);
+    guardTea.position.set(pX + 4.4, hillY(pX + 4.4, pZ + 3.2), pZ + 3.2); guardTea.rotation.y = -0.9; passGrp.add(guardTea);
+    root.add(mergeStaticGroup(passGrp));
+
+    gardenRoot.add(root);
+
+    /* ---- HÀM ĐỘ CAO BƯỚC CHÂN CHO PHÉP LEO BẬC RỒNG -> HOÀNG THÀNH & ĐI TRÊN CẦU TÀU ---- */
+    window.__dioramaFloorY = function (x, z, baseY) {
+      /* 1. Bậc đá Long Đạo z: -31.8..-50.6, |x| <= 2.75 */
+      if (Math.abs(x) <= 2.75 && z <= -31.8 && z >= -50.6) {
+        var frac = (-31.8 - z) / 18.8;
+        frac = Math.max(0, Math.min(1, frac));
+        return palBaseY + frac * palRise + 0.12;
+      }
+      /* 2. Sân Hoàng Thành z: -50.6..-69.8, |x| <= 12.2 */
+      if (Math.abs(x) <= 12.2 && z < -50.6 && z >= -69.8) {
+        var upPlat = (Math.abs(x) <= 7.8 && z <= -54.8 && z >= -64.5) ? 0.85 : 0.08;
+        return palTopY + upPlat;
+      }
+      /* 3. Cầu Tàu Gỗ & 3 Nhánh Bến Cảng Hồ Gương */
+      if (x >= -6.4 && x <= 11.2 && z >= 22.6 && z <= 26.2) return deckY + 0.14;
+      for (var pi = 0; pi < pierXs.length; pi++) {
+        if (Math.abs(x - pierXs[pi]) <= 1.1 && z >= 18.2 && z <= 22.8) return deckY + 0.08;
+      }
+      /* 4. Cầu ván Cọn Nước */
+      if (Math.hypot(x - 22.2, z - 18.2) < 1.8) return hillY(22.2, 18.2) + 0.36;
+      return null;
+    };
+
+    window.__updateDiorama = function (timeSec, dt) {
+      for (var wi = 0; wi < animWheels.length; wi++) {
+        animWheels[wi].rotation.z -= (dt || 0.016) * 0.85;
+      }
+    };
+
+    window.__KINHKY_DIORAMA = { root: root, palTopY: palTopY };
+    return window.__KINHKY_DIORAMA;
+  };
+})();
+
 /* Đại Việt 64 Địa Danh & Kiến Trúc Chi Tiết — đối chiếu 100% 8 bản đồ khu vực trong Regional Atlas. */
 window.__initDaiVietLandmarks = function (gardenRoot) {
   if (!gardenRoot || window.__DAIVIET_LANDMARKS) return window.__DAIVIET_LANDMARKS;
@@ -23213,6 +24243,73 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
       return SEA_Y + 0.15;
     }
     return h;
+  }
+
+  var P = window.__DAI_VIET_PROPS || null;
+  function attachDetailedProps(det, g) {
+    if (!P) return;
+    var r = det.region, id = det.id;
+    /* Cổng đèn đá, đỉnh đồng, sư tử & hành lang chi tiết theo đặc trưng vùng */
+    if (r === 'r01' || r === 'r08' || id === 'r05_01' || id === 'r05_07' || id === 'r06_04') {
+      [-3.5, 3.5].forEach(function (px) {
+        var lan = P.makeStoneLantern(0.95); lan.position.set(px, 0, 8.5); g.add(lan);
+      });
+    }
+    if (id === 'r01_01') {
+      g.add(P.makeImperialPalace(0.88));
+      var ds1 = P.makeDragonStaircase(4.6, 18, 5.2, 12.5);
+      ds1.position.set(0, -5.0, 9.5); g.add(ds1);
+    } else if (id === 'r01_02') {
+      var cart1 = P.makeHorseCart(1.1); cart1.position.set(-5.8, 0, 7.2); cart1.rotation.y = 0.4; g.add(cart1);
+      [-3.2, 3.2].forEach(function (sx) {
+        var gl = P.makeGuardianLion(1.0, false); gl.position.set(sx, 0, 5.5); g.add(gl);
+      });
+    } else if (id === 'r01_04' || id === 'r02_05' || id === 'r03_05') {
+      var cPort = P.makeCrateAndJarSet(1.15, true); cPort.position.set(-5.2, 0.7, 2.5); g.add(cPort);
+      var netP = P.makeDryingNetRack(1.1); netP.position.set(5.6, 0.5, -2.5); netP.rotation.y = -0.45; g.add(netP);
+    } else if (id === 'r01_05' || id === 'r02_04' || id === 'r04_03') {
+      var ts = P.makeTeaStall(1.0, id === 'r01_05'); ts.position.set(-9.5, 0.2, 5.5); ts.rotation.y = 0.5; g.add(ts);
+    } else if (id === 'r01_06' || id === 'r02_08') {
+      var bg = P.makeBambooGrove(30, 10.5, 6.2, 10.2, 5); g.add(bg);
+      if (id === 'r01_06') {
+        var tc = P.makeTombChamber(1.1); tc.position.set(-4.2, 0, -4.5); tc.rotation.y = 0.35; g.add(tc);
+      } else {
+        var pots = P.makeCrateAndJarSet(1.1, false); pots.position.set(4.5, 0, 5.8); g.add(pots);
+      }
+    } else if (id === 'r01_07') {
+      var wArr = P.makeWaterwheelArray(3); wArr.position.set(4.0, 0.1, 4.0); g.add(wArr);
+      wArr.traverse(function (o) { if (o.userData && o.userData.dynamicAnim === 'wheel') animatedWheels.push(o); });
+      var bf = P.makeWaterBuffalo(1.1); bf.position.set(-6.5, 0.2, 6.5); bf.rotation.y = 0.8; g.add(bf);
+    } else if (id === 'r01_08' || id === 'r05_07') {
+      var sr1 = P.makeSpearRack(1.15); sr1.position.set(-5.5, 0, 5.5); sr1.rotation.y = 0.35; g.add(sr1);
+      var sr2 = P.makeSpearRack(1.15); sr2.position.set(5.5, 0, 5.5); sr2.rotation.y = -0.35; g.add(sr2);
+      var gtSt = P.makeTeaStall(0.95, false); gtSt.position.set(6.5, 0, 8.2); gtSt.rotation.y = -0.7; g.add(gtSt);
+    } else if (id === 'r02_06' || id === 'r05_08' || id === 'r06_07') {
+      for (var bi = 0; bi < 4; bi++) {
+        var ang = bi * 1.57 + 0.4;
+        var sl = P.makeStoneLantern(0.92); sl.position.set(Math.cos(ang) * 7.2, 1.4, Math.sin(ang) * 7.2); g.add(sl);
+      }
+      var cz = P.makeBronzeCauldron(1.3); cz.position.set(0, 1.8, 3.8); g.add(cz);
+    } else if (id === 'r03_01' || id === 'r03_06') {
+      [-4.2, 4.2].forEach(function (lx) {
+        var chL = P.makeGuardianLion(1.1, false); chL.position.set(lx, id === 'r03_01' ? 2.8 : 0, 7.2); g.add(chL);
+      });
+      if (id === 'r03_01') {
+        var cb3 = P.makeBronzeCauldron(1.35); cb3.position.set(0, 2.8, 6.2); g.add(cb3);
+      }
+    } else if (id === 'r03_04') {
+      var cr34 = P.makeCrateAndJarSet(1.15, true); cr34.position.set(-7.5, 0, 5.5); g.add(cr34);
+      var ct34 = P.makeHorseCart(1.0); ct34.position.set(8.0, 0, 6.0); ct34.rotation.y = -0.6; g.add(ct34);
+    } else if (id === 'r06_01' || id === 'r06_08') {
+      var mc = P.makeMineCrane(1.15); mc.position.set(-4.5, 0.2, 1.5); g.add(mc);
+      var mr = P.makeMineRailAndCart(16); mr.position.set(4.0, 0.2, 1.0); g.add(mr);
+      var sr6 = P.makeSpearRack(1.1); sr6.position.set(6.5, 0.2, 6.5); g.add(sr6);
+    } else if (id === 'r08_01' || id === 'r08_03') {
+      var ba8 = P.makeBalustradeSegment(14, 7); ba8.position.set(0, 1.6, 8.5); g.add(ba8);
+      [-5.5, 5.5].forEach(function (bx) {
+        var p8 = P.makeBonsaiPot(1.2, true); p8.position.set(bx, 1.6, 7.2); g.add(p8);
+      });
+    }
   }
 
   function buildDetail(det) {
@@ -23736,6 +24833,12 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
       g.add(makeSkyAirship(1.65));
     }
 
+    if (P) {
+      var pg = new THREE.Group();
+      attachDetailedProps(det, pg);
+      g.add(P.mergeStaticGroup ? P.mergeStaticGroup(pg) : pg);
+    }
+
     var dScale = det.region === 'r07' ? 3.2 : (det.id === 'r02_01' || det.id === 'r05_01' || det.id === 'r06_02' || det.region === 'r08' ? 3.0 : 2.5);
     g.scale.setScalar(dScale);
     return g;
@@ -24086,11 +25189,11 @@ window.__initCombat = function (gardenRoot) {
     { id: 'EN-01', name: 'Xà Tinh Đầm', kind: 'snake', weak: 'Phản đòn (F)', asset: 'enemySnake', x: -16.5, z: -12.0, height: 1.15, hp: 12, speed: 1.65, range: 1.95, tell: 0.56, active: 0.22, recover: 0.78, damage: 10 },
     { id: 'EN-02', name: 'Cóc Độc Hồ', kind: 'frog', weak: 'Phản cầu / Né (C)', asset: 'enemyFrog', x: 14.5, z: 19.5, height: 1.1, hp: 10, speed: 0.90, range: 9.0, meleeRange: 2.0, tell: 0.85, active: 0.2, recover: 1.05, damage: 12, ranged: true },
     { id: 'EN-03', name: 'Vạc Bùn Giáp', kind: 'boulder', weak: '[1] Phá Giáp · Thủy Nộ', asset: 'enemyBoulder', x: -24.0, z: -20.0, height: 1.55, hp: 22, speed: 0.76, range: 2.35, tell: 1.02, active: 0.26, recover: 1.15, damage: 16, armored: true },
-    { id: 'EN-04', name: 'Nhện Rừng Rậm', kind: 'spider', weak: '[2] Toàn Phong (Gió)', asset: 'enemySpider', x: 22.0, z: -16.0, height: 1.15, hp: 12, speed: 1.55, range: 1.95, tell: 0.62, active: 0.2, recover: 0.85, damage: 11 },
+    { id: 'EN-04', name: 'Nhện Rừng Rậm', kind: 'spider', weak: '[2] Toàn Phong (Gió)', asset: 'enemySpider', x: 29.5, z: -14.0, height: 1.15, hp: 12, speed: 1.55, range: 1.95, tell: 0.62, active: 0.2, recover: 0.85, damage: 11 },
     { id: 'EN-05', name: 'Xà Tinh Ven Bờ', kind: 'snake', weak: 'Phản đòn (F)', asset: 'enemySnake', x: -24.5, z: 10.5, height: 1.15, hp: 12, speed: 1.6, range: 1.95, tell: 0.56, active: 0.2, recover: 0.78, damage: 10 },
-    { id: 'EN-06', name: 'Vạc Bùn Cổ Đạo', kind: 'boulder', weak: '[1] Phá Giáp · Thủy Nộ', asset: 'enemyBoulder', x: 18.5, z: -26.0, height: 1.6, hp: 22, speed: 0.75, range: 2.35, tell: 1.02, active: 0.25, recover: 1.15, damage: 16, armored: true },
+    { id: 'EN-06', name: 'Vạc Bùn Cổ Đạo', kind: 'boulder', weak: '[1] Phá Giáp · Thủy Nộ', asset: 'enemyBoulder', x: 18.5, z: -28.5, height: 1.6, hp: 22, speed: 0.75, range: 2.35, tell: 1.02, active: 0.25, recover: 1.15, damage: 16, armored: true },
     { id: 'EN-07', name: 'Nhện Ám Mạch', kind: 'spider', weak: '[2] Toàn Phong (Gió)', asset: 'enemySpider', x: 25.0, z: 22.0, height: 1.15, hp: 14, speed: 1.55, range: 1.95, tell: 0.6, active: 0.2, recover: 0.85, damage: 12 },
-    { id: 'EN-08', name: 'Cóc Độc Rừng Bắc', kind: 'frog', weak: 'Phản cầu / Né (C)', asset: 'enemyFrog', x: -10.5, z: -34.0, height: 1.1, hp: 12, speed: 0.90, range: 9.0, meleeRange: 2.0, tell: 0.82, active: 0.2, recover: 1.0, damage: 12, ranged: true }
+    { id: 'EN-08', name: 'Cóc Độc Rừng Bắc', kind: 'frog', weak: 'Phản cầu / Né (C)', asset: 'enemyFrog', x: -18.5, z: -34.0, height: 1.1, hp: 12, speed: 0.90, range: 9.0, meleeRange: 2.0, tell: 0.82, active: 0.2, recover: 1.0, damage: 12, ranged: true }
   ];
 
   /* Thanh Hành Động chiến thuật + Huy hiệu Mục Tiêu Lock-on */
@@ -27197,12 +28300,20 @@ if (!window.__GAME && consented) {
     }
     function inCourtyardG(x, z) {
       if (x > -2.5 && x < 5.3 && z > 0.3 && z < 7.3) return true;
-      if (Math.abs(x) < 2.7 && z > -27.5 && z < 2.8) return true;
-      if (Math.abs(x) < 5.6 && z > -28.8 && z < -22.2) return true;
-      if (Math.hypot(x - 15, z + 18) < 4.2) return true;
+      if (Math.abs(x) < 2.8 && z > -32.5 && z < 2.8) return true;
+      if (Math.abs(x) < 23.0 && z <= -31.0 && z > -72.0) return true;
+      if (Math.abs(x) < 13.5 && z > -28.8 && z < -22.2) return true;
+      if (x > 8.0 && x < 26.2 && z > -25.2 && z < -10.2) return true;
+      if (Math.hypot(x + 20.0, z + 18.5) < 5.4) return true;
+      if (x > -7.2 && x < 11.4 && z > 22.4 && z < 31.5) return true;
+      if (x > 15.8 && x < 34.5 && z > 5.0 && z < 23.5) return true;
+      if (Math.hypot(x - 36.5, z + 29.5) < 9.5) return true;
       if (segDistG(x, z, -1.6, -5.2, -6.5, -5.4) < 1.55) return true;
-      if (segDistG(x, z, 2.0, -4.5, 12.8, -16.8) < 1.45) return true;
+      if (segDistG(x, z, 2.0, -4.5, 12.8, -15.5) < 1.45) return true;
       if (segDistG(x, z, -9.5, -4.0, -22.5, 12.2) < 1.45) return true;
+      if (segDistG(x, z, -9.5, -6.5, -18.2, -17.2) < 1.35) return true;
+      if (segDistG(x, z, -2.2, 6.2, -5.4, 22.8) < 1.45) return true;
+      if (segDistG(x, z, 20.0, -17.5, 34.5, -28.0) < 1.35) return true;
       return false;
     }
     for (var bi = 0; bi < TARGET_BLADES * 3 && count < TARGET_BLADES; bi++) {
@@ -28235,6 +29346,7 @@ if (!window.__GAME && consented) {
     }
     if (window.__updateLeavesAndMist) window.__updateLeavesAndMist(t, dt);
     if (window.__updateVillageLiving) window.__updateVillageLiving(t);
+    if (window.__updateDiorama) window.__updateDiorama(t, dt);
 
     /* đàn cò: uốn lưới cánh theo nhịp sin — cánh gập lên/xuống liên tục (đêm cò nghỉ: ẩn + đứng yên) */
     var nightG = window.__isNight === true;
@@ -29902,7 +31014,7 @@ if (!window.__GAME && consented) {
       gardenRoot.add(shrine);
 
       var lhouse = DM.makePagodaLighthouse(0.82);
-      lhouse.position.set(28, hillY(28, -16), -16);
+      lhouse.position.set(28, hillY(28, 30), 30);
       lhouse.rotation.y = -0.35;
       gardenRoot.add(lhouse);
 
@@ -29911,6 +31023,7 @@ if (!window.__GAME && consented) {
       boat.rotation.y = -0.5;
       gardenRoot.add(boat);
     }
+    if (window.__initKinhKyDiorama) window.__initKinhKyDiorama(gardenRoot, hillY, LAKE, wY);
     if (window.__REAL_ASSETS) {
       if (!DM) {
         var br = window.__REAL_ASSETS.makeModel('bridge', 2.6); br.scale.multiplyScalar(2.0);
@@ -30442,7 +31555,13 @@ if (!window.__GAME && consented) {
       var inOcean = region === 'ocean' || coastD < -0.5;
       var isDryRock = region === 'r03' || region === 'r05' || region === 'r06' || region === 'r07';
       function inCourtyard(cx, cz) {
-        return (Math.abs(cx) < 6.2 && cz > -29 && cz < 10.5) || (cx > -4.2 && cx < 7.2 && cz > -0.5 && cz < 10.5);
+        return (Math.abs(cx) < 13.5 && cz > -30 && cz < 10.5)
+          || (Math.abs(cx) < 25.0 && cz <= -28.0 && cz > -72.0)
+          || (cx > 7.5 && cx < 27.5 && cz > -26.5 && cz < -9.5)
+          || (cx > -7.8 && cx < 35.0 && cz > 20.0 && cz < 32.5)
+          || Math.hypot(cx - 36.5, cz + 29.5) < 12.0
+          || Math.hypot(cx + 20.0, cz + 18.5) < 7.5
+          || (cx > -4.2 && cx < 7.2 && cz > -0.5 && cz < 10.5);
       }
       /* cỏ GPU 1-draw-call phủ toàn đồng; chỉ giữ hoa dại PBR và props GLB thật trong chunk */
       var nB2 = 0;
@@ -31631,10 +32750,16 @@ window.__createHeroine = function () {
       var sy = window.__skyIsleY(x, z);
       if (sy !== null && pPos && pPos.y > 45) return sy;
     }
-    if (window.__hillY) return window.__hillY(x, z);
-    return 0.13 * Math.sin(x * 0.45 + 1.3) * Math.cos(z * 0.5)
+    var base = window.__hillY ? window.__hillY(x, z) : (
+      0.13 * Math.sin(x * 0.45 + 1.3) * Math.cos(z * 0.5)
       + 0.06 * Math.sin(x * 1.7 + z * 1.3)
-      + smoothG(-z, 2.5, 9) * 0.75;
+      + smoothG(-z, 2.5, 9) * 0.75
+    );
+    if (window.__dioramaFloorY) {
+      var dy = window.__dioramaFloorY(x, z, base);
+      if (dy !== null && dy > base) return dy;
+    }
+    return base;
   }
 
   /* ---- sao đêm + chu kỳ ngày-đêm (giữ từ v1) ---- */
