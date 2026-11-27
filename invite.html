@@ -274,7 +274,7 @@ window.__REGION = (function () {
     /* San phẳng nhẹ nền sân các cụm di tích chính trên dốc núi để công trình không hẫng chân */
     if (w.r02 > 0.25) {
       var dP2 = Math.hypot(x - 221.0, z + 1480.8);
-      if (dP2 < 65.0) landH = mix(landH, Math.max(landH, 92.0), 1.0 - smooth(dP2, 28.0, 65.0));
+      if (dP2 < 88.0) landH = mix(landH, 108.0, 1.0 - smooth(dP2, 46.0, 88.0));
     }
     if (w.r03 > 0.25) {
       var dP3 = Math.hypot(x - 1831.5, z - 780.3);
@@ -21300,10 +21300,10 @@ window.__initMegaLandmarks = function (gardenRoot) {
     gMega.add(mergeByMat(cg));
   })();
 
-  /* 2. R02 — ĐẠI THỤ CÂY ĐA THẦN KHỔNG LỒ (TÁN ~400M + RỄ CONG) & 6 ĐỈNH ĐÁ VÔI NHỌN */
+  /* 2. R02 — ĐẠI THỤ CÂY ĐA THẦN KHỔNG LỒ (đặt lệch Tây-Bắc không che r02_01) & 6 ĐỈNH ĐÁ VÔI */
   (function buildWorldBanyanAndKarsts() {
     var r2 = regPos('r02', 78, -1287);
-    var bg = new THREE.Group(), bx = r2.x - 20, bz = r2.z - 125;
+    var bg = new THREE.Group(), bx = r2.x - 165, bz = r2.z - 195;
     bg.position.set(bx, hillY(bx, bz) - 18, bz);
     for (var i = 0; i < 8; i++) {
       var a = (i / 8) * Math.PI * 2;
@@ -21342,21 +21342,21 @@ window.__initMegaLandmarks = function (gardenRoot) {
     var r7 = regPos('r07', 2067, -257.4);
     var sg = new THREE.Group(), cx = r7.x, cz = r7.z + 40;
     sg.position.set(cx, 0, cz);
-    /* Vách đá vôi vòng cung chữ U (từ góc Tây sang Bắc sang Đông, mở về phía Nam) */
-    for (var i = 0; i <= 14; i++) {
-      var ang = Math.PI * 0.88 + (i / 14) * Math.PI * 1.24;
-      var rx = Math.cos(ang) * 265, rz = Math.sin(ang) * 235;
-      var hCliff = 148 + ((i % 3) * 26);
-      addM(sg, new THREE.CylinderGeometry(36, 68, hCliff, 7), M.limestone, rx, hCliff * 0.42, rz, 0, ang, 0);
-      addM(sg, new THREE.DodecahedronGeometry(46, 1), i % 2 ? M.crownMid : M.crownSun, rx, hCliff * 0.88, rz, 0, 0, 0, 1.25, 0.65, 1.15);
+    /* Vách đá vôi vòng cung chữ U thoải tự nhiên (cao vút phía Bắc, thấp dần mở về Nam) */
+    for (var i = 0; i <= 16; i++) {
+      var ang = Math.PI * 0.96 + (i / 16) * Math.PI * 1.08;
+      var rx = Math.cos(ang) * 285, rz = Math.sin(ang) * 245;
+      var edgeFade = Math.sin((i / 16) * Math.PI);
+      var hCliff = 70 + edgeFade * 115 + ((i % 3) * 18);
+      addM(sg, new THREE.CylinderGeometry(48, 86, hCliff, 7), M.limestone, rx, hCliff * 0.42, rz, 0, ang, 0);
+      addM(sg, new THREE.DodecahedronGeometry(44 + edgeFade * 18, 1), i % 2 ? M.crownMid : M.crownSun, rx, hCliff * 0.88, rz, 0, 0, 0, 1.35, 0.52, 1.25);
     }
-    /* 3 Thác nước lớn đổ từ vách Bắc xuống hồ */
-    [-110, 0, 110].forEach(function (ox, idx) {
-      var wz = -222 + Math.abs(ox) * 0.28;
-      addM(sg, new THREE.BoxGeometry(idx === 1 ? 30 : 22, 138, 10), M.fall, ox, 66, wz);
-      addM(sg, new THREE.DodecahedronGeometry(26, 1), M.cloud, ox, 4, wz + 12, 0, 0, 0, 1.7, 0.42, 1.4);
+    /* 3 Thác nước lớn đổ ra phía trước vách Bắc, dễ nhìn từ toàn cảnh trên không */
+    [-115, 0, 115].forEach(function (ox, idx) {
+      var wz = -205 + Math.abs(ox) * 0.28;
+      addM(sg, new THREE.BoxGeometry(idx === 1 ? 34 : 24, 152, 14), M.fall, ox, 72, wz, 0.10, 0, 0);
+      addM(sg, new THREE.DodecahedronGeometry(28, 1), M.cloud, ox, 4, wz + 18, 0, 0, 0, 1.8, 0.42, 1.4);
     });
-    /* Vòm đá rêu cổ & đảo nhỏ giữa hồ ngọc */
     [-85, 85, 0].forEach(function (ax, ai) {
       var az = ai === 2 ? 75 : -25;
       addM(sg, new THREE.BoxGeometry(10, 28, 10), M.mossStone, ax - 14, 10, az);
@@ -21366,18 +21366,18 @@ window.__initMegaLandmarks = function (gardenRoot) {
     gMega.add(mergeByMat(sg));
   })();
 
-  /* 4. R03 — VÁCH ĐÁ ĐỎ TẠC SẮC, 3 THÁP CHĂM & THUYỀN BUỒM CÁNH DƠI */
+  /* 4. R03 — VÁCH ĐÁ ĐỎ TẠC SẮC, 3 THÁP CHĂM & THUYỀN BUỒM CÁNH DƠI (tách khỏi góc camera r03_01) */
   (function buildChampaCragsAndPort() {
     var r3 = regPos('r03', 1989, 982.8);
     var rg = new THREE.Group(); rg.position.set(r3.x, 0, r3.z);
     for (var ci = 0; ci < 16; ci++) {
-      var ca = -Math.PI * 0.15 + (ci / 15) * Math.PI * 1.3;
-      var rad = 260 + (ci % 3) * 75, px = Math.cos(ca) * rad - 80, pz = Math.sin(ca) * rad * 0.68 - 40;
-      var sh = 55 + (ci % 4) * 28;
-      addM(rg, new THREE.ConeGeometry(34 + (ci % 3) * 12, sh, 5), M.redRock, px, sh * 0.38, pz, (ci % 2 ? 0.14 : -0.12), ca, (ci % 3 - 1) * 0.16);
+      var ca = -Math.PI * 0.12 + (ci / 15) * Math.PI * 1.24;
+      var rad = 320 + (ci % 3) * 80, px = Math.cos(ca) * rad - 40, pz = Math.sin(ca) * rad * 0.65 - 20;
+      var sh = 62 + (ci % 4) * 30;
+      addM(rg, new THREE.ConeGeometry(38 + (ci % 3) * 14, sh, 5), M.redRock, px, sh * 0.38, pz, (ci % 2 ? 0.14 : -0.12), ca, (ci % 3 - 1) * 0.16);
     }
-    /* 3 Tháp Chăm sừng sững trên vách đỏ */
-    [[-160, 48, -140, 1.15], [-95, 42, -90, 0.85], [-220, 44, -85, 0.88]].forEach(function (tp) {
+    /* 3 Tháp Chăm horizon đặt phía Đông cụm r03 để không cắt ngang r03_01 */
+    [[140, 32, -160, 1.15], [210, 28, -100, 0.85], [75, 28, -95, 0.88]].forEach(function (tp) {
       var tx = tp[0], ty = tp[1], tz = tp[2], sc = tp[3];
       for (var lv = 0; lv < 4; lv++) {
         var bw = (32 - lv * 6) * sc, bh = 22 * sc;
@@ -21385,7 +21385,6 @@ window.__initMegaLandmarks = function (gardenRoot) {
       }
       addM(rg, new THREE.ConeGeometry(12 * sc, 24 * sc, 4), M.gold, tx, ty + 4 * 20 * sc, tz, 0, Math.PI / 4, 0);
     });
-    /* 2 Thuyền buồm cánh dơi lớn trên vịnh xanh */
     [[-340, SEA_Y + 2, 340, 0.55], [140, SEA_Y + 2, 290, -0.45]].forEach(function (bt) {
       var bg = new THREE.Group(); bg.position.set(bt[0], bt[1], bt[2]); bg.rotation.y = bt[3];
       addM(bg, new THREE.CylinderGeometry(14, 8, 68, 8), M.hullWood, 0, 4, 0, Math.PI / 2, 0, 0, 1, 1, 0.55);
@@ -21491,28 +21490,27 @@ window.__initMegaLandmarks = function (gardenRoot) {
     gMega.add(mergeByMat(sg));
   })();
 
-  /* 9. MÂY TRẮNG BỒNG BỀNH VIỀN TIỀN CẢNH & LƯNG NÚI (1 DRAW CALL INSTANCED) */
+  /* 9. MÂY TRẮNG BỒNG BỀNH VIỀN TIỀN CẢNH & LƯNG NÚI (CUMULUS PUFFS 5 CỤM/ĐÁM) */
   (function buildStorybookClouds() {
-    var cGeo = new THREE.DodecahedronGeometry(1, 1);
-    var spots = [];
-    // Tiền cảnh góc trái & góc phải (như viền mây trong tranh minh họa)
-    [[-680, 125, 1150, 210], [-350, 145, 1450, 240], [-980, 160, 720, 195],
-      [4450, 130, 1450, 220], [4920, 155, 1100, 245], [5250, 180, 520, 195],
-      // Biển mây chân Đỉnh Tuyết & Cây Đa & Hắc Sơn & Đảo Bay
-      [3520, 135, -880, 175], [4350, 148, -960, 185], [3920, 155, -1580, 165], [3980, 165, -720, 170],
-      [-450, 215, -1350, 175], [360, 235, -1720, 185], [1480, 265, -1950, 175], [2420, 240, -2100, 180],
-      [4790, 265, -1820, 195], [5220, 245, -1620, 165], [4520, 255, -1720, 155]
-    ].forEach(function (c) {
-      for (var k = 0; k < 3; k++) {
-        spots.push([c[0] + (k - 1) * c[3] * 0.65, c[1] + (k % 2) * 22, c[2] + (k - 1) * 38, c[3] * (0.72 + (k % 2) * 0.28)]);
-      }
-    });
-    var inst = new THREE.InstancedMesh(cGeo, M.cloud, spots.length);
+    var cGeo = new THREE.IcosahedronGeometry(1, 1);
+    var puffs = [];
+    function addCloudCluster(cx, cy, cz, sz) {
+      [[0, 0, 0, 1.0], [-0.72, -0.14, 0.18, 0.72], [0.76, -0.12, -0.14, 0.76], [0.15, 0.28, -0.18, 0.68], [-0.25, 0.22, 0.22, 0.62]].forEach(function (o) {
+        puffs.push([cx + o[0] * sz, cy + o[1] * sz, cz + o[2] * sz, sz * o[3]]);
+      });
+    }
+    [
+      [-780, 65, 1180, 185], [-420, 82, 1520, 210], [-1150, 75, 620, 175],
+      [4450, 68, 1520, 195], [4950, 85, 1180, 220], [5320, 95, 540, 185],
+      [3520, 118, -860, 155], [4350, 125, -940, 165], [3920, 138, -1580, 150],
+      [-550, 155, -1350, 145], [380, 175, -1720, 155], [4790, 240, -1820, 165], [5220, 225, -1620, 145]
+    ].forEach(function (c) { addCloudCluster(c[0], c[1], c[2], c[3]); });
+    var inst = new THREE.InstancedMesh(cGeo, M.cloud, puffs.length);
     var d = new THREE.Object3D();
-    spots.forEach(function (s, idx) {
+    puffs.forEach(function (s, idx) {
       d.position.set(s[0], s[1], s[2]);
-      d.scale.set(s[3] * 1.45, s[3] * 0.44, s[3] * 1.05);
-      d.rotation.set(0, idx * 0.6, 0);
+      d.scale.set(s[3] * 1.15, s[3] * 0.72, s[3] * 1.05);
+      d.rotation.set(0, idx * 0.8, 0);
       d.updateMatrix();
       inst.setMatrixAt(idx, d.matrix);
     });
