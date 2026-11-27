@@ -21439,6 +21439,29 @@ window.__createRealAssets = function () {
     waiting[name] = null;
   }
 
+  var activeLoads = 0, loadQueue = [];
+  function pumpLoadQueue() {
+    while (activeLoads < 4 && loadQueue.length) {
+      (function (job) {
+        activeLoads++;
+        loader.load(job.src, function (gltf) {
+          activeLoads--; pumpLoadQueue();
+          applyGltf(job.name, job.record, gltf);
+          settle(job.name, job.record, false);
+        }, undefined, function () {
+          activeLoads--;
+          if (!job.retried) {
+            job.retried = true;
+            setTimeout(function () { loadQueue.push(job); pumpLoadQueue(); }, 600);
+          } else {
+            pumpLoadQueue();
+            settle(job.name, job.record, true);
+          }
+        });
+      })(loadQueue.shift());
+    }
+  }
+
   function parse(name) {
     if (templates[name]) return templates[name];
     var record = { ready: false, scene: null, geometry: null, material: null, box: null, size: null };
@@ -21446,19 +21469,15 @@ window.__createRealAssets = function () {
     var src = SOURCES[name];
     if (!src || src.charAt(0) === '_') return record;
     if (/^(models\/|https?:\/\/|\.\/|blob:)/.test(src)) {
-      loader.load(src, function (gltf) {
-        applyGltf(name, record, gltf);
-        settle(name, record, false);
-      }, undefined, function (error) {
-        settle(name, record, true);
-      });
+      loadQueue.push({ name: name, record: record, src: src, retried: false });
+      pumpLoadQueue();
       return record;
     }
     var bytes = Uint8Array.from(atob(src), function (c) { return c.charCodeAt(0); });
     loader.parse(bytes.buffer, '', function (gltf) {
       applyGltf(name, record, gltf);
       settle(name, record, false);
-    }, function (error) {
+    }, function () {
       settle(name, record, true);
     });
     return record;
@@ -21552,7 +21571,10 @@ window.__createRealAssets = function () {
     return holder;
   }
 
-  Object.keys(SOURCES).forEach(parse);
+  /* Tải theo nhu cầu (on-demand) + xếp hàng tối đa 4 luồng để nhường băng thông ưu tiên cho nhân vật Lạc Nữ khi boot */
+  setTimeout(function () {
+    ['dvTamQuan', 'dvCauNgoi', 'dvBiaRua', 'broadleaf', 'blossom', 'pondStone', 'coral', 'kelp'].forEach(parse);
+  }, 500);
   return {
     whenReady: whenReady,
     replaceInstanced: replaceInstanced,
