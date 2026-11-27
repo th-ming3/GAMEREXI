@@ -32370,6 +32370,7 @@ if (!window.__GAME && consented) {
     g.scale.setScalar(s || 0.22); g.position.set(x || 0, 0, z || 0);
     return g;
   }
+  W.wfDiscGeoC = wfDiscGeoC;
   W.makeWildFlower = makeWildFlower;
 })();
 
@@ -32378,7 +32379,7 @@ if (!window.__GAME && consented) {
   if (!window.THREE || !window.__W) return;
   var W = window.__W;
   var gardenRoot = W.gardenRoot, LAKE = W.LAKE, LAKE_DEPTH = W.LAKE_DEPTH, LOW = W.LOW;
-  var hillY = W.hillY, smooth = W.smooth, ppL = W.ppL, isMobile = W.isMobile;
+  var hillY = W.hillY, smooth = W.smooth, ppL = W.ppL, isMobile = W.isMobile, wfDiscGeoC = W.wfDiscGeoC;
   /* ---- HỒ NƯỚC + CÁ KOI (ảnh thật) + BÔNG LAU + ĐÁ ĐEN + NHÀ GỖ ---- */
   function lakeDepth(x, z) {
     if (!window.__lakeInfo) return 0; /* LAKE khai báo muộn hơn hillY — lazy an toàn */
@@ -32851,7 +32852,7 @@ if (!window.__GAME && consented) {
 (function () {
   if (!window.THREE || !window.__W) return;
   var W = window.__W;
-  var gardenRoot = W.gardenRoot, LAKE = W.LAKE, LOW = W.LOW;
+  var gardenRoot = W.gardenRoot, LAKE = W.LAKE, LOW = W.LOW, isMobile = W.isMobile, glowTex = W.glowTex;
   var hillY = W.hillY, hillYWorld = W.hillYWorld;
   /* ---- HIỆU ỨNG VỀ ĐIỂM XUẤT PHÁT: cột sáng + vòng xung ---- */
   window.__spawnHomeFX = function () {
@@ -33500,7 +33501,7 @@ if (!window.__GAME && consented) {
 /* Chunk Materials, Trees, Rocks, Mushrooms & Regional Landmarks Pool */
 (function () {
   if (!window.THREE || !window.__W || !window.__GAME) return;
-  var W = window.__W, gardenRoot = W.gardenRoot, hillY = W.hillY, TXT = W.TXT, blobTex = W.blobTex;
+  var W = window.__W, gardenRoot = W.gardenRoot, hillY = W.hillY, TXT = W.TXT, blobTex = W.blobTex, LOW = W.LOW, mergeGeos = W.mergeGeos;
     function pathZ(x) { return 15.5 + 5.2 * Math.sin(x * 0.085) + 3.1 * Math.sin(x * 0.041 + 2.0) - 12.5 * Math.exp(-(x * x) / 70); }
     function onPathW(x, z, w) { return Math.abs(z - pathZ(x)) < (w || 1.5); }
     var DEN_X = -18, DEN_Z = 6;
@@ -33761,7 +33762,7 @@ if (!window.__GAME && consented) {
 /* Endless World Chunk Streamer, Frustum Culling & Ambient Tick Dispatcher */
 (function () {
   if (!window.THREE || !window.__W || !window.__GAME) return;
-  var W = window.__W, gardenRoot = W.gardenRoot, camera = W.camera, LOW = W.LOW, hillY = W.hillY, lakeDepth = W.lakeDepth;
+  var W = window.__W, gardenRoot = W.gardenRoot, camera = W.camera, LOW = W.LOW, hillY = W.hillY, lakeDepth = W.lakeDepth, groundMat = W.groundMat, ppL = W.ppL, terrainColor = W.terrainColor;
   var cottons = W.cottons;
   var pathZ = W.pathZ, onPathW = W.onPathW, nearDen = W.nearDen, dummyC = W.dummyC, shadowMatC = W.shadowMatC;
   var stemGeoC = W.stemGeoC, headGeoC = W.headGeoC, stoneGeoC = W.stoneGeoC, regionStone = W.regionStone;
