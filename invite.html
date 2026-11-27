@@ -272,7 +272,7 @@ window.__REGION = (function () {
     /* San phẳng nhẹ nền sân các cụm di tích chính trên dốc núi để công trình không hẫng chân */
     if (w.r02 > 0.25) {
       var dP2 = Math.hypot(x - 221.0, z + 1480.8);
-      if (dP2 < 52.0) landH = mix(landH, 42.0, 1.0 - smooth(dP2, 22.0, 52.0));
+      if (dP2 < 58.0) landH = mix(landH, 62.0, 1.0 - smooth(dP2, 26.0, 58.0));
     }
     if (w.r03 > 0.25) {
       var dP3 = Math.hypot(x - 1831.5, z - 780.3);
@@ -25775,13 +25775,15 @@ window.__LM_INIT_R01_R02 = function (C) {
         }
       }
       g.add(treeBase);
-      var hut1 = makePavilion(5.8, 4.6, 3.0, 1, M.roofRed, M.wood); hut1.position.set(-10.5, 11.2, -1.5); g.add(hut1);
-      var hut2 = makePavilion(5.8, 4.6, 3.0, 1, M.roofRed, M.wood); hut2.position.set(10.5, 12.2, -3.5); g.add(hut2);
-      var boughL = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.8, 12.5, 7), M.wood);
-      boughL.rotation.z = 1.05; boughL.position.set(-5.8, 9.2, -2.5); g.add(boughL);
-      var boughR = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.8, 12.5, 7), M.wood);
-      boughR.rotation.z = -1.02; boughR.position.set(5.8, 9.8, -3.5); g.add(boughR);
-      var rb2 = makeRopeBridge(22, 2.2, M.silkRed); rb2.rotation.y = 1.52; rb2.position.set(0, 11.2, -2.2); g.add(rb2);
+      var hut1 = makePavilion(5.8, 4.6, 3.0, 1, M.roofRed, M.wood); hut1.position.set(-10.5, 6.2, -1.5); g.add(hut1);
+      var hut2 = makePavilion(5.8, 4.6, 3.0, 1, M.roofRed, M.wood); hut2.position.set(10.5, 6.8, -3.5); g.add(hut2);
+      [[-10.5, -1.5, 6.2], [10.5, -3.5, 6.8]].forEach(function (hp) {
+        [[-2.2, -1.6], [2.2, -1.6], [-2.2, 1.6], [2.2, 1.6]].forEach(function (sp) {
+          var st2 = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.30, hp[2] + 1.5, 6), M.wood);
+          st2.position.set(hp[0] + sp[0], hp[2] * 0.5 - 0.5, hp[1] + sp[1]); g.add(st2);
+        });
+      });
+      var rb2 = makeRopeBridge(22, 2.2, M.silkRed); rb2.rotation.y = 1.52; rb2.position.set(0, 6.2, -2.2); g.add(rb2);
       var st21 = fx.makeStairFlight(9, 4.4, 2.8, 11.0, M.mossStone, M.stone); st21.position.set(0, -1.6, 13.5); g.add(st21);
     } else if (id === 'r02_02') {
       [[-8.5, 6, 6.2], [8.5, 6, 6.4], [-5, 13.5, 5.8], [5, 13.5, 5.8], [0, 15.5, 6.5]].forEach(function (rk) {
