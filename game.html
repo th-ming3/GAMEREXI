@@ -21087,7 +21087,7 @@ window.__createTerrain = function (context) {
   }
   buildContinentBackdrop();
   window.__TERRAIN_CTX = {
-    gardenRoot: gardenRoot, LAKE: LAKE, LAKE_DEPTH: LAKE_DEPTH,
+    gardenRoot: gardenRoot, LAKE: LAKE, LAKE_DEPTH: LAKE_DEPTH, R8: R8,
     SKY_ISLES: SKY_ISLES, skyIsleY: skyIsleY, hillY: hillY, hillYWorld: hillYWorld
   };
   if (window.__initTerrainEnvironment) window.__initTerrainEnvironment();
@@ -21100,7 +21100,7 @@ window.__createTerrain = function (context) {
 /* Tang Nuoc Bien, Dao Bay Tien Gioi, Cau Noi & Rung Cay Toan Luc Dia */
 window.__initTerrainEnvironment = function () {
   var C = window.__TERRAIN_CTX;
-  var gardenRoot = C.gardenRoot, LAKE = C.LAKE, SKY_ISLES = C.SKY_ISLES;
+  var gardenRoot = C.gardenRoot, LAKE = C.LAKE, SKY_ISLES = C.SKY_ISLES, R8 = C.R8 || { x: 4953.0, z: -1965.6 };
   var skyIsleY = C.skyIsleY, hillY = C.hillY;
   /* Biển Đông Hải, 5 Đảo Bay tạo hình vách đá gồ ghề + cầu vòm cong, và tầng mây */
   function buildWorldWaterAndSky() {
