@@ -21593,10 +21593,12 @@ window.__createRealAssets = function () {
 
   var activeLoads = 0, loadQueue = [];
   function pumpLoadQueue() {
-    while (activeLoads < 4 && loadQueue.length) {
+    var maxConc = window.__heroineGlbLoaded ? 4 : 2;
+    while (activeLoads < maxConc && loadQueue.length) {
       (function (job) {
         activeLoads++;
-        loader.load(job.src, function (gltf) {
+        var reqUrl = job.retried ? (job.src + (job.src.indexOf('?') >= 0 ? '&' : '?') + 'r=1') : job.src;
+        loader.load(reqUrl, function (gltf) {
           activeLoads--; pumpLoadQueue();
           applyGltf(job.name, job.record, gltf);
           settle(job.name, job.record, false);
@@ -21604,7 +21606,7 @@ window.__createRealAssets = function () {
           activeLoads--;
           if (!job.retried) {
             job.retried = true;
-            setTimeout(function () { loadQueue.push(job); pumpLoadQueue(); }, 600);
+            setTimeout(function () { loadQueue.push(job); pumpLoadQueue(); }, 700);
           } else {
             pumpLoadQueue();
             settle(job.name, job.record, true);
@@ -34482,9 +34484,10 @@ window.__createHeroine = function () {
   var src = 'models/lac-nu-heroine.glb';
   var loader = new THREE.GLTFLoader();
   function loadHeroineWithRetry(retriesLeft) {
-    loader.load(src, setupLoadedHeroine, undefined, function (err) {
+    var reqUrl = retriesLeft < 3 ? (src + (src.indexOf('?') >= 0 ? '&' : '?') + 'retry=' + retriesLeft) : src;
+    loader.load(reqUrl, setupLoadedHeroine, undefined, function (err) {
       if (retriesLeft > 0) {
-        setTimeout(function () { loadHeroineWithRetry(retriesLeft - 1); }, 800);
+        setTimeout(function () { loadHeroineWithRetry(retriesLeft - 1); }, 1000);
       } else {
         console.warn('Heroine GLB load failed:', err);
       }

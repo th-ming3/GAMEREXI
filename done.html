@@ -21615,10 +21615,12 @@ window.__createRealAssets = function () {
 
   var activeLoads = 0, loadQueue = [];
   function pumpLoadQueue() {
-    while (activeLoads < 4 && loadQueue.length) {
+    var maxConc = window.__heroineGlbLoaded ? 4 : 2;
+    while (activeLoads < maxConc && loadQueue.length) {
       (function (job) {
         activeLoads++;
-        loader.load(job.src, function (gltf) {
+        var reqUrl = job.retried ? (job.src + (job.src.indexOf('?') >= 0 ? '&' : '?') + 'r=1') : job.src;
+        loader.load(reqUrl, function (gltf) {
           activeLoads--; pumpLoadQueue();
           applyGltf(job.name, job.record, gltf);
           settle(job.name, job.record, false);
@@ -21626,7 +21628,7 @@ window.__createRealAssets = function () {
           activeLoads--;
           if (!job.retried) {
             job.retried = true;
-            setTimeout(function () { loadQueue.push(job); pumpLoadQueue(); }, 600);
+            setTimeout(function () { loadQueue.push(job); pumpLoadQueue(); }, 700);
           } else {
             pumpLoadQueue();
             settle(job.name, job.record, true);
