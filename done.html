@@ -21201,10 +21201,10 @@ window.__initMegaLandmarks = function (gardenRoot) {
   var mFall = new THREE.MeshStandardMaterial({ color: 0xdff8ff, emissive: 0x7ae2f5, emissiveIntensity: 0.55, transparent: true, opacity: 0.85 });
   var mCloud = new THREE.MeshStandardMaterial({ color: 0xf7fbff, roughness: 0.95, transparent: true, opacity: 0.72, depthWrite: false });
 
-  /* 1. R02 — ĐẠI THỤ CÂY ĐA THẦN KHỔNG LỒ (~340m cao, tán rộng 300m khớp atlas_img_00.webp) */
+  /* 1. R02 — ĐẠI THỤ CÂY ĐA THẦN KHỔNG LỒ (~340m cao, đứng sau r02_01 không che miếu cổ) */
   (function buildWorldBanyan() {
     var r2 = regPos('r02', 78, -1287);
-    var bx = r2.x + 140, bz = r2.z - 190, by = hillY(bx, bz);
+    var bx = r2.x + 95, bz = r2.z - 335, by = hillY(bx, bz);
     var bg = new THREE.Group();
     bg.position.set(bx, by - 12, bz);
     for (var i = 0; i < 8; i++) {
@@ -21247,12 +21247,13 @@ window.__initMegaLandmarks = function (gardenRoot) {
     var crater = new THREE.Mesh(new THREE.CircleGeometry(45, 14), mLava);
     crater.rotation.x = -Math.PI / 2; crater.position.y = 248; vg.add(crater);
     for (var fi = 0; fi < 6; fi++) {
-      var fa = fi * (Math.PI / 3) + 0.3;
-      var vein = new THREE.Mesh(new THREE.BoxGeometry(10, 225, 12), mLava);
-      vein.position.set(Math.cos(fa) * 106, 128, Math.sin(fa) * 106);
-      vein.rotation.z = Math.cos(fa) * 0.58;
-      vein.rotation.x = -Math.sin(fa) * 0.58;
-      vg.add(vein);
+      var arm = new THREE.Group();
+      arm.rotation.y = -(fi * (Math.PI / 3) + 0.3);
+      var vein = new THREE.Mesh(new THREE.BoxGeometry(11, 215, 14), mLava);
+      vein.position.set(126, 114, 0);
+      vein.rotation.z = 0.585;
+      arm.add(vein);
+      vg.add(arm);
     }
     for (var si = 0; si < 5; si++) {
       var sm = new THREE.Mesh(new THREE.DodecahedronGeometry(30 + si * 11, 1), mSmoke);
