@@ -25785,7 +25785,7 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
   };
 
   var banner = document.createElement('div');
-  banner.style.cssText = 'position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:54;padding:8px 16px;border-radius:12px;background:rgba(24,20,14,.86);color:#ffe7b0;font:600 13px/1.4 Georgia,serif;border:1px solid rgba(245,195,91,.45);box-shadow:0 8px 24px rgba(0,0,0,.35);pointer-events:none;opacity:0;transition:opacity .25s;text-align:center;max-width:min(88vw,460px)';
+  banner.style.cssText = 'position:fixed;left:50%;bottom:106px;transform:translateX(-50%);z-index:54;padding:8px 16px;border-radius:12px;background:rgba(24,20,14,.86);color:#ffe7b0;font:600 13px/1.4 Georgia,serif;border:1px solid rgba(245,195,91,.45);box-shadow:0 8px 24px rgba(0,0,0,.35);pointer-events:none;opacity:0;transition:opacity .25s;text-align:center;max-width:min(88vw,460px)';
   document.body.appendChild(banner);
   var lastLocId = '';
 
@@ -26153,6 +26153,16 @@ window.__initCombat = function (gardenRoot) {
     '<button type="button" data-sk="bag" id="btnBag" style="padding:4px 7px;border-radius:8px;border:1px solid rgba(235,190,115,.45);background:rgba(68,48,24,.7);color:#ffe4ad;cursor:pointer;font:inherit"><b>I</b> Túi (<span id="nEss">20</span>)</button>' +
     '</div>';
   document.body.appendChild(bar);
+  function layoutCombatBar() {
+    var mob = window.innerWidth < 768;
+    bar.style.padding = mob ? '5px 7px' : '7px 10px';
+    bar.style.fontSize = mob ? '10.5px' : '12px';
+    bar.style.bottom = mob ? '6px' : '10px';
+    [].forEach.call(bar.querySelectorAll('button[data-sk]'), function (bt) {
+      bt.style.padding = mob ? '3px 5px' : '4px 7px';
+    });
+  }
+  layoutCombatBar(); window.addEventListener('resize', layoutCombatBar);
 
   /* Modal Hành Trang — Rèn Ngọc Thương & Chế Ngọc Bội [I] */
   var bagModal = document.createElement('div');
