@@ -22148,6 +22148,8 @@ window.__createRealAssets = function () {
         model.scale.set(sx, sy, sz);
       } else model.scale.setScalar(k);
       model.position.set(-record.box.min.x * model.scale.x, -record.box.min.y * model.scale.y, -record.box.min.z * model.scale.z);
+      var keepSh = (name === 'house' || name === 'temple' || name === 'ruins');
+      model.traverse(function (o) { if (o.isMesh) { o.castShadow = keepSh; o.receiveShadow = true; } });
       holder.add(model);
     });
     return holder;
@@ -26723,7 +26725,7 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
     if (!reg) return;
     var node = buildDetail(det);
     reg.group.add(node);
-    detailNodes.push({ grp: node, x: det.x, z: det.z, region: det.region, farR: det.num === '01' ? 1400 : 580 });
+    detailNodes.push({ grp: node, x: det.x, z: det.z, region: det.region, farR: det.num === '01' ? 920 : 280 });
   });
 
   window.__updateLandmarksVis = function (px, pz) {
@@ -29605,8 +29607,14 @@ window.__populateUnderwaterLife = function () {
     underwaterRoot.add(gLight);
   }
 
+  underwaterRoot.traverse(function (o) { if (o.isMesh) o.castShadow = false; });
+
   /* ========== ANIMATION LOOP ========== */
   return function updateUnderwater(dt, elapsed) {
+    var ppU = window.__W && window.__W.ppL ? window.__W.ppL() : null;
+    var nearUW = !!(window.__isDiving || window.__isSwimming || (ppU && inLake(ppU.x, ppU.z, -0.8)));
+    if (underwaterRoot.visible !== nearUW) underwaterRoot.visible = nearUW;
+    if (!nearUW) return;
     /* Crystals */
     for (var ci = 0; ci < underwaterCrystals.length; ci++) {
       var cr = underwaterCrystals[ci];
@@ -30319,7 +30327,7 @@ if (!window.__GAME && consented) {
     renderer.toneMappingExposure = 1.15;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
 
   } catch (e3d) { failBoot(); return; }
 
@@ -30340,7 +30348,7 @@ if (!window.__GAME && consented) {
   window.__key = key;
   key.position.set(-28, 42, -24);
   key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.mapSize.set(512, 512);
   key.shadow.camera.left = -42; key.shadow.camera.right = 42;
   key.shadow.camera.top = 42; key.shadow.camera.bottom = -42;
   key.shadow.camera.near = 2; key.shadow.camera.far = 190;
@@ -30912,7 +30920,7 @@ if (!window.__GAME && consented) {
       }
       stem.geometry.computeVertexNormals();
     })();
-    stem.castShadow = true;
+    stem.castShadow = false;
     group.add(stem);
 
     for (var li = 0; li < 3; li++) {
@@ -30923,7 +30931,7 @@ if (!window.__GAME && consented) {
       var leaf = new THREE.Mesh(leafGeo, leafMat);
       leaf.rotation.x = rand(0.4, 0.75);
       leaf.scale.setScalar(rand(0.2, 0.3));
-      leaf.castShadow = true;
+      leaf.castShadow = false;
       lh.add(leaf);
       group.add(lh);
     }
@@ -31301,7 +31309,7 @@ if (!window.__GAME && consented) {
     midFlowerMesh.instanceMatrix.needsUpdate = true;
     if (midFlowerMesh.instanceColor) midFlowerMesh.instanceColor.needsUpdate = true;
     registerWave(midFlowerMesh, MID_N);
-    midFlowerMesh.castShadow = true;
+    midFlowerMesh.castShadow = false;
   }
 
   /* ---- sỏi nhỏ ---- */
@@ -35074,8 +35082,8 @@ if (!window.__GAME && consented) {
     var blades = [];
     /* hoa dại (đăng ký để nhiệm vụ hái hoa) + đá xác định theo seed */
     var arrF2 = [];
-    var flowerBase = inOcean ? 0 : (region === 'r01' || region === 'r08' ? 4 : (region === 'r02' || region === 'r04' ? 2 : 0));
-    var flowerRange = inOcean ? 0 : (region === 'r01' ? 7 : (isDryRock ? 1 : 3));
+    var flowerBase = inOcean ? 0 : (region === 'r01' || region === 'r08' ? 2 : 1);
+    var flowerRange = inOcean ? 0 : (region === 'r01' ? 3 : (isDryRock ? 1 : 2));
     var nf2 = flowerBase + (rng() * flowerRange | 0);
     for (var fi = 0; fi < nf2; fi++) {
       var fx = bx + rng() * CHSZ, fz = bz + rng() * CHSZ;
@@ -35113,6 +35121,7 @@ if (!window.__GAME && consented) {
       treeG.position.set(tx2, ty2 - 0.04, tz2);
       treeG.rotation.y = rng() * 6.283;
       treeG.rotation.z = (rng() - 0.5) * 0.06;
+      treeG.traverse(function (o) { if (o.isMesh) o.castShadow = false; });
       grp.add(treeG); treeAdded++; treesArr.push({ g: treeG, leaf: lf3, x: tx2, z: tz2 });
       if (window.__physicsAddStatic) chunkBodies.push(window.__physicsAddStatic(tx2, tz2, Math.max(0.18, tsc * 0.12), tsc * 1.4));
       var shC = new THREE.Mesh(new THREE.CircleGeometry(1, 14), shadowMatC);
@@ -35274,7 +35283,7 @@ if (!window.__GAME && consented) {
     }
     var budget = (!window.__playerMoving || frameN2 % 2 === 0) ? 1 : 0;
     var chunkStartT = performance.now();
-    while (genQueue.length && budget > 0 && chunkList.length < (LOW ? 42 : 76) && performance.now() - chunkStartT < 5) {
+    while (genQueue.length && budget > 0 && chunkList.length < (LOW ? 18 : 28) && performance.now() - chunkStartT < 4) {
       var nextChunk = genQueue.shift();
       if (!chunkMap[nextChunk.cx + '|' + nextChunk.cz]) buildChunk(nextChunk.cx, nextChunk.cz);
       budget--;
@@ -35506,10 +35515,10 @@ if (!window.__GAME && consented) {
     if (W.updateButterflies) W.updateButterflies(t, dtRaw, window.__isNight === true);
     if (W.updateBees) W.updateBees(t, dtRaw, window.__isNight === true);
     if (W.updateAtmosphereFx) W.updateAtmosphereFx(t, dt, nowMs, mx, motion);
-    if (elapsed > 5 && !liteApplied && !liteDisabled) {
+    if (elapsed > 1.5 && !liteApplied && !liteDisabled) {
       ftAcc += dt; ftN++;
-      if (ftN >= 50) {
-        if (ftAcc / ftN > 0.044) applyLite();
+      if (ftN >= 16) {
+        if (ftAcc / ftN > 0.036) applyLite();
         ftAcc = 0; ftN = 0;
       }
     }
