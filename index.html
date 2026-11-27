@@ -34481,10 +34481,17 @@ window.__createHeroine = function () {
 
   var src = 'models/lac-nu-heroine.glb';
   var loader = new THREE.GLTFLoader();
-  if (/^(models\/|https?:\/\/|\.\/|blob:)/.test(src)) {
+  function loadHeroineWithRetry(retriesLeft) {
     loader.load(src, setupLoadedHeroine, undefined, function (err) {
-      console.warn('Heroine GLB load failed:', err);
+      if (retriesLeft > 0) {
+        setTimeout(function () { loadHeroineWithRetry(retriesLeft - 1); }, 800);
+      } else {
+        console.warn('Heroine GLB load failed:', err);
+      }
     });
+  }
+  if (/^(models\/|https?:\/\/|\.\/|blob:)/.test(src)) {
+    loadHeroineWithRetry(3);
   } else if (src && src.charAt(0) !== '_') {
     try {
       var bytes = Uint8Array.from(atob(src), function (c) { return c.charCodeAt(0); });
