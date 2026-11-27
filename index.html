@@ -21078,7 +21078,7 @@ window.__createTerrain = function (context) {
   /* Lưới nền toàn lục địa Đại Việt 7800x4680m (step=27m sắc nét + mịn FPS, có UV texture địa hình) */
   function buildContinentBackdrop() {
     var b = (window.__WORLD_MAP_DATA && window.__WORLD_MAP_DATA.bounds) || { minX: -1794.0, maxX: 6006.0, minZ: -2644.0, maxZ: 2036.0 };
-    var step = 27.0;
+    var step = 32.0;
     var wm = window.__WASM_MATH;
     var useWasmShade = !!(wm && wm.ready && wm.fastShade);
     var cols = Math.floor((b.maxX - b.minX) / step) + 1;
@@ -31426,11 +31426,11 @@ if (!window.__GAME && consented) {
   window.__gpuGrassUniforms = gpuGrassUniforms;
 
   (function buildGpuGrassAndAtmosphere() {
-    var segs = 3;
+    var segs = 2;
     var baseVerts = [], baseUvs = [], baseIndices = [];
-    var bladeAngles = [0.0, 0.72, 1.48, 2.24, 2.96];
-    var bladeScales = [1.05, 0.86, 1.18, 0.78, 0.94];
-    var bladeOffs = [[0.0, 0.0], [0.12, 0.07], [-0.11, 0.09], [0.06, -0.12], [-0.08, -0.07]];
+    var bladeAngles = [0.0, 1.05, 2.15];
+    var bladeScales = [1.08, 0.88, 1.16];
+    var bladeOffs = [[0.0, 0.0], [0.11, 0.07], [-0.10, 0.08]];
     var vBase = 0;
     for (var bIdx = 0; bIdx < bladeAngles.length; bIdx++) {
       var ang = bladeAngles[bIdx], ca = Math.cos(ang), sa = Math.sin(ang);
@@ -31458,7 +31458,7 @@ if (!window.__GAME && consented) {
     gInstGeo.setAttribute('uv', new THREE.Float32BufferAttribute(baseUvs, 2));
     gInstGeo.setIndex(baseIndices);
 
-    var TARGET_BLADES = isMobile || LOW ? 6500 : 16000;
+    var TARGET_BLADES = isMobile || LOW ? 3800 : 8000;
     var offsets = new Float32Array(TARGET_BLADES * 3);
     var oriRot = new Float32Array(TARGET_BLADES * 2);
     var bendInfo = new Float32Array(TARGET_BLADES * 2);
@@ -31612,6 +31612,11 @@ if (!window.__GAME && consented) {
     });
 
     window.__updateLeavesAndMist = function (timeSec, dtSec) {
+      var ppG = W.ppL ? W.ppL() : null;
+      var inSpawn = !ppG || Math.hypot(ppG.x, ppG.z) < 62;
+      if (gpuGrassMesh.visible !== inSpawn) gpuGrassMesh.visible = inSpawn;
+      if (leafInst.visible !== inSpawn) leafInst.visible = inSpawn;
+      if (!inSpawn) return;
       var td = Math.min(0.05, dtSec || 0.016);
       for (var i = 0; i < LEAF_N; i++) {
         var lf = leafData[i];
