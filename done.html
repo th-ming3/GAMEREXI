@@ -22756,11 +22756,11 @@ window.__REAL_ASSETS = window.__createRealAssets();
     var s = scale || 1;
     var g = new THREE.Group();
     var RA = window.__REAL_ASSETS;
-    var darkBarkMat = new THREE.MeshStandardMaterial({ color: 0x4a3525, roughness: 0.92, bumpMap: barkTex, bumpScale: 0.08 });
-    var mossBarkMat = new THREE.MeshStandardMaterial({ color: 0x3f4a2e, roughness: 0.90, bumpMap: barkTex, bumpScale: 0.06 });
-    var rootMat = new THREE.MeshStandardMaterial({ color: 0x5c422c, roughness: 0.88, bumpMap: barkTex, bumpScale: 0.05 });
-    var leafDeep = new THREE.MeshStandardMaterial({ color: 0x264c23, roughness: 0.82, bumpMap: thatchTex, bumpScale: 0.04 });
-    var leafMid = new THREE.MeshStandardMaterial({ color: 0x35642c, roughness: 0.78, bumpMap: thatchTex, bumpScale: 0.04 });
+    var darkBarkMat = new THREE.MeshStandardMaterial({ color: 0x4a3525, roughness: 0.92, bumpMap: texDarkWood, bumpScale: 0.08 });
+    var mossBarkMat = new THREE.MeshStandardMaterial({ color: 0x3f4a2e, roughness: 0.90, bumpMap: texDarkWood, bumpScale: 0.06 });
+    var rootMat = new THREE.MeshStandardMaterial({ color: 0x5c422c, roughness: 0.88, bumpMap: texDarkWood, bumpScale: 0.05 });
+    var leafDeep = new THREE.MeshStandardMaterial({ color: 0x264c23, roughness: 0.82, bumpMap: texBambooSail, bumpScale: 0.04 });
+    var leafMid = new THREE.MeshStandardMaterial({ color: 0x35642c, roughness: 0.78, bumpMap: texBambooSail, bumpScale: 0.04 });
     var leafLit = new THREE.MeshStandardMaterial({ color: 0x4b7e34, roughness: 0.74 });
 
     /* Thân chính xù xì u bướu (3 khối thân bện xoắn) */
@@ -22868,10 +22868,10 @@ window.__REAL_ASSETS = window.__createRealAssets();
     [-0.86, 0.86].forEach(function (px) {
       var colS = addShadow(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.10, 1.5, 10), MAT.redLacquer));
       colS.position.set(px, 1.06, 0.72); shrine.add(colS);
-      var lanGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.09, 0.24, 10), MAT.lanternGlow);
+      var lanGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.09, 0.24, 10), MAT.lantern);
       lanGlow.position.set(px, 1.62, 0.82); shrine.add(lanGlow);
     });
-    var altarDoor = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.05, 0.08), MAT.lanternGlow);
+    var altarDoor = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.05, 0.08), MAT.lantern);
     altarDoor.position.set(0, 0.94, 0.56); shrine.add(altarDoor);
     var censer = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.18, 12), MAT.gold);
     censer.position.set(0, 0.41, 0.88); shrine.add(censer);
