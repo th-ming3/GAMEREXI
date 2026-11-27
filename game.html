@@ -44,7 +44,8 @@ window.__REGION = (function () {
     }
     return { pts: pts, minX: minX - pad, maxX: maxX + pad, minZ: minZ - pad, maxZ: maxZ + pad };
   }
-  var landBoxes = DATA.landPolys.map(function (p) { return makeBBox(p, 160); });
+  var coastPolys = DATA.landPolys && DATA.landPolys.length ? [DATA.landPolys[0]] : [];
+  var landBoxes = coastPolys.map(function (p) { return makeBBox(p, 200); });
   var skyBoxes = DATA.skyPolys.map(function (p) { return makeBBox(p, 90); });
   var riverBoxes = DATA.rivers.map(function (p) { return makeBBox(p, 90); });
   var roadBoxes = DATA.roads.map(function (p) { return makeBBox(p, 70); });
@@ -210,33 +211,33 @@ window.__REGION = (function () {
 
     /* 1. Đồng Bằng Kinh Kỳ & Ruộng Bậc Thang (r01) */
     var dCitadel = Math.hypot(sx - (-62), sz - (-53));
-    var citadelHill = 14.0 * Math.exp(-(dCitadel * dCitadel) / 2200);
+    var citadelHill = 13.5 * Math.exp(-(dCitadel * dCitadel) / 2200);
     var dTerrace = Math.hypot(sx - 73, sz - 22);
-    var eastHill = 10.5 * Math.exp(-(dTerrace * dTerrace) / 2400);
-    var r01Raw = 0.6 + citadelHill + eastHill + 1.8 * Math.sin(sx * 0.018 + 0.5) * Math.cos(sz * 0.018 + 0.3);
+    var eastHill = 10.0 * Math.exp(-(dTerrace * dTerrace) / 2400);
+    var r01Raw = 1.4 + citadelHill + eastHill + 1.6 * Math.sin(sx * 0.018 + 0.5) * Math.cos(sz * 0.018 + 0.3);
     var r01Terrace = Math.floor(r01Raw * 0.85) / 0.85;
-    var h01 = mix(r01Raw, r01Terrace, 0.68) * (1 - spawnFlat * 0.92);
+    var h01 = mix(r01Raw, r01Terrace, 0.65) * (1 - spawnFlat * 0.95);
 
     /* 2. Đại Thụ Cây Đa Thần & Rừng Núi Đá Vôi (r02) */
     var r2 = R_MAP.r02 || { x: 78.0, z: -1287.0 };
     var rx2 = r2.x / S, rz2 = r2.z / S;
     var d2 = Math.hypot(sx - rx2, sz - rz2);
-    var karst = Math.pow(Math.max(0, Math.sin(sx * 0.036) * Math.cos(sz * 0.036)), 1.6) * 26.0;
-    var valley2 = -2.2 * Math.exp(-Math.pow((sx - rx2) / 38, 2));
-    var h02 = 2.5 + karst + valley2 + 16.0 * Math.exp(-(d2 * d2) / 2800);
+    var karst = Math.pow(Math.max(0, Math.sin(sx * 0.036) * Math.cos(sz * 0.036)), 1.6) * 24.0;
+    var valley2 = -1.8 * Math.exp(-Math.pow((sx - rx2) / 38, 2));
+    var h02 = 3.2 + karst + valley2 + 15.0 * Math.exp(-(d2 * d2) / 2800);
 
     /* 3. Bãi Biển Đá Đỏ & Tháp Chăm Cổ (r03) */
     var r3 = R_MAP.r03 || { x: 1989.0, z: 982.8 };
     var rx3 = r3.x / S, rz3 = r3.z / S;
     var dChampa = Math.hypot(sx - (rx3 - 31.5), sz - (rz3 - 40.5));
     var dOasis = Math.hypot(sx - (rx3 - 73.5), sz - (rz3 + 36.0));
-    var dune = 1.6 + 3.8 * Math.sin(sx * 0.025 + Math.sin(sz * 0.022)) + 1.2 * Math.cos(sz * 0.045);
-    var mesa3 = 18.5 * Math.exp(-(dChampa * dChampa) / 1450);
-    var oasisPit = -3.4 * Math.exp(-(dOasis * dOasis) / 260);
+    var dune = 2.6 + 3.2 * Math.sin(sx * 0.025 + Math.sin(sz * 0.022)) + 1.0 * Math.cos(sz * 0.045);
+    var mesa3 = 16.5 * Math.exp(-(dChampa * dChampa) / 1450);
+    var oasisPit = -3.8 * Math.exp(-(dOasis * dOasis) / 260);
     var h03 = dune + mesa3 + oasisPit;
 
-    /* 4. Rừng Đước Ngập Mặn & Phế Tích Chìm (r04) */
-    var h04 = -0.3 + 0.9 * Math.sin(sx * 0.038 + 1.1) * Math.cos(sz * 0.041 - 0.6)
+    /* 4. Rừng Đước Ngập Mặn & Phế Tích Chìm (r04) — giữ đất rìa nổi rõ trên bán đảo, chỉ vịnh đước ngập */
+    var h04 = 0.65 + 1.15 * Math.sin(sx * 0.038 + 1.1) * Math.cos(sz * 0.041 - 0.6)
       + 0.45 * Math.sin(sx * 0.08 - sz * 0.07);
 
     /* 5. Đỉnh Tuyết Hoàng Liên & Cổ Tự Trên Mây (r05) */
@@ -291,39 +292,42 @@ window.__REGION = (function () {
       var seaDepth = mix(-1.2, -16.0, smooth(-cd, 0, 36 * S));
       return seaDepth + 0.5 * Math.sin(sx * 0.06) * Math.cos(sz * 0.06);
     }
-    var shoreF = smooth(cd, 0, 14.0 * S);
-    return mix(-0.7, landH, shoreF);
+    var shoreF = smooth(cd, 0, 10.0 * S);
+    var innerLand = mix(1.4, Math.max(1.2, landH), shoreF);
+    if (w.r04 > 0.45 && landH < 1.2) innerLand = mix(innerLand, landH, smooth(w.r04, 0.45, 0.72));
+    if (d7 < 54 && dIsle7 > 17) innerLand = Math.min(innerLand, landH);
+    return mix(-0.7, innerLand, smooth(cd, 0, 4.5 * S));
   }
 
   function colorAt(x, z) {
     var sx = x / S, sz = z / S;
     var cd = coastDist(x, z);
-    if (cd < -1.2 * S) return [0.12, 0.32, 0.39];
-    if (cd < 7.5 * S) return [0.64, 0.56, 0.36];
+    if (cd < -1.2 * S) return [0.09, 0.36, 0.44];
+    if (cd < 4.8 * S) return [0.76, 0.65, 0.38];
 
     var w = weights(x, z);
     var h = heightAt(x, z) / V;
 
-    /* Bảng màu tự nhiên theo đúng ranh giới 8 bản đồ khu vực */
+    /* Bảng màu rực rỡ khớp atlas_img_00.webp theo đúng 8 vùng */
     var riceBand = (Math.floor(h * 1.1) % 2 === 0);
-    var c01 = h > 3.2 ? (riceBand ? [0.50, 0.58, 0.19] : [0.30, 0.49, 0.16]) : [0.22, 0.43, 0.15]; /* Ruộng bậc thang vàng-xanh đậm */
-    var c02 = h > 16.0 ? [0.22, 0.36, 0.21] : [0.16, 0.35, 0.18]; /* Rừng đá vôi rậm */
+    var c01 = h > 3.2 ? (riceBand ? [0.56, 0.66, 0.18] : [0.24, 0.56, 0.17]) : [0.22, 0.50, 0.16];
+    var c02 = h > 16.0 ? [0.18, 0.42, 0.18] : [0.14, 0.42, 0.17];
     var r3 = R_MAP.r03 || { x: 1989.0, z: 982.8 };
     var dOasis = Math.hypot(sx - (r3.x / S - 73.5), sz - (r3.z / S + 36.0));
-    var c03 = dOasis < 16 ? [0.18, 0.52, 0.54] : (h > 7.0 ? [0.62, 0.25, 0.13] : [0.68, 0.54, 0.27]); /* Ốc đảo, đá đỏ Chăm & cát vàng */
-    var c04 = [0.15, 0.34, 0.28]; /* Rừng đước ngập mặn */
+    var c03 = dOasis < 16 ? [0.14, 0.58, 0.58] : (h > 7.0 ? [0.70, 0.27, 0.14] : [0.76, 0.59, 0.29]);
+    var c04 = [0.14, 0.40, 0.28];
     var r5 = R_MAP.r05 || { x: 3993.6, z: -1123.2 };
     var dGlacial = Math.hypot(sx - (r5.x / S + 48.3), sz - (r5.z / S - 12.8));
-    var c05 = dGlacial < 20 ? [0.24, 0.68, 0.74] : (h > 22.0 ? [0.80, 0.85, 0.90] : [0.27, 0.33, 0.38]); /* Hồ băng, tuyết & đá Hoàng Liên */
+    var c05 = dGlacial < 20 ? [0.24, 0.72, 0.78] : (h > 20.0 ? [0.90, 0.94, 0.98] : [0.24, 0.38, 0.36]);
     var r6 = R_MAP.r06 || { x: 1989.0, z: -1731.6 };
     var d6 = Math.hypot(sx - (r6.x / S + 10.5), sz - (r6.z / S - 33.0));
-    var lavaCrack = (d6 < 20 && h < 14.0) || (d6 < 62 && Math.abs(Math.sin(sx * 0.14 + sz * 0.11)) < 0.1);
-    var c06 = lavaCrack ? [0.92, 0.30, 0.05] : [0.13, 0.12, 0.15]; /* Dung nham & đá bazan đen */
+    var lavaCrack = (d6 < 20 && h < 14.0) || (d6 < 62 && Math.abs(Math.sin(sx * 0.14 + sz * 0.11)) < 0.12);
+    var c06 = lavaCrack ? [1.00, 0.38, 0.06] : [0.14, 0.12, 0.16];
     var r7 = R_MAP.r07 || { x: 2067.0, z: -257.4 };
     var d7 = Math.hypot((sx - r7.x / S) * 0.92, (sz - (r7.z / S + 8.0)) * 1.12);
     var dIsle7 = Math.hypot(sx - (r7.x / S + 3.7), sz - (r7.z / S + 21.0));
-    var c07 = (d7 < 54 && dIsle7 > 16 && h < 1.2) ? [0.10, 0.44, 0.44] : (dIsle7 <= 16 ? [0.28, 0.48, 0.20] : [0.46, 0.42, 0.26]); /* Hồ ngọc, đảo rêu & vách đá vôi vàng */
-    var c08 = [0.38, 0.50, 0.25];
+    var c07 = (d7 < 54 && dIsle7 > 16 && h < 1.2) ? [0.11, 0.56, 0.58] : (dIsle7 <= 16 ? [0.24, 0.54, 0.19] : [0.34, 0.48, 0.24]);
+    var c08 = [0.30, 0.54, 0.22];
 
     var rgb = [0, 1, 2].map(function (ch) {
       return w.r01 * c01[ch] + w.r02 * c02[ch] + w.r03 * c03[ch] + w.r04 * c04[ch]
@@ -649,8 +653,9 @@ window.__TEXTURES = {"mBody":"models/tex-1-mBody.png","mWL":"models/tex-2-mWL.pn
 </style>
 
     <style>
-    @media (max-width: 879px) {
-      #hudHelp { display: none !important; }
+    @media (max-width: 819px) {
+      #hudHelp, #hudHelpToggle { display: none !important; }
+      #hudFps { top: 8px !important; left: 8px !important; font-size: 11px !important; padding: 4px 8px !important; }
     }
     </style>
 </head>
@@ -20608,6 +20613,28 @@ window.CANNON = { AABB, ArrayCollisionMatrix, BODY_SLEEP_STATES, BODY_TYPES, Bod
 
 </script>
 <script>
+/* Native Rust -> WebAssembly Spatial & Wave Math Kernel (world_math.rs, ~1.4KB) */
+(function () {
+  var b64 = 'AGFzbQEAAAABDgJgAn19AX1gA319fQF9AwUEAAAAAQUDAQAQBgkBfwFBgIDAAAsHTQUGbWVtb3J5AgAKZmFzdF9zaGFkZQAADmZhc3Rfc3FydF9kaXN0AAEUbWljcm9fdGVycmFpbl9kZXRhaWwAAgt3YXZlX2hlaWdodAADCqYKBKkCAQF9AkACQCAAQx+Faz6UIgAgAEOD+SI+lEMAAAA/QwAAAL8gAEMAAAAAYBuS/ACyQ9sPycCUkiIAQ9sPSUBeDQAgAEPbD0nAXUUNASAAQ9sPyUCSIQAMAQsgAEPbD8nAkiEACwJAAkAgAUM9Clc+lEPbD8k/kiIBIAFDg/kiPpRDAAAAP0MAAAC/IAFDAAAAAGAbkvwAskPbD8nAlJIiAUPbD0lAXg0AIAFD2w9JwF1FDQEgAUPbD8lAkiEBDAELIAFD2w/JwJIhAQsgAEMAAIA/IAAgAJQiAkOrqio+IAJDiYgIPCACQwENUDmUk5STlJOUQwrXoz2UIAFDAACAPyABIAGUIgBDq6oqPiAAQ4mICDwgAEMBDVA5lJOUk5STlJRDH4VrP5ILYgEBfUMAAAAAIQICQCAAIACUIAEgAZSSIgFDAAAAAF8NACABQwAAwD8gAUMAAAA/lCICQd+z3fkFIAG8QQF2a74iAJQgAJSTIACUIgCUQwAAwD8gACACIACUlJOUIQILIAILwgMBAn0CQAJAIABDZmbmPpRDZmamP5IiAiACQ4P5Ij6UQwAAAD9DAAAAvyACQwAAAABgG5L8ALJD2w/JwJSSIgJD2w9JQF4NACACQ9sPScBdRQ0BIAJD2w/JQJIhAgwBCyACQ9sPycCSIQILAkACQCABQwAAAD+UQ9sPyT+SIgMgA0OD+SI+lEMAAAA/QwAAAL8gA0MAAAAAYBuS/ACyQ9sPycCUkiIDQ9sPSUBeDQAgA0PbD0nAXUUNASADQ9sPyUCSIQMMAQsgA0PbD8nAkiEDCwJAAkAgAEMzM7M/lCABQ83MjD+UkiIAIABDg/kiPpRDAAAAP0MAAAC/IABDAAAAAGAbkvwAskPbD8nAlJIiAEPbD0lAXg0AIABD2w9JwF1FDQEgAEPbD8lAkiEADAELIABD2w/JwJIhAAsgAkMAAIA/IAIgApQiAUOrqio+IAFDiYgIPCABQwENUDmUk5STlJOUQylcDz6UIANDAACAPyADIAOUIgJDq6oqPiACQ4mICDwgAkMBDVA5lJOUk5STlJQgAEMAAIA/IAAgAJQiAkOrqio+IAJDiYgIPCACQwENUDmUk5STlJOUQwrXoz2UkgvRAwECfQJAAkAgAEPNzKw/lCACQzMz8z+UkiIDIANDg/kiPpRDAAAAP0MAAAC/IANDAAAAAGAbkvwAskPbD8nAlJIiA0PbD0lAXg0AIAND2w9JwF1FDQEgA0PbD8lAkiEDDAELIAND2w/JwJIhAwsCQAJAIAFDMzOTP5QgAkMzM7O/lJJD2w/JP5IiBCAEQ4P5Ij6UQwAAAD9DAAAAvyAEQwAAAABgG5L8ALJD2w/JwJSSIgRD2w9JQF4NACAEQ9sPScBdRQ0BIARD2w/JQJIhBAwBCyAEQ9sPycCSIQQLAkACQCAAIAGSQ5qZGUCUIAJDMzMzQJSSIgIgAkOD+SI+lEMAAAA/QwAAAL8gAkMAAAAAYBuS/ACyQ9sPycCUkiICQ9sPSUBeDQAgAkPbD0nAXUUNASACQ9sPyUCSIQIMAQsgAkPbD8nAkiECCyADQwAAgD8gAyADlCIAQ6uqKj4gAEOJiAg8IABDAQ1QOZSTlJOUk5RD7FE4PZQgBEMAAIA/IAQgBJQiA0Orqio+IANDiYgIPCADQwENUDmUk5STlJOUlCACQwAAgD8gAiAClCIDQ6uqKj4gA0OJiAg8IANDAQ1QOZSTlJOUk5RDzczMPJSSCw==';
+  if (!b64 || b64.charAt(0) === '_' || typeof WebAssembly === 'undefined') return;
+  try {
+    var raw = atob(b64);
+    var bytes = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    var mod = new WebAssembly.Module(bytes);
+    var inst = new WebAssembly.Instance(mod, {});
+    if (inst && inst.exports) {
+      window.__WASM_MATH = {
+        ready: true,
+        microDetail: inst.exports.micro_terrain_detail,
+        waveHeight: inst.exports.wave_height,
+        fastShade: inst.exports.fast_shade,
+        fastDist: inst.exports.fast_sqrt_dist
+      };
+    }
+  } catch (e) { /* async fallback if large module restriction applies */ }
+})();
+
 /* Tầng vật lý người chơi & collider 3D đầy đủ (hệ tọa độ garden-local chính xác từng milimét + chiều cao 3D). */
 (function () {
   window.__PENDING_COLLIDERS = window.__PENDING_COLLIDERS || [];
@@ -20839,8 +20866,9 @@ window.__createTerrain = function (context) {
     }
     fl = Math.min(fl, 1 - Math.min(1, lakeDepth(x, z) * 2.2));
     var base = window.__REGION ? window.__REGION.heightAt(x, z) : 0;
-    var micro = (0.14 * Math.sin(x * 0.45 + 1.3) * Math.cos(z * 0.5)
-      + 0.08 * Math.sin(x * 1.4 + z * 1.1)) * fl;
+    var wm = window.__WASM_MATH;
+    var micro = (wm && wm.ready ? wm.microDetail(x, z)
+      : (0.14 * Math.sin(x * 0.45 + 1.3) * Math.cos(z * 0.5) + 0.08 * Math.sin(x * 1.4 + z * 1.1))) * fl;
     var h = base + micro;
     if (spawnMask > 0.002) {
       h -= creekDepth(x, z) * 0.9 * fl * spawnMask;
@@ -20992,27 +21020,32 @@ window.__createTerrain = function (context) {
           'float warp = (tFbm(tp * 0.65) - 0.5) * 0.72;',
           'float stoneMask = 1.0 - smoothstep(-0.18, 0.32, dStone + warp);',
           'if (stoneMask > 0.01) {',
-          '  vec2 stGrid = tp * vec2(1.45, 1.95);',
+          '  vec2 stGrid = tp * vec2(1.15, 1.45);',
           '  float row = floor(stGrid.y);',
           '  stGrid.x += mod(row, 2.0) * 0.5;',
           '  vec2 stCell = fract(stGrid);',
           '  vec2 stId = floor(stGrid);',
-          '  float mortar = smoothstep(0.04, 0.09, stCell.x) * smoothstep(0.04, 0.09, 1.0 - stCell.x) * smoothstep(0.04, 0.09, stCell.y) * smoothstep(0.04, 0.09, 1.0 - stCell.y);',
+          '  float mortar = smoothstep(0.03, 0.08, stCell.x) * smoothstep(0.03, 0.08, 1.0 - stCell.x) * smoothstep(0.03, 0.08, stCell.y) * smoothstep(0.03, 0.08, 1.0 - stCell.y);',
           '  float tileVar = tHash(stId);',
-          '  vec3 slate = mix(vec3(0.32, 0.33, 0.29), vec3(0.45, 0.44, 0.38), tileVar) * (0.85 + 0.24 * nBlade);',
-          '  vec3 mossGap = vec3(0.18, 0.31, 0.13);',
-          '  vec3 cobble = mix(mossGap, slate, mortar);',
-          '  cobble = mix(cobble, vec3(0.20, 0.36, 0.14), smoothstep(0.55, 0.85, nMid) * 0.35);',
-          '  diffuseColor.rgb = mix(diffuseColor.rgb, cobble, stoneMask * 0.94);',
+          '  float grain = tFbm(tp * 3.8);',
+          '  vec3 stoneA = vec3(0.56, 0.54, 0.46);',
+          '  vec3 stoneB = vec3(0.68, 0.64, 0.53);',
+          '  vec3 slate = mix(stoneA, stoneB, tileVar * 0.65 + grain * 0.35);',
+          '  vec3 warmJoint = vec3(0.36, 0.35, 0.28);',
+          '  vec3 cobble = mix(warmJoint, slate, mix(0.45, 1.0, mortar));',
+          '  cobble = mix(cobble, vec3(0.24, 0.42, 0.16), smoothstep(0.68, 0.94, nMid) * 0.18);',
+          '  diffuseColor.rgb = mix(diffuseColor.rgb, cobble, stoneMask * 0.96);',
           '}',
-          'float cliff = smoothstep(0.90, 0.68, abs(vTerrainWNorm.y));',
+          'float cliff = smoothstep(0.88, 0.62, abs(vTerrainWNorm.y));',
           'if (cliff > 0.01) {',
-          '  float strata = tNoise(vec2(tp.x * 0.6, vTerrainLPos.y * 2.8 + tp.y * 0.4));',
-          '  vec3 rockCol = mix(vec3(0.24, 0.26, 0.22), vec3(0.42, 0.40, 0.35), strata);',
-          '  diffuseColor.rgb = mix(diffuseColor.rgb, rockCol, cliff * 0.88);',
+          '  float strata = tNoise(vec2(tp.x * 0.55, vTerrainLPos.y * 2.4 + tp.y * 0.35));',
+          '  vec3 rockCol = mix(vec3(0.28, 0.32, 0.24), vec3(0.48, 0.46, 0.38), strata);',
+          '  diffuseColor.rgb = mix(diffuseColor.rgb, rockCol, cliff * 0.85);',
           '}',
+          'float surfRim = 1.0 - smoothstep(-0.85, -0.35, vTerrainLPos.y);',
           'float wetShore = 1.0 - smoothstep(-0.3, 0.65, vTerrainLPos.y);',
-          'diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.54, 0.60, 0.52), wetShore * 0.65 * (1.0 - regionMix));',
+          'diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.85, 0.93, 0.95), surfRim * 0.32 * regionMix);',
+          'diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.62, 0.66, 0.58), wetShore * 0.45 * (1.0 - regionMix));',
           'float cloud = smoothstep(0.38, 0.78, tFbm(tp * 0.024 + vec2(uSplatTime * 0.018, uSplatTime * 0.011)));',
           'diffuseColor.rgb *= mix(1.06, 0.72, cloud * 0.82 * uSplatDay);'
         ].join('\n'));
@@ -21024,7 +21057,9 @@ window.__createTerrain = function (context) {
   /* Lưới nền toàn lục địa Đại Việt 7800x4680m (step=26m sắc nét + mịn FPS, có UV texture địa hình) */
   function buildContinentBackdrop() {
     var b = (window.__WORLD_MAP_DATA && window.__WORLD_MAP_DATA.bounds) || { minX: -1794.0, maxX: 6006.0, minZ: -2644.0, maxZ: 2036.0 };
-    var step = 26.0;
+    var step = 22.0;
+    var wm = window.__WASM_MATH;
+    var useWasmShade = !!(wm && wm.ready && wm.fastShade);
     var cols = Math.floor((b.maxX - b.minX) / step) + 1;
     var rows = Math.floor((b.maxZ - b.minZ) / step) + 1;
     var count = cols * rows;
@@ -21046,7 +21081,7 @@ window.__createTerrain = function (context) {
         uvs[idx * 2] = x * 0.06;
         uvs[idx * 2 + 1] = z * 0.06;
         terrainColor(x, z, gt);
-        var sh = 0.90 + 0.10 * Math.sin(x * 0.23) * Math.cos(z * 0.21);
+        var sh = useWasmShade ? wm.fastShade(x, z) : (0.90 + 0.10 * Math.sin(x * 0.23) * Math.cos(z * 0.21));
         colors[idx * 3] = gt.r * sh;
         colors[idx * 3 + 1] = gt.g * sh;
         colors[idx * 3 + 2] = gt.b * sh;
@@ -21095,6 +21130,165 @@ window.__createTerrain = function (context) {
   window.__hillYWorld = hillYWorld;
   window.__skyIsleY = skyIsleY;
   return { hillY: hillY, hillYWorld: hillYWorld, terrainColor: terrainColor, groundGeo: buildGroundGeometry() };
+};
+
+/* Horizon Mega-Silhouettes (Khop atlas_img_00.webp): Dai Thu Cay Da, Hac Son Nui Lua, Dinh Tuyet, Tien Gioi Thap Bay, Tam Thac Son Doong */
+window.__initMegaLandmarks = function (gardenRoot) {
+  if (!gardenRoot || !window.THREE || window.__MEGA_LANDMARKS) return;
+  var DATA = window.__WORLD_MAP_DATA;
+  if (!DATA || !DATA.regions) return;
+  var hillY = window.__hillY || function () { return 0; };
+  var gMega = new THREE.Group();
+  gMega.name = 'megaLandmarks';
+  gardenRoot.add(gMega);
+
+  function regPos(id, fx, fz) {
+    var r = DATA.regions.filter(function (x) { return x.id === id; })[0];
+    return r ? { x: r.x, z: r.z } : { x: fx, z: fz };
+  }
+
+  var mBark = new THREE.MeshStandardMaterial({ color: 0x5c3d24, roughness: 0.92, flatShading: true });
+  var mCrownA = new THREE.MeshStandardMaterial({ color: 0x2f6e2b, roughness: 0.85, flatShading: true });
+  var mCrownB = new THREE.MeshStandardMaterial({ color: 0x4f9434, roughness: 0.82, flatShading: true });
+  var mCrownSun = new THREE.MeshStandardMaterial({ color: 0x7cb842, roughness: 0.78, flatShading: true });
+  var mObsidian = new THREE.MeshStandardMaterial({ color: 0x242026, roughness: 0.92, flatShading: true });
+  var mLava = new THREE.MeshStandardMaterial({ color: 0xff6e1a, emissive: 0xff4500, emissiveIntensity: 1.7, roughness: 0.25 });
+  var mSmoke = new THREE.MeshStandardMaterial({ color: 0xf4dbd4, transparent: true, opacity: 0.62, roughness: 0.95, depthWrite: false });
+  var mSnow = new THREE.MeshStandardMaterial({ color: 0xf2f7fc, roughness: 0.62, flatShading: true });
+  var mGranite = new THREE.MeshStandardMaterial({ color: 0x505a62, roughness: 0.90, flatShading: true });
+  var mGold = new THREE.MeshStandardMaterial({ color: 0xe3ad2b, roughness: 0.42, metalness: 0.25 });
+  var mLacquer = new THREE.MeshStandardMaterial({ color: 0xa62e1e, roughness: 0.6 });
+  var mFall = new THREE.MeshStandardMaterial({ color: 0xdff8ff, emissive: 0x7ae2f5, emissiveIntensity: 0.55, transparent: true, opacity: 0.85 });
+  var mCloud = new THREE.MeshStandardMaterial({ color: 0xf7fbff, roughness: 0.95, transparent: true, opacity: 0.72, depthWrite: false });
+
+  /* 1. R02 — ĐẠI THỤ CÂY ĐA THẦN KHỔNG LỒ (~260m cao, thấy rõ từ Kinh Kỳ & toàn lục địa!) */
+  (function buildWorldBanyan() {
+    var r2 = regPos('r02', 78, -1287);
+    var bx = r2.x + 140, bz = r2.z - 190, by = hillY(bx, bz);
+    var bg = new THREE.Group();
+    bg.position.set(bx, by - 8, bz);
+    for (var i = 0; i < 8; i++) {
+      var a = (i / 8) * Math.PI * 2;
+      var root = new THREE.Mesh(new THREE.CylinderGeometry(8, 17, 130, 7), mBark);
+      root.position.set(Math.cos(a) * 26, 60, Math.sin(a) * 26);
+      root.rotation.z = Math.cos(a) * 0.24;
+      root.rotation.x = -Math.sin(a) * 0.24;
+      bg.add(root);
+    }
+    var core = new THREE.Mesh(new THREE.CylinderGeometry(24, 34, 150, 9), mBark);
+    core.position.y = 75; bg.add(core);
+    var puffs = [
+      [0, 178, 0, 108, 0.55, mCrownA], [-78, 158, 36, 72, 0.52, mCrownB], [84, 162, -28, 76, 0.52, mCrownB],
+      [-35, 198, -68, 68, 0.55, mCrownSun], [48, 206, 54, 62, 0.55, mCrownSun], [0, 224, 0, 56, 0.58, mCrownSun]
+    ];
+    puffs.forEach(function (pf) {
+      var c = new THREE.Mesh(new THREE.DodecahedronGeometry(pf[3], 1), pf[5]);
+      c.scale.set(1.22, pf[4], 1.18);
+      c.position.set(pf[0], pf[1], pf[2]);
+      bg.add(c);
+    });
+    for (var vi = 0; vi < 12; vi++) {
+      var va = vi * 0.52 + 0.2, vr = 56 + (vi % 3) * 22;
+      var vine = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 0.8, 105, 5), mBark);
+      vine.position.set(Math.cos(va) * vr, 105, Math.sin(va) * vr);
+      bg.add(vine);
+    }
+    gMega.add(bg);
+  })();
+
+  /* 2. R06 — NÚI LỬA HẮC SƠN PHUN MẠCH DUNG NHAM RỰC SÁNG */
+  (function buildObsidianVolcano() {
+    var r6 = regPos('r06', 1989, -1731.6);
+    var vx = r6.x + 52, vz = r6.z - 165, vy = hillY(vx, vz);
+    var vg = new THREE.Group();
+    vg.position.set(vx, Math.max(20, vy - 18), vz);
+    var cone = new THREE.Mesh(new THREE.CylinderGeometry(36, 175, 220, 14, 1, true), mObsidian);
+    cone.position.y = 110; vg.add(cone);
+    var crater = new THREE.Mesh(new THREE.CircleGeometry(35, 14), mLava);
+    crater.rotation.x = -Math.PI / 2; crater.position.y = 212; vg.add(crater);
+    for (var fi = 0; fi < 4; fi++) {
+      var fa = fi * 1.57 + 0.4;
+      var vein = new THREE.Mesh(new THREE.BoxGeometry(8, 195, 10), mLava);
+      vein.position.set(Math.cos(fa) * 86, 112, Math.sin(fa) * 86);
+      vein.rotation.z = Math.cos(fa) * 0.56;
+      vein.rotation.x = -Math.sin(fa) * 0.56;
+      vg.add(vein);
+    }
+    for (var si = 0; si < 5; si++) {
+      var sm = new THREE.Mesh(new THREE.DodecahedronGeometry(26 + si * 10, 1), mSmoke);
+      sm.scale.set(1.4, 0.72, 1.3);
+      sm.position.set(si * 18, 240 + si * 42, -si * 12);
+      vg.add(sm);
+    }
+    gMega.add(vg);
+  })();
+
+  /* 3. R05 — DÃY ĐỈNH TUYẾT HOÀNG LIÊN SẮC NHỌN TRONG BIỂN MÂY */
+  (function buildSnowAlps() {
+    var r5 = regPos('r05', 3993.6, -1123.2);
+    var peaks = [
+      [r5.x + 20, r5.z - 180, 110, 215],
+      [r5.x - 160, r5.z - 90, 88, 168],
+      [r5.x + 190, r5.z - 60, 94, 182],
+      [r5.x + 40, r5.z + 110, 76, 138]
+    ];
+    peaks.forEach(function (pk, idx) {
+      var pg = new THREE.Group();
+      pg.position.set(pk[0], 8, pk[1]);
+      var rock = new THREE.Mesh(new THREE.ConeGeometry(pk[2], pk[3], 6), mGranite);
+      rock.position.y = pk[3] * 0.5; rock.rotation.y = idx * 0.5; pg.add(rock);
+      var cap = new THREE.Mesh(new THREE.ConeGeometry(pk[2] * 0.56, pk[3] * 0.52, 6), mSnow);
+      cap.position.y = pk[3] * 0.76; cap.rotation.y = idx * 0.5; pg.add(cap);
+      if (idx === 0) {
+        var crest = new THREE.Mesh(new THREE.ConeGeometry(16, 22, 4), mGold);
+        crest.position.y = pk[3] + 8; crest.rotation.y = Math.PI / 4; pg.add(crest);
+      }
+      gMega.add(pg);
+    });
+  })();
+
+  /* 4. R07 — TAM THÁC SƠN ĐOÒNG & HỒ NGỌC BÍCH HÙNG VĨ */
+  (function buildSonDoongFalls() {
+    var r7 = regPos('r07', 2067, -257.4);
+    var cx = r7.x, cz = r7.z + 40;
+    [-68, 0, 68].forEach(function (ox, idx) {
+      var wf = new THREE.Mesh(new THREE.BoxGeometry(idx === 1 ? 26 : 18, 96, 8), mFall);
+      wf.position.set(cx + ox, 44, cz - 210 + Math.abs(ox) * 0.25);
+      gMega.add(wf);
+      var foam = new THREE.Mesh(new THREE.DodecahedronGeometry(18, 1), mCloud);
+      foam.scale.set(1.6, 0.45, 1.4);
+      foam.position.set(cx + ox, 2, cz - 204 + Math.abs(ox) * 0.25);
+      gMega.add(foam);
+    });
+  })();
+
+  /* 5. R08 — ĐẠI THÁP TIÊN GIỚI & THÁC MÂY TRẮNG THẤY TỪ XA */
+  (function buildSkyBeacons() {
+    var isles = window.__SKY_ISLES || [];
+    isles.forEach(function (isl, idx) {
+      var sg = new THREE.Group();
+      sg.position.set(isl.x, isl.y, isl.z);
+      var tier1 = new THREE.Mesh(new THREE.BoxGeometry(isl.id === 'main' ? 54 : 30, 14, isl.id === 'main' ? 40 : 24), mLacquer);
+      tier1.position.y = 8; sg.add(tier1);
+      var roof1 = new THREE.Mesh(new THREE.ConeGeometry(isl.id === 'main' ? 44 : 26, 20, 4), mGold);
+      roof1.rotation.y = Math.PI / 4; roof1.position.y = 24; sg.add(roof1);
+      if (isl.id === 'main' || isl.id === 'pagoda') {
+        var roof2 = new THREE.Mesh(new THREE.ConeGeometry(isl.id === 'main' ? 30 : 18, 16, 4), mGold);
+        roof2.rotation.y = Math.PI / 4; roof2.position.y = 40; sg.add(roof2);
+      }
+      var colWF = new THREE.Mesh(new THREE.BoxGeometry(10, 195, 5), mFall);
+      colWF.position.set(0, -98, isl.r * 0.65); sg.add(colWF);
+      for (var ci = 0; ci < 3; ci++) {
+        var cl = new THREE.Mesh(new THREE.DodecahedronGeometry(34 + ci * 8, 1), mCloud);
+        cl.scale.set(2.0, 0.38, 1.5);
+        cl.position.set((ci - 1) * 48, -110 - (idx % 2) * 18, (ci % 2 - 0.5) * 35);
+        sg.add(cl);
+      }
+      gMega.add(sg);
+    });
+  })();
+
+  window.__MEGA_LANDMARKS = gMega;
 };
 
 /* Tang Nuoc Bien, Dao Bay Tien Gioi, Cau Noi & Rung Cay Toan Luc Dia */
@@ -21344,26 +21538,26 @@ window.__initTerrainEnvironment = function () {
     connectSkyBridge(SKY_ISLES[0], SKY_ISLES[3], false);
     connectSkyBridge(SKY_ISLES[0], SKY_ISLES[4], false);
 
-    /* Tầng mây trắng quanh Hoàng Liên (r05) và Tiên Giới (r08) */
-    var cloudMat = new THREE.MeshStandardMaterial({ color: 0xf4f7fa, roughness: 0.95, transparent: true, opacity: 0.65 });
+    /* Tầng mây bồng bềnh quanh Hoàng Liên (r05), Tiên Giới (r08) & vành đai chân trời biển */
+    var cloudMat = new THREE.MeshStandardMaterial({ color: 0xf7fbff, roughness: 0.94, transparent: true, opacity: 0.72, depthWrite: false });
     var R5 = (window.__REGION && window.__REGION.DATA && window.__REGION.DATA.regions)
       ? (window.__REGION.DATA.regions.filter(function (r) { return r.id === 'r05'; })[0] || { x: 3993.6, z: -1123.2 })
       : { x: 3993.6, z: -1123.2 };
-    [[R8.x, 155, R8.z, 460], [R5.x, 76, R5.z, 410]].forEach(function (cl) {
-      for (var ci = 0; ci < 16; ci++) {
-        var ca = ci * 0.40, cr = cl[3] * (0.35 + (ci % 4) * 0.20);
-        var puff = new THREE.Mesh(new THREE.DodecahedronGeometry(48 + (ci % 3) * 18, 1), cloudMat);
-        puff.scale.set(1.9, 0.35, 1.4);
+    [[R8.x, 155, R8.z, 460], [R5.x, 82, R5.z, 420], [-950, 32, 720, 380], [2950, 36, 1580, 440], [5100, 40, 1200, 420]].forEach(function (cl) {
+      for (var ci = 0; ci < 12; ci++) {
+        var ca = ci * 0.52, cr = cl[3] * (0.35 + (ci % 4) * 0.20);
+        var puff = new THREE.Mesh(new THREE.DodecahedronGeometry(46 + (ci % 3) * 18, 1), cloudMat);
+        puff.scale.set(1.95, 0.36, 1.45);
         puff.position.set(cl[0] + Math.cos(ca) * cr, cl[1] + (ci % 3) * 10, cl[2] + Math.sin(ca) * cr);
         gardenRoot.add(puff);
       }
     });
   }
   buildWorldWaterAndSky();
+  if (window.__initMegaLandmarks) window.__initMegaLandmarks(gardenRoot);
 
-  /* Phủ 5.000 cây & tảng đá thật từ GLB bằng InstancedMesh (chỉ 4 draw calls, FPS vẫn mượt!) */
+  /* Rừng cây & tảng đá nhẹ chuẩn Ghibli theo vùng (~1.400 cụm tổng, ~64 tris/cụm, frustumCulled=true -> 60 FPS!) */
   function buildGlobalForestAndRocks() {
-    if (!window.__REAL_ASSETS) return;
     var DATA = window.__REGION && window.__REGION.DATA;
     if (!DATA) return;
     var b = DATA.bounds || { minX: -1794.0, maxX: 6006.0, minZ: -2644.0, maxZ: 2036.0 };
@@ -21374,84 +21568,123 @@ window.__initTerrainEnvironment = function () {
     }
 
     var buckets = { broadleaf: [], pine: [], blossom: [], kopje: [] };
-    for (var i = 0; i < 5000; i++) {
+    for (var i = 0; i < 1850; i++) {
       var x = b.minX + 120 + rnd() * (b.maxX - b.minX - 240);
       var z = b.minZ + 120 + rnd() * (b.maxZ - b.minZ - 240);
-      if (Math.hypot(x, z) < 55) continue; /* Tránh đè sân trung tâm đã có chunk */
+      if (Math.hypot(x, z) < 62) continue;
       var cd = window.__REGION.coastDist(x, z);
-      if (cd < 18) continue;
+      if (cd < 16) continue;
       if (window.__REGION.riverDist(x, z) < 34 || window.__REGION.roadDist(x, z) < 22) continue;
       var reg = window.__REGION.at(x, z);
       var y = hillY(x, z);
-      if (y < -0.2) continue;
+      if (y < 0.2) continue;
 
       if (reg === 'r05') {
         if (y > 95 && rnd() < 0.55) continue;
-        if (rnd() < 0.72) buckets.pine.push({ x: x, y: y - 0.5, z: z, s: 1.8 + rnd() * 1.6, ry: rnd() * 6.28 });
-        else buckets.kopje.push({ x: x, y: y - 2.4, z: z, s: 1.5 + rnd() * 1.6, ry: rnd() * 6.28 });
+        if (rnd() < 0.72) buckets.pine.push({ x: x, y: y - 0.5, z: z, s: 1.6 + rnd() * 1.4, ry: rnd() * 6.28 });
+        else buckets.kopje.push({ x: x, y: y - 2.0, z: z, s: 1.4 + rnd() * 1.4, ry: rnd() * 6.28 });
       } else if (reg === 'r06') {
-        if (rnd() < 0.52) buckets.kopje.push({ x: x, y: y - 2.6, z: z, s: 1.6 + rnd() * 1.8, ry: rnd() * 6.28 });
+        if (rnd() < 0.52) buckets.kopje.push({ x: x, y: y - 2.2, z: z, s: 1.5 + rnd() * 1.5, ry: rnd() * 6.28 });
       } else if (reg === 'r03') {
-        if (rnd() < 0.35) buckets.kopje.push({ x: x, y: y - 2.2, z: z, s: 1.4 + rnd() * 1.4, ry: rnd() * 6.28 });
-        else if (rnd() < 0.16) buckets.broadleaf.push({ x: x, y: y - 0.4, z: z, s: 1.5 + rnd() * 0.8, ry: rnd() * 6.28 });
+        if (rnd() < 0.35) buckets.kopje.push({ x: x, y: y - 1.8, z: z, s: 1.3 + rnd() * 1.2, ry: rnd() * 6.28 });
+        else if (rnd() < 0.20) buckets.broadleaf.push({ x: x, y: y - 0.4, z: z, s: 1.4 + rnd() * 0.8, ry: rnd() * 6.28 });
       } else if (reg === 'r02' || reg === 'r04' || reg === 'r07') {
         var rVal = rnd();
-        if (rVal < 0.68) buckets.broadleaf.push({ x: x, y: y - 0.4, z: z, s: 1.6 + rnd() * 1.5, ry: rnd() * 6.28 });
-        else if (rVal < 0.84) buckets.kopje.push({ x: x, y: y - 2.4, z: z, s: 1.5 + rnd() * 1.5, ry: rnd() * 6.28 });
+        if (rVal < 0.72) buckets.broadleaf.push({ x: x, y: y - 0.4, z: z, s: 1.5 + rnd() * 1.4, ry: rnd() * 6.28 });
+        else if (rVal < 0.88) buckets.kopje.push({ x: x, y: y - 2.0, z: z, s: 1.4 + rnd() * 1.3, ry: rnd() * 6.28 });
       } else {
         var r1 = rnd();
-        if (r1 < 0.52) buckets.broadleaf.push({ x: x, y: y - 0.4, z: z, s: 1.5 + rnd() * 1.2, ry: rnd() * 6.28 });
-        else if (r1 < 0.72) buckets.blossom.push({ x: x, y: y - 0.4, z: z, s: 1.4 + rnd() * 1.0, ry: rnd() * 6.28 });
+        if (r1 < 0.56) buckets.broadleaf.push({ x: x, y: y - 0.4, z: z, s: 1.4 + rnd() * 1.1, ry: rnd() * 6.28 });
+        else if (r1 < 0.78) buckets.blossom.push({ x: x, y: y - 0.4, z: z, s: 1.3 + rnd() * 0.9, ry: rnd() * 6.28 });
       }
     }
 
-    /* Thêm thông & hoa đào trên 5 Đảo Bay Khu 08 */
     SKY_ISLES.forEach(function (isl, idx) {
-      for (var k = 0; k < 14; k++) {
-        var ka = k * 0.45 + idx, kr = isl.r * (0.42 + rnd() * 0.46);
+      for (var k = 0; k < 12; k++) {
+        var ka = k * 0.52 + idx, kr = isl.r * (0.42 + rnd() * 0.45);
         var sx = isl.x + Math.cos(ka) * kr, sz = isl.z + Math.sin(ka) * kr;
-        var sy = isl.y;
-        if (isl.id === 'peach') buckets.blossom.push({ x: sx, y: sy, z: sz, s: 1.5 + rnd() * 0.8, ry: rnd() * 6.28 });
-        else buckets.pine.push({ x: sx, y: sy, z: sz, s: 1.4 + rnd() * 0.9, ry: rnd() * 6.28 });
+        if (isl.id === 'peach') buckets.blossom.push({ x: sx, y: isl.y, z: sz, s: 1.4 + rnd() * 0.7, ry: rnd() * 6.28 });
+        else buckets.pine.push({ x: sx, y: isl.y, z: sz, s: 1.3 + rnd() * 0.8, ry: rnd() * 6.28 });
       }
     });
 
-    Object.keys(buckets).forEach(function (assetName) {
-      var list = buckets[assetName];
-      if (!list.length) return;
-      var targetH = assetName === 'kopje' ? 11.0 : (assetName === 'pine' ? 15.0 : 13.0);
-      window.__REAL_ASSETS.whenReady(assetName, function (record) {
-        if (!record.scene || !record.size || record.size.y <= 0) return;
-        var normScale = targetH / record.size.y;
-        var offX = -record.box.min.x * normScale;
-        var offY = -record.box.min.y * normScale;
-        var offZ = -record.box.min.z * normScale;
-        record.scene.updateMatrixWorld(true);
-        var parts = [];
-        record.scene.traverse(function (o) {
-          if (o.isMesh && o.geometry) parts.push(o);
-        });
-        var dummy = new THREE.Object3D();
-        var subMat = new THREE.Matrix4();
-        var instMat = new THREE.Matrix4();
-        var localNorm = new THREE.Matrix4().makeTranslation(offX, offY, offZ).scale(new THREE.Vector3(normScale, normScale, normScale));
-        parts.forEach(function (part) {
-          var mat = Array.isArray(part.material) ? part.material[0] : part.material;
-          var inst = new THREE.InstancedMesh(part.geometry, mat, list.length);
-          subMat.multiplyMatrices(localNorm, part.matrixWorld);
-          for (var j = 0; j < list.length; j++) {
-            dummy.position.set(list[j].x, list[j].y, list[j].z);
-            dummy.rotation.set(0, list[j].ry, 0);
-            dummy.scale.setScalar(list[j].s);
-            dummy.updateMatrix();
-            instMat.multiplyMatrices(dummy.matrix, subMat);
-            inst.setMatrixAt(j, instMat);
-          }
-          inst.instanceMatrix.needsUpdate = true;
-          inst.frustumCulled = false;
-          gardenRoot.add(inst);
-        });
+    function mergeTris(geos) {
+      var vN = 0, iN = 0;
+      geos.forEach(function (g) {
+        vN += g.attributes.position.count;
+        iN += g.index ? g.index.count : g.attributes.position.count;
       });
+      var pos = new Float32Array(vN * 3), nor = new Float32Array(vN * 3), idx = new Uint16Array(iN);
+      var vo = 0, io = 0;
+      geos.forEach(function (g) {
+        var pa = g.attributes.position, na = g.attributes.normal;
+        for (var k = 0; k < pa.count; k++) {
+          pos[(vo + k) * 3] = pa.getX(k); pos[(vo + k) * 3 + 1] = pa.getY(k); pos[(vo + k) * 3 + 2] = pa.getZ(k);
+          nor[(vo + k) * 3] = na.getX(k); nor[(vo + k) * 3 + 1] = na.getY(k); nor[(vo + k) * 3 + 2] = na.getZ(k);
+        }
+        if (g.index) { for (var j = 0; j < g.index.count; j++) idx[io + j] = vo + g.index.getX(j); io += g.index.count; }
+        else { for (var j2 = 0; j2 < pa.count; j2++) idx[io + j2] = vo + j2; io += pa.count; }
+        vo += pa.count;
+      });
+      var out = new THREE.BufferGeometry();
+      out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+      out.setIndex(new THREE.BufferAttribute(idx, 1));
+      return out;
+    }
+
+    var trunkG = new THREE.CylinderGeometry(0.42, 0.78, 5.2, 5).translate(0, 2.6, 0);
+    var trunkMat = new THREE.MeshStandardMaterial({ color: 0x614228, roughness: 0.92, flatShading: true });
+    var crownGeo = mergeTris([
+      new THREE.IcosahedronGeometry(3.4, 0).scale(1.15, 0.72, 1.15).translate(0, 6.2, 0),
+      new THREE.IcosahedronGeometry(2.5, 0).scale(1.1, 0.75, 1.1).translate(1.4, 5.2, 0.9),
+      new THREE.IcosahedronGeometry(2.4, 0).scale(1.1, 0.75, 1.1).translate(-1.3, 5.4, -0.8)
+    ]);
+    var pineGeo = mergeTris([
+      new THREE.ConeGeometry(3.2, 5.5, 5).translate(0, 4.8, 0),
+      new THREE.ConeGeometry(2.4, 4.8, 5).translate(0, 7.6, 0),
+      new THREE.ConeGeometry(1.5, 3.8, 5).translate(0, 10.2, 0)
+    ]);
+    var rockGeo = new THREE.DodecahedronGeometry(3.6, 0).scale(1.25, 0.85, 1.1);
+
+    var mats = {
+      broadleaf: new THREE.MeshStandardMaterial({ color: 0x3b7d31, roughness: 0.85, flatShading: true }),
+      pine: new THREE.MeshStandardMaterial({ color: 0x2c603e, roughness: 0.86, flatShading: true }),
+      blossom: new THREE.MeshStandardMaterial({ color: 0xf4a2bd, roughness: 0.78, flatShading: true }),
+      kopje: new THREE.MeshStandardMaterial({ color: 0x6b675b, roughness: 0.94, flatShading: true })
+    };
+    var capGeos = { broadleaf: crownGeo, pine: pineGeo, blossom: crownGeo, kopje: rockGeo };
+
+    var dummy = new THREE.Object3D();
+    function addSpatialInstances(list, geo, mat, chunkSz) {
+      if (!list.length) return;
+      var cells = {};
+      for (var j = 0; j < list.length; j++) {
+        var it = list[j];
+        var key = Math.floor(it.x / chunkSz) + ',' + Math.floor(it.z / chunkSz);
+        (cells[key] || (cells[key] = [])).push(it);
+      }
+      Object.keys(cells).forEach(function (ck) {
+        var sub = cells[ck];
+        var inst = new THREE.InstancedMesh(geo, mat, sub.length);
+        for (var k = 0; k < sub.length; k++) {
+          dummy.position.set(sub[k].x, sub[k].y, sub[k].z);
+          dummy.rotation.set(0, sub[k].ry, 0);
+          dummy.scale.setScalar(sub[k].s);
+          dummy.updateMatrix();
+          inst.setMatrixAt(k, dummy.matrix);
+        }
+        inst.instanceMatrix.needsUpdate = true;
+        inst.computeBoundingSphere();
+        inst.frustumCulled = true;
+        gardenRoot.add(inst);
+      });
+    }
+
+    var allTrunks = buckets.broadleaf.concat(buckets.pine, buckets.blossom);
+    addSpatialInstances(allTrunks, trunkG, trunkMat, 1200);
+    Object.keys(buckets).forEach(function (name) {
+      addSpatialInstances(buckets[name], capGeos[name], mats[name], 1200);
     });
   }
   buildGlobalForestAndRocks();
@@ -25237,16 +25470,15 @@ window.__LM_INIT_COMMON = function (C) {
     wallGeo.computeVertexNormals();
     var wallMesh = new THREE.Mesh(wallGeo, M.karstRock);
     wallMesh.position.set(cx, SEA_Y + 50, cz); rg.add(wallMesh);
-    for (var ci = 0; ci < 24; ci++) {
-      var a = startAng + (ci / 23) * sweep;
+    for (var ci = 0; ci < 20; ci++) {
+      var a = startAng + (ci / 19) * sweep;
       var rx = cx + Math.cos(a) * 255, rz = cz + Math.sin(a) * 255;
-      var rimLedge = new THREE.Mesh(new THREE.DodecahedronGeometry(24, 1), M.mossStone);
-      rimLedge.scale.set(1.5, 0.5, 1.5);
-      rimLedge.position.set(rx, SEA_Y + 106 + Math.sin(a * 9) * 8.0, rz); rg.add(rimLedge);
-      if (RA && ci % 2 === 0) {
-        var bt7 = RA.makeModel('broadleaf', { height: 28 });
-        bt7.position.set(rx, SEA_Y + 110, rz); rg.add(bt7);
-      }
+      var rimLedge = new THREE.Mesh(new THREE.DodecahedronGeometry(22 + (ci % 3) * 6, 1), ci % 2 ? M.karstRock : M.mossStone);
+      rimLedge.scale.set(1.4, 0.75 + (ci % 3) * 0.25, 1.4);
+      rimLedge.position.set(rx, SEA_Y + 104 + Math.sin(a * 9) * 8.0, rz); rg.add(rimLedge);
+      var capCrown = new THREE.Mesh(new THREE.IcosahedronGeometry(14 + (ci % 2) * 5, 0), M.foliage);
+      capCrown.scale.set(1.3, 0.65, 1.2);
+      capCrown.position.set(rx, SEA_Y + 118 + (ci % 3) * 4, rz); rg.add(capCrown);
     }
   })();
 
@@ -26104,6 +26336,12 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
         if (!C.builders.r05_r06(det, g, id)) C.builders.r07_r08(det, g, id);
       }
     }
+    if (det.region !== 'r04' && det.region !== 'r08' && det.num !== '05' && id !== 'r07_02' && id !== 'r07_05') {
+      var skirtMat = det.region === 'r03' ? C.M.redSandstone : (det.region === 'r06' ? C.M.darkRock : C.M.mossStone);
+      var skirt = new THREE.Mesh(new THREE.CylinderGeometry(13.5, 16.5, 9.0, 12), skirtMat);
+      skirt.position.y = -4.45;
+      g.add(skirt);
+    }
     if (P) {
       var pg = new THREE.Group();
       C.attachDetailedProps(det, pg);
@@ -26237,7 +26475,7 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
 
   var banner = document.createElement('div');
   banner.id = 'landmarkBannerHud';
-  banner.style.cssText = 'position:fixed;left:50%;bottom:106px;transform:translateX(-50%);z-index:54;padding:8px 16px;border-radius:12px;background:rgba(24,20,14,.86);color:#ffe7b0;font:600 13px/1.4 Georgia,serif;border:1px solid rgba(245,195,91,.45);box-shadow:0 8px 24px rgba(0,0,0,.35);pointer-events:none;opacity:0;transition:opacity .25s;text-align:center;max-width:min(88vw,460px)';
+  banner.style.cssText = 'position:fixed;left:50%;bottom:106px;transform:translateX(-50%);z-index:54;padding:8px 16px;border-radius:12px;background:rgba(20,18,14,.88);color:#ffe7b0;font:600 13px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;border:1px solid rgba(245,195,91,.45);box-shadow:0 8px 24px rgba(0,0,0,.35);pointer-events:none;opacity:0;transition:opacity .25s;text-align:center;max-width:min(88vw,460px)';
   document.body.appendChild(banner);
   function layoutBanner() {
     var mob = window.innerWidth < 768;
@@ -26256,8 +26494,9 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
     var pl = gardenRoot.worldToLocal(window.__playerPos.clone());
     Object.keys(regionGroups).forEach(function (rid) {
       var rg = regionGroups[rid];
-      rg.group.visible = Math.hypot(pl.x - rg.x, pl.z - rg.z) < 3400;
+      rg.group.visible = Math.hypot(pl.x - rg.x, pl.z - rg.z) < 2600;
     });
+    window.__updateLandmarksVis(pl.x, pl.z);
     var best = null, bd = 75;
     for (var i = 0; i < DATA.details.length; i++) {
       var d = DATA.details[i], dist = Math.hypot(pl.x - d.x, pl.z - d.z);
@@ -26569,9 +26808,10 @@ window.__createCombatHud = function (C) {
   document.body.appendChild(bar);
   function layoutCombatBar() {
     var mob = window.innerWidth < 768;
-    bar.style.padding = mob ? '5px 7px' : '7px 10px';
-    bar.style.fontSize = mob ? '10.5px' : '12px';
+    bar.style.padding = mob ? '4px 6px' : '7px 10px';
+    bar.style.fontSize = mob ? '10px' : '12px';
     bar.style.bottom = mob ? '6px' : '10px';
+    bar.style.maxWidth = mob ? 'calc(100vw - 10px)' : 'calc(100vw - 16px)';
     [].forEach.call(bar.querySelectorAll('button[data-sk]'), function (bt) {
       bt.style.padding = mob ? '3px 5px' : '4px 7px';
     });
@@ -27010,8 +27250,8 @@ window.__createCombatEnemies = function (C) {
   function damagePlayer(amt, atk, allow) { C.damagePlayer(amt, atk, allow); }
   function refreshHud() { C.refreshHud(); }
   var enemyData = [
-    { id: 'EN-01', name: 'Xà Tinh Đầm', kind: 'snake', weak: 'Phản đòn (F)', asset: 'enemySnake', x: -16.5, z: -12.0, height: 1.15, hp: 12, speed: 1.65, range: 1.95, tell: 0.56, active: 0.22, recover: 0.78, damage: 10 },
-    { id: 'EN-02', name: 'Cóc Độc Hồ', kind: 'frog', weak: 'Phản cầu / Né (C)', asset: 'enemyFrog', x: 15.5, z: 22.0, height: 1.1, hp: 10, speed: 0.90, range: 9.0, meleeRange: 2.0, tell: 0.85, active: 0.2, recover: 1.05, damage: 12, ranged: true },
+    { id: 'EN-01', name: 'Xà Tinh Đầm', kind: 'snake', weak: 'Phản đòn (F)', asset: 'enemySnake', x: -21.5, z: -14.5, height: 1.15, hp: 12, speed: 1.65, range: 1.95, tell: 0.56, active: 0.22, recover: 0.78, damage: 10 },
+    { id: 'EN-02', name: 'Cóc Độc Hồ', kind: 'frog', weak: 'Phản cầu / Né (C)', asset: 'enemyFrog', x: 18.5, z: 22.0, height: 1.1, hp: 10, speed: 0.90, range: 9.0, meleeRange: 2.0, tell: 0.85, active: 0.2, recover: 1.05, damage: 12, ranged: true },
     { id: 'EN-03', name: 'Vạc Bùn Giáp', kind: 'boulder', weak: '[1] Phá Giáp · Thủy Nộ', asset: 'enemyBoulder', x: -25.5, z: -15.5, height: 1.55, hp: 22, speed: 0.76, range: 2.35, tell: 1.02, active: 0.26, recover: 1.15, damage: 16, armored: true },
     { id: 'EN-04', name: 'Nhện Rừng Rậm', kind: 'spider', weak: '[2] Toàn Phong (Gió)', asset: 'enemySpider', x: 29.5, z: -14.0, height: 1.15, hp: 12, speed: 1.55, range: 1.95, tell: 0.62, active: 0.2, recover: 0.85, damage: 11 },
     { id: 'EN-05', name: 'Xà Tinh Ven Bờ', kind: 'snake', weak: 'Phản đòn (F)', asset: 'enemySnake', x: -24.5, z: 10.5, height: 1.15, hp: 12, speed: 1.6, range: 1.95, tell: 0.56, active: 0.2, recover: 0.78, damage: 10 },
@@ -29657,7 +29897,7 @@ if (!window.__GAME && consented) {
   try {
     renderer.setClearColor(0x000000, 0);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.08;
+    renderer.toneMappingExposure = 1.15;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -29668,16 +29908,16 @@ if (!window.__GAME && consented) {
   var scene = new THREE.Scene();
   window.__scene3d = scene;
   window.__renderer = renderer; /* debug */
-  scene.fog = new THREE.Fog(0xcadff0, 75, 420);
+  scene.fog = new THREE.Fog(0xcce4f6, 420, 4400);
 
-  var camera = new THREE.PerspectiveCamera(44, 1, 0.1, 9500);
+  var camera = new THREE.PerspectiveCamera(46, 1, 0.1, 12000);
   window.__cam3d = camera; /* debug */
 
   /* ---- ánh sáng trời tự nhiên & shadow map ±42m theo người chơi ---- */
-  var hemiL = new THREE.HemisphereLight(0x9ad0ff, 0x556b38, 1.05);
+  var hemiL = new THREE.HemisphereLight(0xaad9ff, 0x6f8c4a, 1.28);
   scene.add(hemiL);
   window.__hemi = hemiL;
-  var key = new THREE.DirectionalLight(0xfff1d6, 2.15);
+  var key = new THREE.DirectionalLight(0xfff3db, 2.25);
   window.__key = key;
   key.position.set(-28, 42, -24);
   key.castShadow = true;
@@ -29690,11 +29930,11 @@ if (!window.__GAME && consented) {
   key.shadow.camera.updateProjectionMatrix();
   scene.add(key);
   scene.add(key.target);
-  var rim = new THREE.DirectionalLight(0xb8dcff, 0.72);
+  var rim = new THREE.DirectionalLight(0xc2e2ff, 0.85);
   rim.position.set(18, 16, 22);
   scene.add(rim);
-  var fill = new THREE.DirectionalLight(0xffe8d6, 0.32);
-  fill.position.set(-8, 10, 14);
+  var fill = new THREE.DirectionalLight(0xffecd9, 0.56);
+  fill.position.set(-8, 12, 16);
   scene.add(fill);
 
   /* ---- Bầu trời 3D Shader (gradient azure -> chân trời vàng nhẹ + mây trôi tự nhiên + đĩa mặt trời) ---- */
@@ -32211,18 +32451,72 @@ if (!window.__GAME && consented) {
         }
         setTimeout(chirp, 6000 + Math.random() * 9000);
       }
+      /* suối & hồ róc rách khi gần nước + nhạc nền Ngũ Cung Việt Nam (Đàn Tranh + Sáo Trúc) */
+      var streamLP = ctx.createBiquadFilter(); streamLP.type = 'bandpass'; streamLP.frequency.value = 680; streamLP.Q.value = 0.7;
+      var streamG = ctx.createGain(); streamG.gain.value = 0.008;
+      var streamSrc = ctx.createBufferSource(); streamSrc.buffer = bf2; streamSrc.loop = true;
+      streamSrc.connect(streamLP); streamLP.connect(streamG); streamG.connect(master); streamSrc.start();
+
+      function chime(fA, fB) {
+        if (!ctx || muted) return;
+        [fA || 1318, fB || 1760].forEach(function (f3, i3) {
+          var o5 = ctx.createOscillator(), g5 = ctx.createGain();
+          o5.type = 'sine'; o5.frequency.value = f3;
+          var ts5 = ctx.currentTime + i3 * 0.055;
+          g5.gain.setValueAtTime(0.0001, ts5);
+          g5.gain.exponentialRampToValueAtTime(0.065, ts5 + 0.015);
+          g5.gain.exponentialRampToValueAtTime(0.0001, ts5 + 0.22);
+          o5.connect(g5); g5.connect(master);
+          o5.start(ts5); o5.stop(ts5 + 0.24);
+        });
+      }
       window.__sfx = {
-        chime: function () {
+        chime: function () { chime(1318, 1760); },
+        ui: function () {
           if (!ctx || muted) return;
-          [1318, 1760].forEach(function (f3, i3) {
-            var o5 = ctx.createOscillator(), g5 = ctx.createGain();
-            o5.type = 'sine'; o5.frequency.value = f3;
-            var ts5 = ctx.currentTime + i3 * 0.05;
-            g5.gain.setValueAtTime(0.0001, ts5);
-            g5.gain.exponentialRampToValueAtTime(0.05, ts5 + 0.02);
-            g5.gain.exponentialRampToValueAtTime(0.0001, ts5 + 0.14);
-            o5.connect(g5); g5.connect(master);
-            o5.start(ts5); o5.stop(ts5 + 0.16);
+          var oU = ctx.createOscillator(), gU = ctx.createGain();
+          oU.type = 'triangle'; oU.frequency.setValueAtTime(660, ctx.currentTime);
+          oU.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.05);
+          gU.gain.setValueAtTime(0.0001, ctx.currentTime);
+          gU.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 0.008);
+          gU.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.08);
+          oU.connect(gU); gU.connect(master); oU.start(); oU.stop(ctx.currentTime + 0.09);
+        },
+        step: function (wet) {
+          if (!ctx || muted) return;
+          var sSt = ctx.createBufferSource(); sSt.buffer = bf2;
+          var fSt = ctx.createBiquadFilter(); fSt.type = 'bandpass';
+          fSt.frequency.value = wet ? 920 : 340 + Math.random() * 140; fSt.Q.value = wet ? 1.4 : 2.2;
+          var gSt = ctx.createGain();
+          gSt.gain.setValueAtTime(0.0001, ctx.currentTime);
+          gSt.gain.exponentialRampToValueAtTime(wet ? 0.042 : 0.028, ctx.currentTime + 0.012);
+          gSt.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + (wet ? 0.11 : 0.075));
+          sSt.connect(fSt); fSt.connect(gSt); gSt.connect(master);
+          sSt.start(); sSt.stop(ctx.currentTime + 0.13);
+        },
+        splash: function () {
+          if (!ctx || muted) return;
+          var sSp = ctx.createBufferSource(); sSp.buffer = bf2;
+          var fSp = ctx.createBiquadFilter(); fSp.type = 'lowpass';
+          fSp.frequency.setValueAtTime(1400, ctx.currentTime);
+          fSp.frequency.exponentialRampToValueAtTime(280, ctx.currentTime + 0.36);
+          var gSp = ctx.createGain();
+          gSp.gain.setValueAtTime(0.0001, ctx.currentTime);
+          gSp.gain.exponentialRampToValueAtTime(0.11, ctx.currentTime + 0.025);
+          gSp.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.42);
+          sSp.connect(fSp); fSp.connect(gSp); gSp.connect(master);
+          sSp.start(); sSp.stop(ctx.currentTime + 0.45);
+        },
+        quest: function () {
+          if (!ctx || muted) return;
+          [523.25, 659.25, 783.99, 1046.50].forEach(function (fq, iq) {
+            var oQ = ctx.createOscillator(), gQ = ctx.createGain();
+            oQ.type = 'triangle'; oQ.frequency.value = fq;
+            var tsQ = ctx.currentTime + iq * 0.09;
+            gQ.gain.setValueAtTime(0.0001, tsQ);
+            gQ.gain.exponentialRampToValueAtTime(0.065, tsQ + 0.02);
+            gQ.gain.exponentialRampToValueAtTime(0.0001, tsQ + 0.65);
+            oQ.connect(gQ); gQ.connect(master); oQ.start(tsQ); oQ.stop(tsQ + 0.7);
           });
         },
         slash: function (pitch) {
@@ -32234,10 +32528,10 @@ if (!window.__GAME && consented) {
           fS.frequency.exponentialRampToValueAtTime(fp * 0.4, ctx.currentTime + 0.14);
           var gS = ctx.createGain();
           gS.gain.setValueAtTime(0.0001, ctx.currentTime);
-          gS.gain.exponentialRampToValueAtTime(0.11, ctx.currentTime + 0.02);
-          gS.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.16);
+          gS.gain.exponentialRampToValueAtTime(0.14, ctx.currentTime + 0.015);
+          gS.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
           sS.connect(fS); fS.connect(gS); gS.connect(master);
-          sS.start(); sS.stop(ctx.currentTime + 0.18);
+          sS.start(); sS.stop(ctx.currentTime + 0.2);
         },
         parry: function () {
           if (!ctx || muted) return;
@@ -32246,10 +32540,10 @@ if (!window.__GAME && consented) {
             oP.type = idxP === 0 ? 'triangle' : 'sine'; oP.frequency.value = fP;
             var tsP = ctx.currentTime + idxP * 0.015;
             gP.gain.setValueAtTime(0.0001, tsP);
-            gP.gain.exponentialRampToValueAtTime(0.09, tsP + 0.01);
-            gP.gain.exponentialRampToValueAtTime(0.0001, tsP + 0.34);
+            gP.gain.exponentialRampToValueAtTime(0.11, tsP + 0.01);
+            gP.gain.exponentialRampToValueAtTime(0.0001, tsP + 0.36);
             oP.connect(gP); gP.connect(master);
-            oP.start(tsP); oP.stop(tsP + 0.36);
+            oP.start(tsP); oP.stop(tsP + 0.38);
           });
         },
         hydroBoom: function () {
@@ -32259,7 +32553,7 @@ if (!window.__GAME && consented) {
           oH.frequency.setValueAtTime(165, ctx.currentTime);
           oH.frequency.exponentialRampToValueAtTime(48, ctx.currentTime + 0.28);
           gH.gain.setValueAtTime(0.0001, ctx.currentTime);
-          gH.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.02);
+          gH.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
           gH.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.32);
           oH.connect(gH); gH.connect(master);
           oH.start(); oH.stop(ctx.currentTime + 0.34);
@@ -32272,7 +32566,7 @@ if (!window.__GAME && consented) {
           o6.frequency.exponentialRampToValueAtTime(330, ctx.currentTime + 0.16);
           f6.type = 'lowpass'; f6.frequency.value = 900;
           g6.gain.setValueAtTime(0.0001, ctx.currentTime);
-          g6.gain.exponentialRampToValueAtTime(0.07, ctx.currentTime + 0.03);
+          g6.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.03);
           g6.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
           o6.connect(f6); f6.connect(g6); g6.connect(master);
           o6.start(); o6.stop(ctx.currentTime + 0.25);
@@ -32285,41 +32579,58 @@ if (!window.__GAME && consented) {
           f7.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.34);
           var g7 = ctx.createGain();
           g7.gain.setValueAtTime(0.0001, ctx.currentTime);
-          g7.gain.exponentialRampToValueAtTime(0.1, ctx.currentTime + 0.05);
+          g7.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.04);
           g7.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
           s6.connect(f7); f7.connect(g7); g7.connect(master);
           s6.start(); s6.stop(ctx.currentTime + 0.45);
         }
       };
-      /* Giai điệu Ngũ Cung nhẹ nhàng (Đàn Tranh tổng hợp mềm mại theo môi trường) */
-      var scale = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
+      /* Nhạc Ngũ Cung Việt Nam êm dịu (Đàn Tranh + Sáo Trúc theo tiết tấu 4/4) */
+      var motif = [523.25, 587.33, 783.99, 659.25, 880.00, 783.99, 659.25, 587.33, 523.25, 392.00, 440.00, 523.25];
       var noteStep = 0;
       function playDanTranh() {
-        if (!ctx || muted) { setTimeout(playDanTranh, 2600); return; }
-        var freq = scale[(noteStep * 3 + ((Math.random() * 3) | 0)) % scale.length];
-        noteStep++;
-        var oD = ctx.createOscillator(), gD = ctx.createGain(), fD = ctx.createBiquadFilter();
-        oD.type = 'triangle'; oD.frequency.value = freq;
-        fD.type = 'lowpass'; fD.frequency.value = 1600;
+        if (!ctx || muted) { setTimeout(playDanTranh, 1600); return; }
+        var freq = motif[noteStep % motif.length];
         var tD = ctx.currentTime;
+        var oD = ctx.createOscillator(), oH2 = ctx.createOscillator(), gD = ctx.createGain(), fD = ctx.createBiquadFilter();
+        oD.type = 'triangle'; oD.frequency.value = freq;
+        oH2.type = 'sine'; oH2.frequency.value = freq * 2.0;
+        fD.type = 'lowpass'; fD.frequency.setValueAtTime(2400, tD); fD.frequency.exponentialRampToValueAtTime(650, tD + 1.1);
         gD.gain.setValueAtTime(0.0001, tD);
-        gD.gain.exponentialRampToValueAtTime(0.024, tD + 0.02);
+        gD.gain.exponentialRampToValueAtTime(0.045, tD + 0.015);
         gD.gain.exponentialRampToValueAtTime(0.0001, tD + 1.45);
-        oD.connect(fD); fD.connect(gD); gD.connect(master);
-        oD.start(tD); oD.stop(tD + 1.5);
-        setTimeout(playDanTranh, 1600 + Math.random() * 1800);
+        oD.connect(fD); oH2.connect(fD); fD.connect(gD); gD.connect(master);
+        oD.start(tD); oH2.start(tD); oD.stop(tD + 1.5); oH2.stop(tD + 1.5);
+        if (noteStep % 4 === 0) {
+          var oFl = ctx.createOscillator(), gFl = ctx.createGain();
+          oFl.type = 'sine'; oFl.frequency.value = freq * 0.5;
+          gFl.gain.setValueAtTime(0.0001, tD + 0.08);
+          gFl.gain.exponentialRampToValueAtTime(0.026, tD + 0.45);
+          gFl.gain.exponentialRampToValueAtTime(0.0001, tD + 1.9);
+          oFl.connect(gFl); gFl.connect(master); oFl.start(tD + 0.08); oFl.stop(tD + 1.95);
+        }
+        noteStep++;
+        setTimeout(playDanTranh, 780 + (noteStep % 2) * 320);
       }
-      setTimeout(playDanTranh, 1500);
-      setTimeout(chirp, 3200);
+      setTimeout(playDanTranh, 900);
+      setTimeout(chirp, 2600);
       window.__amb = { started: true, isMuted: function () { return muted; } };
     }
     window.addEventListener('pointerdown', start, { passive: true });
+    window.addEventListener('touchstart', start, { passive: true });
     window.addEventListener('keydown', start);
-    /* nút bật/tắt góc trái dưới */
+    /* nút bật/tắt âm thanh (né mobile combat HUD cleanly) */
     var btn = document.createElement('button');
+    btn.id = 'audioToggleBtn';
     btn.textContent = muted ? '♪ tắt' : '♪ bật';
-    btn.setAttribute('aria-label', 'Bật tắt âm thanh vườn');
-    btn.style.cssText = 'position:fixed;left:18px;bottom:18px;z-index:40;background:rgba(255,252,246,.72);border:1px solid rgba(122,90,52,.25);border-radius:999px;padding:6px 14px;font:600 12px/1.2 Georgia,serif;color:#6d5433;cursor:pointer;backdrop-filter:blur(6px)';
+    btn.setAttribute('aria-label', 'Bật tắt âm thanh');
+    function layoutAudioBtn() {
+      var mob = window.innerWidth < 820;
+      btn.style.cssText = mob
+        ? 'position:fixed;left:8px;top:240px;z-index:50;background:rgba(20,18,15,.80);border:1px solid rgba(226,192,122,.36);border-radius:999px;padding:5px 10px;font:600 11px/1.2 "Segoe UI",system-ui,sans-serif;color:#f6efe0;cursor:pointer;backdrop-filter:blur(6px)'
+        : 'position:fixed;left:18px;bottom:18px;z-index:40;background:rgba(255,252,246,.82);border:1px solid rgba(122,90,52,.28);border-radius:999px;padding:6px 14px;font:600 12px/1.2 "Segoe UI",system-ui,sans-serif;color:#5c4529;cursor:pointer;backdrop-filter:blur(6px)';
+    }
+    layoutAudioBtn(); window.addEventListener('resize', layoutAudioBtn);
     btn.addEventListener('click', function (ev) {
       ev.stopPropagation();
       muted = !muted;
@@ -33448,7 +33759,7 @@ if (!window.__GAME && consented) {
         var bl1 = new THREE.Mesh(blGeoS, blMatS); bl1.position.set(-0.225, 0.35, 0.285); bl1.rotation.y = 0.35;
         var bl2 = new THREE.Mesh(blGeoS, blMatS); bl2.position.set(0.225, 0.35, 0.285); bl2.rotation.y = -0.35;
         sg2.add(e1, e2, glS, glS2, moS, bl1, bl2);
-        var sx0 = 9.5 + si2 * 6.5, sz0 = 12.5 + si2 * 9.5;
+        var sx0 = 6.2 + si2 * 10.5, sz0 = 10.5 + si2 * 11.5;
         sg2.position.set(sx0, hillY(sx0, sz0), sz0);
         gardenRoot.add(sg2);
         slimes.push({ g: sg2, body: bodyS, e1: e1, e2: e2, wx: sx0, wz: sz0, hopT: 0, hop: 1, dir: Math.random() * 6.283, squish: 0, blink: 2 + Math.random() * 3 });
@@ -34497,7 +34808,7 @@ window.__initMinimap = function (garden, waypoints) {
       ctx.fillStyle = '#e5cfa0'; ctx.fill();
       ctx.restore();
     }
-    ctx.fillStyle = '#f8f0dc'; ctx.font = '700 11px Georgia,serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#f8f0dc'; ctx.font = '700 11px "Segoe UI",system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('BẮC·B', 0, -r - 12);
     ctx.fillText('NAM·S', 0, r + 12);
     ctx.fillText('ĐÔNG', r + 22, 0);
@@ -34505,19 +34816,24 @@ window.__initMinimap = function (garden, waypoints) {
     ctx.restore();
   }
 
-  /* Cache lớp nền địa hình SVG 1200x720 vào offscreen canvas */
+  /* Cache lớp nền địa hình minh họa giống atlas_img_00.webp (S-continent + kỳ quan 8 vùng) */
   var bgCanvas = document.createElement('canvas');
   bgCanvas.width = MW; bgCanvas.height = MH;
   (function renderMapBg() {
     var bctx = bgCanvas.getContext('2d');
-    /* 1. Biển sâu đậm viền ngoài giống SVG */
-    bctx.fillStyle = '#091115';
+    /* 1. Đại dương xanh ngọc sâu chuyển sắc rực rỡ */
+    var oceanG = bctx.createRadialGradient(MW * 0.48, MH * 0.52, 90, MW * 0.5, MH * 0.5, MW * 0.72);
+    oceanG.addColorStop(0, '#13576b');
+    oceanG.addColorStop(0.55, '#0c3747');
+    oceanG.addColorStop(1, '#071a24');
+    bctx.fillStyle = oceanG;
     bctx.fillRect(0, 0, MW, MH);
 
-    /* 2. Bậc thềm lục địa ven bờ nhiều tầng xanh ngọc */
-    var shelfColors = ['rgba(105,152,168,0.22)', 'rgba(135,178,191,0.34)', 'rgba(176,210,220,0.48)', 'rgba(209,231,238,0.62)'];
-    var shelfWidths = [86, 54, 30, 14];
-    (MDATA.landPolys || []).forEach(function (poly) {
+    var coastPolys = (MDATA.landPolys && MDATA.landPolys.length) ? [MDATA.landPolys[0]] : [];
+    /* 2. Bậc thềm nước nông & bọt sóng quanh đường bờ S-shape */
+    var shelfColors = ['rgba(68,182,198,0.18)', 'rgba(92,204,214,0.28)', 'rgba(148,228,232,0.42)', 'rgba(218,246,248,0.68)'];
+    var shelfWidths = [74, 46, 24, 9];
+    coastPolys.forEach(function (poly) {
       if (!poly.length) return;
       for (var si = 0; si < shelfColors.length; si++) {
         bctx.beginPath();
@@ -34533,10 +34849,10 @@ window.__initMinimap = function (garden, waypoints) {
       }
     });
 
-    /* 3. Lục địa xanh mướt + đường đồng mức + lớp sinh cảnh vùng */
+    /* 3. Lục địa xanh ngọc lục bảo + cát vàng + đường đồng mức nhẹ bên trong */
     bctx.save();
     bctx.beginPath();
-    (MDATA.landPolys || []).forEach(function (poly) {
+    coastPolys.forEach(function (poly) {
       if (!poly.length) return;
       poly.forEach(function (pt, idx) {
         var p = mapPoint(pt[0], pt[1]);
@@ -34545,112 +34861,132 @@ window.__initMinimap = function (garden, waypoints) {
       bctx.closePath();
     });
     var landGrad = bctx.createLinearGradient(0, 0, MW, MH);
-    landGrad.addColorStop(0, '#c8d99c');
-    landGrad.addColorStop(0.5, '#d5dfb0');
-    landGrad.addColorStop(1, '#c3d59d');
+    landGrad.addColorStop(0, '#5a9b43');
+    landGrad.addColorStop(0.5, '#72ab49');
+    landGrad.addColorStop(1, '#4d8c46');
     bctx.fillStyle = landGrad;
     bctx.fill();
     bctx.clip();
 
-    /* Tô phủ từng vùng địa chất: r03 Champa đỏ, r05 Hoàng Liên tuyết trắng, r06 Hắc Sơn đen nham, r07 Hố sụt Sơn Đoòng */
     function regPt(rid) {
       var r = (MDATA.regions || []).filter(function (it) { return it.id === rid; })[0];
       return r ? mapPoint(r.x, r.z) : null;
     }
     var pR06 = regPt('r06');
     if (pR06) {
-      var g6 = bctx.createRadialGradient(pR06[0], pR06[1], 10, pR06[0], pR06[1], 145);
-      g6.addColorStop(0, 'rgba(38,31,29,0.92)');
-      g6.addColorStop(0.45, 'rgba(72,56,48,0.72)');
-      g6.addColorStop(1, 'rgba(130,104,76,0)');
+      var g6 = bctx.createRadialGradient(pR06[0], pR06[1], 10, pR06[0], pR06[1], 135);
+      g6.addColorStop(0, 'rgba(32,26,28,0.96)');
+      g6.addColorStop(0.5, 'rgba(72,56,48,0.72)');
+      g6.addColorStop(1, 'rgba(92,110,60,0)');
       bctx.fillStyle = g6; bctx.fillRect(0, 0, MW, MH);
     }
     var pR05 = regPt('r05');
     if (pR05) {
-      var g5 = bctx.createRadialGradient(pR05[0], pR05[1], 12, pR05[0], pR05[1], 155);
-      g5.addColorStop(0, 'rgba(246,249,252,0.94)');
-      g5.addColorStop(0.42, 'rgba(182,158,128,0.62)');
-      g5.addColorStop(1, 'rgba(165,148,116,0)');
+      var g5 = bctx.createRadialGradient(pR05[0], pR05[1], 12, pR05[0], pR05[1], 150);
+      g5.addColorStop(0, 'rgba(244,249,255,0.96)');
+      g5.addColorStop(0.46, 'rgba(176,192,208,0.62)');
+      g5.addColorStop(1, 'rgba(120,165,115,0)');
       bctx.fillStyle = g5; bctx.fillRect(0, 0, MW, MH);
     }
     var pR03 = regPt('r03');
     if (pR03) {
       var g3 = bctx.createRadialGradient(pR03[0], pR03[1], 14, pR03[0], pR03[1], 150);
-      g3.addColorStop(0, 'rgba(196,98,54,0.82)');
-      g3.addColorStop(0.55, 'rgba(218,162,92,0.48)');
-      g3.addColorStop(1, 'rgba(218,162,92,0)');
+      g3.addColorStop(0, 'rgba(204,88,44,0.88)');
+      g3.addColorStop(0.58, 'rgba(232,178,94,0.62)');
+      g3.addColorStop(1, 'rgba(120,165,115,0)');
       bctx.fillStyle = g3; bctx.fillRect(0, 0, MW, MH);
     }
     var pR01 = regPt('r01');
     if (pR01) {
-      var g1 = bctx.createRadialGradient(pR01[0], pR01[1], 12, pR01[0], pR01[1], 130);
-      g1.addColorStop(0, 'rgba(194,162,102,0.52)');
-      g1.addColorStop(1, 'rgba(194,162,102,0)');
+      var g1 = bctx.createRadialGradient(pR01[0], pR01[1], 12, pR01[0], pR01[1], 135);
+      g1.addColorStop(0, 'rgba(196,214,88,0.72)');
+      g1.addColorStop(1, 'rgba(98,156,66,0)');
       bctx.fillStyle = g1; bctx.fillRect(0, 0, MW, MH);
     }
 
-    /* Đường đồng mức địa hình bên trong đất liền */
-    [38, 22, 11].forEach(function (cw, ci) {
-      bctx.strokeStyle = ci === 2 ? 'rgba(98,82,46,0.34)' : 'rgba(116,102,58,0.22)';
-      bctx.lineWidth = 1.2;
-      (MDATA.landPolys || []).forEach(function (poly) {
-        if (poly.length < 6) return;
-        bctx.save();
-        bctx.beginPath();
-        poly.forEach(function (pt, idx) {
-          var p = mapPoint(pt[0], pt[1]);
-          if (idx === 0) bctx.moveTo(p[0], p[1]); else bctx.lineTo(p[0], p[1]);
-        });
-        bctx.closePath();
-        bctx.lineWidth = cw * 2;
-        bctx.stroke();
-        bctx.restore();
+    bctx.strokeStyle = 'rgba(42,68,28,0.26)';
+    bctx.lineWidth = 1.4;
+    (MDATA.landPolys || []).slice(2).forEach(function (poly) {
+      if (poly.length < 6) return;
+      bctx.beginPath();
+      poly.forEach(function (pt, idx) {
+        var p = mapPoint(pt[0], pt[1]);
+        if (idx === 0) bctx.moveTo(p[0], p[1]); else bctx.lineTo(p[0], p[1]);
       });
+      bctx.closePath();
+      bctx.stroke();
     });
 
-    /* Hố sụt Thiên Khanh Sơn Đoòng r07 sâu ngọc bích giữa bản đồ */
+    /* Hố sụt Thiên Khanh Sơn Đoòng r07 sâu ngọc bích + 3 dòng thác bạc */
     var pR07 = regPt('r07');
     if (pR07) {
-      for (var ring = 4; ring >= 1; ring--) {
-        bctx.beginPath();
-        bctx.ellipse(pR07[0], pR07[1], 68 + ring * 13, 50 + ring * 10, 0, 0, Math.PI * 2);
-        bctx.fillStyle = 'rgba(130,118,74,' + (0.14 * (5 - ring)) + ')';
-        bctx.fill();
-      }
       var sinkGrad = bctx.createRadialGradient(pR07[0], pR07[1], 6, pR07[0], pR07[1], 74);
       sinkGrad.addColorStop(0, '#094354');
-      sinkGrad.addColorStop(0.72, '#15677b');
-      sinkGrad.addColorStop(1, '#3b98ab');
+      sinkGrad.addColorStop(0.68, '#1b899e');
+      sinkGrad.addColorStop(1, '#5cd6e0');
       bctx.beginPath();
       bctx.ellipse(pR07[0], pR07[1], 74, 54, -0.08, 0, Math.PI * 2);
       bctx.fillStyle = sinkGrad;
       bctx.fill();
-      bctx.strokeStyle = '#625634'; bctx.lineWidth = 1.8; bctx.stroke();
-    }
-
-    /* Miệng núi lửa Hắc Sơn phát sáng cam rực */
-    if (pR06) {
-      var lavaGrad = bctx.createRadialGradient(pR06[0], pR06[1], 2, pR06[0], pR06[1], 26);
-      lavaGrad.addColorStop(0, '#ff8e3c');
-      lavaGrad.addColorStop(0.5, 'rgba(235,82,25,0.65)');
-      lavaGrad.addColorStop(1, 'rgba(235,82,25,0)');
-      bctx.fillStyle = lavaGrad;
-      bctx.beginPath(); bctx.arc(pR06[0], pR06[1], 26, 0, Math.PI * 2); bctx.fill();
+      bctx.strokeStyle = '#c6c086'; bctx.lineWidth = 4.0; bctx.stroke();
+      [-26, 0, 26].forEach(function (fx) {
+        bctx.strokeStyle = '#dff8ff'; bctx.lineWidth = 4.2;
+        bctx.beginPath(); bctx.moveTo(pR07[0] + fx, pR07[1] - 58); bctx.lineTo(pR07[0] + fx * 0.7, pR07[1] - 18); bctx.stroke();
+      });
     }
     bctx.restore();
 
-    /* Viền bờ biển sắc nét */
-    bctx.strokeStyle = '#3b3324';
-    bctx.lineWidth = 2.0;
-    (MDATA.landPolys || []).forEach(function (poly) {
+    /* Viền bờ cát vàng + nét bờ biển sắc nét */
+    coastPolys.forEach(function (poly) {
       if (!poly.length) return;
       bctx.beginPath();
       poly.forEach(function (pt, idx) {
         var p = mapPoint(pt[0], pt[1]);
         if (idx === 0) bctx.moveTo(p[0], p[1]); else bctx.lineTo(p[0], p[1]);
       });
-      bctx.closePath(); bctx.stroke();
+      bctx.closePath();
+      bctx.strokeStyle = '#dfbe74'; bctx.lineWidth = 4.2; bctx.stroke();
+      bctx.strokeStyle = '#332b1e'; bctx.lineWidth = 1.8; bctx.stroke();
     });
+
+    /* Vẽ biểu tượng kỳ quan khổng lồ đúng theo atlas_img_00.webp */
+    var pR02 = regPt('r02');
+    if (pR02) {
+      bctx.fillStyle = '#4e331c';
+      bctx.fillRect(pR02[0] - 5, pR02[1] - 16, 10, 22);
+      [[0, -24, 34, 22, '#2d742b'], [-22, -16, 22, 16, '#408c34'], [22, -16, 22, 16, '#408c34'], [0, -34, 24, 15, '#6cb040']].forEach(function (c) {
+        bctx.fillStyle = c[4]; bctx.beginPath();
+        bctx.ellipse(pR02[0] + c[0], pR02[1] + c[1], c[2], c[3], 0, 0, Math.PI * 2); bctx.fill();
+      });
+    }
+    if (pR06) {
+      bctx.fillStyle = '#252126';
+      bctx.beginPath();
+      bctx.moveTo(pR06[0] - 42, pR06[1] + 22); bctx.lineTo(pR06[0], pR06[1] - 32); bctx.lineTo(pR06[0] + 42, pR06[1] + 22);
+      bctx.closePath(); bctx.fill();
+      bctx.strokeStyle = '#ff7224'; bctx.lineWidth = 3.2;
+      bctx.beginPath(); bctx.moveTo(pR06[0], pR06[1] - 28); bctx.lineTo(pR06[0] - 8, pR06[1] + 4); bctx.lineTo(pR06[0] + 10, pR06[1] + 14); bctx.stroke();
+      var lg6 = bctx.createRadialGradient(pR06[0], pR06[1] - 26, 2, pR06[0], pR06[1] - 26, 20);
+      lg6.addColorStop(0, '#ffd46b'); lg6.addColorStop(0.45, 'rgba(255,90,20,0.85)'); lg6.addColorStop(1, 'rgba(255,80,10,0)');
+      bctx.fillStyle = lg6; bctx.beginPath(); bctx.arc(pR06[0], pR06[1] - 26, 20, 0, Math.PI * 2); bctx.fill();
+    }
+    if (pR05) {
+      [[-24, 8, 22], [18, 12, 18], [0, -6, 28]].forEach(function (pk) {
+        bctx.fillStyle = '#5f6f7d';
+        bctx.beginPath(); bctx.moveTo(pR05[0] + pk[0] - pk[2], pR05[1] + pk[1] + pk[2]); bctx.lineTo(pR05[0] + pk[0], pR05[1] + pk[1] - pk[2]); bctx.lineTo(pR05[0] + pk[0] + pk[2], pR05[1] + pk[1] + pk[2]); bctx.closePath(); bctx.fill();
+        bctx.fillStyle = '#f4f9ff';
+        bctx.beginPath(); bctx.moveTo(pR05[0] + pk[0] - pk[2] * 0.55, pR05[1] + pk[1]); bctx.lineTo(pR05[0] + pk[0], pR05[1] + pk[1] - pk[2]); bctx.lineTo(pR05[0] + pk[0] + pk[2] * 0.55, pR05[1] + pk[1]); bctx.closePath(); bctx.fill();
+      });
+    }
+    if (pR01) {
+      bctx.fillStyle = '#b93424'; bctx.fillRect(pR01[0] - 18, pR01[1] - 10, 36, 14);
+      bctx.fillStyle = '#e8b642'; bctx.beginPath(); bctx.moveTo(pR01[0] - 24, pR01[1] - 10); bctx.lineTo(pR01[0], pR01[1] - 22); bctx.lineTo(pR01[0] + 24, pR01[1] - 10); bctx.closePath(); bctx.fill();
+    }
+    if (pR03) {
+      [-18, 0, 18].forEach(function (tx, ti) {
+        bctx.fillStyle = '#b84b2a'; bctx.fillRect(pR03[0] + tx - 6, pR03[1] - (ti === 1 ? 22 : 16), 12, ti === 1 ? 22 : 16);
+      });
+    }
 
     /* 4. Lưới kinh vĩ độ mờ */
     bctx.strokeStyle = 'rgba(230,220,190,0.08)'; bctx.lineWidth = 1;
@@ -34746,13 +35082,13 @@ window.__initMinimap = function (garden, waypoints) {
       ctx.fillStyle = 'rgba(235,230,214,0.88)';
       ctx.strokeStyle = '#7b5f3c'; ctx.lineWidth = 1.8;
       ctx.fillRect(18, 18, 250, 56); ctx.strokeRect(18, 18, 250, 56);
-      ctx.fillStyle = '#4e2c14'; ctx.font = '700 18px Georgia,serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#4e2c14'; ctx.font = '700 17px "Segoe UI",system-ui,sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('ĐẠI VIỆT HUYỀN KÝ', 143, 45);
-      ctx.fillStyle = '#6f5538'; ctx.font = '600 10px sans-serif';
+      ctx.fillStyle = '#6f5538'; ctx.font = '600 10px "Segoe UI",system-ui,sans-serif';
       ctx.fillText('8 Khu Vực · 64 Địa Danh Kiến Trúc', 143, 63);
 
-      ctx.fillStyle = 'rgba(220,235,244,0.56)';
-      ctx.font = 'italic 700 13px Georgia,serif';
+      ctx.fillStyle = 'rgba(220,235,244,0.62)';
+      ctx.font = 'italic 700 13px "Segoe UI",system-ui,sans-serif';
       ctx.fillText('VỊNH BẮC VÂN', MW * 0.34, 48);
       ctx.fillText('ĐÔNG HẢI BÍCH BA', MW * 0.90, MH * 0.56);
       ctx.fillText('VỊNH NAM HẢI', MW * 0.36, MH - 48);
@@ -34773,7 +35109,7 @@ window.__initMinimap = function (garden, waypoints) {
         ctx.fillStyle = 'rgba(248,241,222,0.92)';
         ctx.strokeStyle = '#7e5c34'; ctx.lineWidth = 1.4;
         ctx.fillRect(bx, by, bw, bh); ctx.strokeRect(bx, by, bw, bh);
-        ctx.fillStyle = '#2d1c0c'; ctx.font = '700 10.5px Georgia,serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#2d1c0c'; ctx.font = '700 10.5px "Segoe UI",system-ui,sans-serif'; ctx.textAlign = 'center';
         ctx.fillText(reg.name, bx + bw * 0.5, by + 17);
       });
 
@@ -35575,20 +35911,26 @@ window.__createHeroine = function () {
     }
     update(); window.addEventListener('resize', update);
   })();
-  function mkBtn(txt, label, bottom, fn) {
+  function mkBtn(txt, label, bottomD, leftM, fn) {
     var b = document.createElement("button");
     b.textContent = txt;
     b.setAttribute("aria-label", label);
-    b.style.cssText = "position:fixed;left:18px;bottom:" + bottom + "px;z-index:50;background:rgba(20,18,15,.74);border:1px solid rgba(226,192,122,.34);border-radius:999px;padding:6px 12px;font:700 14px/1 \"Segoe UI\",system-ui,-apple-system,Roboto,\"Noto Sans\",sans-serif;color:#f6efe0;cursor:pointer;backdrop-filter:blur(8px)";
+    function pos() {
+      var mob = window.innerWidth < 820;
+      b.style.cssText = mob
+        ? ("position:fixed;left:" + leftM + "px;top:240px;z-index:50;background:rgba(20,18,15,.80);border:1px solid rgba(226,192,122,.36);border-radius:999px;padding:5px 9px;font:700 12px/1 \"Segoe UI\",system-ui,sans-serif;color:#f6efe0;cursor:pointer;backdrop-filter:blur(8px)")
+        : ("position:fixed;left:18px;bottom:" + bottomD + "px;z-index:50;background:rgba(20,18,15,.74);border:1px solid rgba(226,192,122,.34);border-radius:999px;padding:6px 12px;font:700 14px/1 \"Segoe UI\",system-ui,-apple-system,Roboto,\"Noto Sans\",sans-serif;color:#f6efe0;cursor:pointer;backdrop-filter:blur(8px)");
+    }
+    pos(); window.addEventListener("resize", pos);
     b.addEventListener("click", function (e) { e.stopPropagation(); fn(); });
     document.body.appendChild(b);
     return b;
   }
-  mkBtn("\u26f6", "Toan man hinh", 58, function () {
+  mkBtn("\u26f6", "Toan man hinh", 58, 66, function () {
     if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
     else document.documentElement.requestFullscreen().catch(function () {});
   });
-  mkBtn("\u23cd", "Ve diem xuat phat", 98, function () { if (window.__goHome) window.__goHome(); });
+  mkBtn("\u23cd", "Ve diem xuat phat", 98, 102, function () { if (window.__goHome) window.__goHome(); });
 })();
 
 /* Noi That Nha Go, Vuot Ve Sinh Vat & Mo Hinh Nhan Vat Du Phong */
@@ -36066,10 +36408,13 @@ window.__createQuestGather = function (Q) {
     if (indoorMode) { indoorMode = false; if (indoorRoom) indoorRoom.visible = false; if (window.__cabinGroup) window.__cabinGroup.visible = true; }
     if (caveMode) { caveMode = false; if (window.__caveRoom) window.__caveRoom.visible = false; if (window.__caveGroup) window.__caveGroup.visible = true; }
     var wv = window.__garden ? window.__garden.localToWorld(new THREE.Vector3(wx, 0, wz)) : new THREE.Vector3(wx, 0, wz);
-    var baseH = hillY2(wx, wz);
+    var skyY = (typeof wyOpt === 'number' && wyOpt > 45 && window.__skyIsleY) ? window.__skyIsleY(wx, wz) : null;
+    var baseH = skyY !== null ? skyY : hillY2(wx, wz);
     pPos.x = wv.x; pPos.z = wv.z;
     if (typeof wyOpt === 'number' && wyOpt > baseH + 4) {
       flyMode = true; pY = Math.max(1.0, wyOpt - baseH); pPos.y = wyOpt;
+    } else if (skyY !== null) {
+      flyMode = false; pY = 0; pPos.y = baseH;
     } else if (typeof wyOpt === 'number' && wyOpt > 20) {
       flyMode = true; pY = wyOpt; pPos.y = baseH + wyOpt;
     } else {
@@ -36226,6 +36571,7 @@ window.__createQuestGather = function (Q) {
     }
     if (!wasSwimming && isSwimming) {
       pY = 0; jumpV = 0; onGround = true;
+      if (window.__sfx && window.__sfx.splash) window.__sfx.splash();
       if (now - lastSwimToast > 8000) {
         lastSwimToast = now;
         showToast('\u0110ang b\u01a1i \u2014 W/A/S/D b\u01a1i \u00b7 Shift b\u01a1i nhanh \u00b7 Q/X l\u1eb7n \u00b7 Space n\u1ed5i');
@@ -36274,8 +36620,8 @@ window.__createQuestGather = function (Q) {
         var fB = Math.floor(106 * (1 - deepT) + 58 * deepT);
         SC.fog.color.setRGB(fR / 255, fG / 255, fB / 255);
       }
-      else if (flyMode && pPos.y > 40) { SC.fog.near = 900 + pPos.y * 3.5; SC.fog.far = 3600 + pPos.y * 12.0; }
-      else { SC.fog.near = 75; SC.fog.far = 420; SC.fog.color.setHex(0xc8dfe8); }
+      else if (flyMode && pPos.y > 40) { SC.fog.near = 1000 + pPos.y * 3.5; SC.fog.far = 4800 + pPos.y * 12.0; }
+      else { SC.fog.near = 420; SC.fog.far = 4400; SC.fog.color.setHex(0xcce4f6); }
     }
     var divingNow = diving && isSwimming;
     var diveOpacity = divingNow ? Math.min(0.38, 0.18 + Math.max(0, ws.waterY - (gy2 + pY)) * 0.06) : 0;
@@ -36283,6 +36629,12 @@ window.__createQuestGather = function (Q) {
     var moving2 = ml > 0.01;
     walkT += dt * (moving2 ? (keys.shift ? 10.5 : 7.5) : 1.6);
     swimT += dt * (moving2 ? (keys.shift ? 4.8 : 3.2) : 1.5);
+    if (moving2 && (onGround || isSwimming) && !flyMode && window.__sfx && window.__sfx.step) {
+      if (!stepPlayer._nextStep || now > stepPlayer._nextStep) {
+        stepPlayer._nextStep = now + (isSwimming ? 460 : (keys.shift ? 260 : 370));
+        window.__sfx.step(isSwimming || ws.depth > 0.08);
+      }
+    }
     var cabinCheck = window.__cabinPos || { x: 26, z: 9 }, caveCheck = window.__cavePos || { x: -30, z: -12 };
     var cabinNear = Math.hypot(pl.x - cabinCheck.x, pl.z - cabinCheck.z) < 4.1, caveNear = Math.hypot(pl.x - caveCheck.x, pl.z - caveCheck.z) < 4.3;
     var waypointNear = false;
