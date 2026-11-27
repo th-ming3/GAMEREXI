@@ -30023,6 +30023,12 @@ if (!window.__GAME && consented) {
   /* Shared garden-local lake layout, available to the base terrain mesh too. */
   var LAKE = { x: 4.5, z: 17, rx: 8.2, rz: 6.8 };
   var LAKE_DEPTH = 7.0;
+  function lakeDepth(x, z) {
+    if (!window.__lakeInfo) return 0;
+    var dx = (x - LAKE.x) / LAKE.rx, dz = (z - LAKE.z) / LAKE.rz;
+    var d2 = dx * dx + dz * dz;
+    return d2 < 1 ? Math.min(1, (1 - d2) * 1.25) : 0;
+  }
   window.__lakeInfo = LAKE;
   scene.add(gardenRoot);
   /* clouds added by wildlife-air.js */
@@ -30057,6 +30063,7 @@ if (!window.__GAME && consented) {
   W.gardenRoot = gardenRoot; W.LAKE = LAKE; W.LAKE_DEPTH = LAKE_DEPTH;
   W.hillY = hillY; W.hillYWorld = hillYWorld; W.terrainColor = terrainColor; W.ppL = ppL;
   W.groundMat = groundMat; W.ground = ground;
+  W.lakeDepth = lakeDepth;
   W.elapsed = 0; W.nowMs = 0; W.liteMeshes = []; W.clouds = [];
 })();
 
@@ -30731,7 +30738,7 @@ if (!window.__GAME && consented) {
   if (!window.THREE || !window.__W) return;
   var W = window.__W;
   var gardenRoot = W.gardenRoot, scene = W.scene, isMobile = W.isMobile, LOW = W.LOW, reduced = W.reduced;
-  var hillY = W.hillY, ppL = W.ppL, rand = W.rand, smooth = W.smooth, easeOutCubic = W.easeOutCubic;
+  var hillY = W.hillY, lakeDepth = W.lakeDepth, ppL = W.ppL, rand = W.rand, smooth = W.smooth, easeOutCubic = W.easeOutCubic;
   var petalGeo = W.petalGeo, bladeGeo = W.bladeGeo, bladeMat = W.bladeMat, RINGS = W.RINGS;
   var veinTex = W.veinTex, glowTex = W.glowTex, shaftTex = W.shaftTex, LAYOUT_D = W.LAYOUT_D;
   var liteMeshes = W.liteMeshes;
@@ -32147,6 +32154,7 @@ if (!window.__GAME && consented) {
 (function () {
   if (!window.THREE || !window.__W) return;
   var W = window.__W, gardenRoot = W.gardenRoot;
+  var reduced = W.reduced, petalTex = W.petalTex, petalSkinTex = W.petalSkinTex;
   /* ---- âm ambient tổng hợp: gió + vo ve + chim xa — WebAudio thuần, không file ---- */
   (function buildAmbience() {
     if (reduced) return;
@@ -32351,6 +32359,17 @@ if (!window.__GAME && consented) {
     })()
   });
 
+  function makeWildFlower(x, z, s) {
+    var g = new THREE.Group();
+    for (var i = 0; i < 4; i++) {
+      var pt = new THREE.Mesh(wfPetalGeoC, wfPetalMatsC[i % wfPetalMatsC.length]);
+      pt.rotation.z = (i / 4) * 6.283; pt.rotation.x = -0.35; pt.position.y = 0.25; g.add(pt);
+    }
+    var dc = new THREE.Mesh(wfDiscGeoC, wfDiscMatC);
+    dc.rotation.x = -Math.PI / 2; dc.position.y = 0.28; g.add(dc);
+    g.scale.setScalar(s || 0.22); g.position.set(x || 0, 0, z || 0);
+    return g;
+  }
   W.makeWildFlower = makeWildFlower;
 })();
 
@@ -33742,7 +33761,7 @@ if (!window.__GAME && consented) {
 /* Endless World Chunk Streamer, Frustum Culling & Ambient Tick Dispatcher */
 (function () {
   if (!window.THREE || !window.__W || !window.__GAME) return;
-  var W = window.__W, gardenRoot = W.gardenRoot, camera = W.camera, LOW = W.LOW, hillY = W.hillY;
+  var W = window.__W, gardenRoot = W.gardenRoot, camera = W.camera, LOW = W.LOW, hillY = W.hillY, lakeDepth = W.lakeDepth;
   var cottons = W.cottons;
   var pathZ = W.pathZ, onPathW = W.onPathW, nearDen = W.nearDen, dummyC = W.dummyC, shadowMatC = W.shadowMatC;
   var stemGeoC = W.stemGeoC, headGeoC = W.headGeoC, stoneGeoC = W.stoneGeoC, regionStone = W.regionStone;
