@@ -20608,6 +20608,180 @@ window.CANNON = { AABB, ArrayCollisionMatrix, BODY_SLEEP_STATES, BODY_TYPES, Bod
 
 </script>
 <script>
+/* Tầng vật lý người chơi & collider 3D đầy đủ (hệ tọa độ garden-local chính xác từng milimét + chiều cao 3D). */
+(function () {
+  window.__PENDING_COLLIDERS = window.__PENDING_COLLIDERS || [];
+  window.__addColliderCyl = function (x, z, r, h, baseY) {
+    if (window.__physicsAddStatic) return window.__physicsAddStatic(x, z, r, h, baseY);
+    window.__PENDING_COLLIDERS.push({ kind: 'cyl', x: x, z: z, r: r, h: h, baseY: baseY });
+    return null;
+  };
+  window.__addColliderBox = function (x, z, w, h, d, ry, baseY) {
+    if (window.__physicsAddBox) return window.__physicsAddBox(x, z, w, h, d, ry, baseY);
+    window.__PENDING_COLLIDERS.push({ kind: 'box', x: x, z: z, w: w, h: h, d: d, ry: ry, baseY: baseY });
+    return null;
+  };
+})();
+
+window.__createPlayerPhysics = function (context) {
+  var garden = context.garden, landmarks = context.landmarks || {};
+  var physWorld = null, playerBody = null, staticBodies = [], collidersMeta = [];
+  var PR = 0.36;
+  var tmpPos = new THREE.Vector3();
+
+  function addStatic(x, z, radius, height, baseY) {
+    if (!physWorld) return null;
+    var h = Math.max(0.4, height || 3.0);
+    var r = Math.max(0.12, radius || 0.4);
+    var bY = (typeof baseY === 'number') ? baseY : (window.__hillY ? window.__hillY(x, z) - 0.1 : -2.0);
+    var worldPos = garden.localToWorld(new THREE.Vector3(x, 0, z));
+    var body = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC });
+    body.addShape(new CANNON.Cylinder(r, r, 4.0, 10));
+    body.position.set(worldPos.x, 0.42, worldPos.z);
+    body.collisionFilterGroup = 0;
+    body.collisionFilterMask = 0;
+    physWorld.addBody(body);
+    staticBodies.push(body);
+    collidersMeta.push({ kind: 'cyl', body: body, lx: x, lz: z, r: r, minY: bY, maxY: bY + h });
+    return body;
+  }
+
+  function addStaticBox(x, z, w, h, d, ry, baseY) {
+    if (!physWorld) return null;
+    var bw = Math.max(0.16, w || 1), bh = Math.max(0.4, h || 3), bd = Math.max(0.16, d || 1);
+    var bY = (typeof baseY === 'number') ? baseY : (window.__hillY ? window.__hillY(x, z) - 0.1 : -2.0);
+    var ang = ry || 0;
+    var worldPos = garden.localToWorld(new THREE.Vector3(x, 0, z));
+    var body = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC });
+    body.addShape(new CANNON.Box(new CANNON.Vec3(bw * 0.5, 2.0, bd * 0.5)));
+    body.position.set(worldPos.x, 0.42, worldPos.z);
+    body.collisionFilterGroup = 0;
+    body.collisionFilterMask = 0;
+    physWorld.addBody(body);
+    staticBodies.push(body);
+    /* Three.js Object3D.rotation.y = ang:
+     * worldOffset = (u * cos + v * sin, -u * sin + v * cos)
+     * inverse(local) = (dx * cos - dz * sin, dx * sin + dz * cos) */
+    collidersMeta.push({
+      kind: 'box', body: body, lx: x, lz: z,
+      hw: bw * 0.5, hd: bd * 0.5, cosA: Math.cos(ang), sinA: Math.sin(ang),
+      minY: bY, maxY: bY + bh
+    });
+    return body;
+  }
+
+  function removeStatic(body) {
+    if (!body || !physWorld) return;
+    physWorld.removeBody(body);
+    var index = staticBodies.indexOf(body);
+    if (index >= 0) staticBodies.splice(index, 1);
+    for (var i = collidersMeta.length - 1; i >= 0; i--) {
+      if (collidersMeta[i].body === body) { collidersMeta.splice(i, 1); break; }
+    }
+  }
+
+  /* Xử lý va chạm trực tiếp trong hệ tọa độ garden-local (bất biến dù gardenRoot xoay góc nào) */
+  function pushOutLocal(lPos, playerY) {
+    var py = typeof playerY === 'number' ? playerY : 0;
+    for (var pass = 0; pass < 3; pass++) {
+      for (var i = 0; i < collidersMeta.length; i++) {
+        var c = collidersMeta[i];
+        var active = (py + 1.55) > c.minY && (py + 0.16) < c.maxY;
+        if (!active) continue;
+        if (Math.abs(lPos.x - c.lx) > 36 || Math.abs(lPos.z - c.lz) > 36) continue;
+        if (c.kind === 'cyl') {
+          var dx = lPos.x - c.lx, dz = lPos.z - c.lz;
+          var dist = Math.hypot(dx, dz), minD = c.r + PR;
+          if (dist < minD) {
+            if (dist < 0.0001) { lPos.z += minD; }
+            else { var k = minD / dist; lPos.x = c.lx + dx * k; lPos.z = c.lz + dz * k; }
+          }
+        } else {
+          var rx = lPos.x - c.lx, rz = lPos.z - c.lz;
+          var u = rx * c.cosA - rz * c.sinA;
+          var v = rx * c.sinA + rz * c.cosA;
+          var clU = Math.max(-c.hw, Math.min(c.hw, u));
+          var clV = Math.max(-c.hd, Math.min(c.hd, v));
+          var ou = u - clU, ov = v - clV;
+          var d2 = ou * ou + ov * ov;
+          if (d2 < PR * PR) {
+            var pushU = 0, pushV = 0;
+            if (d2 > 1e-6) {
+              var d = Math.sqrt(d2), pen = PR - d;
+              pushU = (ou / d) * pen; pushV = (ov / d) * pen;
+            } else {
+              var eu = c.hw - Math.abs(u), ev = c.hd - Math.abs(v);
+              if (eu < ev) pushU = (u >= 0 ? 1 : -1) * (eu + PR);
+              else pushV = (v >= 0 ? 1 : -1) * (ev + PR);
+            }
+            lPos.x += pushU * c.cosA + pushV * c.sinA;
+            lPos.z += -pushU * c.sinA + pushV * c.cosA;
+          }
+        }
+      }
+    }
+  }
+
+  function init() {
+    if (typeof CANNON === 'undefined' || physWorld) return;
+    physWorld = new CANNON.World({ gravity: new CANNON.Vec3(0, 0, 0) });
+    playerBody = new CANNON.Body({
+      mass: 1, type: CANNON.Body.DYNAMIC, shape: new CANNON.Sphere(PR),
+      fixedRotation: true, allowSleep: false, linearDamping: 0
+    });
+    physWorld.addBody(playerBody);
+
+    if (landmarks.tomb) addStatic(landmarks.tomb.x, landmarks.tomb.z, 1.2, 2.6);
+    if (landmarks.bigTree) addStatic(landmarks.bigTree.x, landmarks.bigTree.z, 0.75, 5.5);
+    if (landmarks.well) addStatic(landmarks.well.x, landmarks.well.z, 0.75, 1.5);
+    if (landmarks.cabin) addStatic(landmarks.cabin.x, landmarks.cabin.z, 2.2, 3.6);
+
+    var pending = window.__PENDING_COLLIDERS || [];
+    for (var pi = 0; pi < pending.length; pi++) {
+      var it = pending[pi];
+      if (it.kind === 'box') addStaticBox(it.x, it.z, it.w, it.h, it.d, it.ry, it.baseY);
+      else addStatic(it.x, it.z, it.r, it.h, it.baseY);
+    }
+    window.__PENDING_COLLIDERS = [];
+    window.__physics = { world: physWorld, player: playerBody, statics: staticBodies, meta: collidersMeta, steps: 0 };
+  }
+
+  function resolve(pos, dt, vx, vz, enabled, playerY) {
+    if (!physWorld || !playerBody) return;
+    if (enabled === false) { pos.x += (vx || 0) * dt; pos.z += (vz || 0) * dt; return; }
+    var py = typeof playerY === 'number' ? playerY : (pos.y || 0);
+    var stepDt = Math.max(1 / 240, Math.min(dt || 1 / 60, 0.05));
+    var moveX = (vx || 0) * stepDt, moveZ = (vz || 0) * stepDt;
+    var steps = Math.max(1, Math.min(6, Math.ceil(Math.hypot(moveX, moveZ) / 0.16)));
+    var sx = moveX / steps, sz = moveZ / steps;
+    for (var s = 0; s < steps; s++) {
+      pos.x += sx; pos.z += sz;
+      tmpPos.set(pos.x, 0, pos.z);
+      garden.worldToLocal(tmpPos);
+      pushOutLocal(tmpPos, py);
+      garden.localToWorld(tmpPos);
+      pos.x = tmpPos.x; pos.z = tmpPos.z;
+    }
+    playerBody.position.set(pos.x, 0.42, pos.z);
+    window.__physics.steps++;
+  }
+
+  function resetBody(x, z) {
+    if (!playerBody) return;
+    playerBody.position.set(x, 0.42, z);
+    playerBody.velocity.set(0, 0, 0);
+  }
+
+  init();
+  window.__physicsAddStatic = addStatic;
+  window.__physicsAddBox = addStaticBox;
+  window.__physicsRemoveStatic = removeStatic;
+  window.__physicsReset = resetBody;
+  window.__addColliderCyl = addStatic;
+  window.__addColliderBox = addStaticBox;
+  return { resolve: resolve, addStatic: addStatic, addStaticBox: addStaticBox, removeStatic: removeStatic, reset: resetBody };
+};
+
 /* Tầng địa hình: lưới lục địa 1560x936m độ nét cao, biển Đông Hải, 5 Đảo Bay gồ ghề + cầu vòm & rừng cây toàn lục địa. */
 window.__createTerrain = function (context) {
   var gardenRoot = context.gardenRoot;
@@ -34054,197 +34228,6 @@ window.__initAdventure = function () {
       crystal.position.y = crystal.userData.baseY + Math.sin(time * 1.3 + crystal.userData.phase) * 0.08;
     });
   }, 50);
-};
-
-/* Tầng vật lý người chơi và collider 3D đầy đủ (hình trụ + tường hộp xoay + lọc độ cao); không phụ thuộc render/quest. */
-(function () {
-  window.__PENDING_COLLIDERS = window.__PENDING_COLLIDERS || [];
-  window.__addColliderCyl = function (x, z, r, h, baseY) {
-    if (window.__physicsAddStatic) return window.__physicsAddStatic(x, z, r, h, baseY);
-    window.__PENDING_COLLIDERS.push({ kind: 'cyl', x: x, z: z, r: r, h: h, baseY: baseY });
-    return null;
-  };
-  window.__addColliderBox = function (x, z, w, h, d, ry, baseY) {
-    if (window.__physicsAddBox) return window.__physicsAddBox(x, z, w, h, d, ry, baseY);
-    window.__PENDING_COLLIDERS.push({ kind: 'box', x: x, z: z, w: w, h: h, d: d, ry: ry, baseY: baseY });
-    return null;
-  };
-})();
-
-window.__createPlayerPhysics = function (context) {
-  var garden = context.garden, landmarks = context.landmarks || {};
-  var physWorld = null, playerBody = null, staticBodies = [], collidersMeta = [];
-  var PR = 0.36;
-
-  function gYaw() { return (garden && garden.rotation) ? garden.rotation.y : 0; }
-
-  function addStatic(x, z, radius, height, baseY) {
-    if (!physWorld) return null;
-    var h = Math.max(0.4, height || 3.0);
-    var r = Math.max(0.12, radius || 0.4);
-    var worldPos = garden.localToWorld(new THREE.Vector3(x, 0, z));
-    var bY = (typeof baseY === 'number') ? baseY : (window.__hillY ? window.__hillY(x, z) - 0.1 : -2.0);
-    var body = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC });
-    body.addShape(new CANNON.Cylinder(r, r, 4.0, 10));
-    body.position.set(worldPos.x, 0.42, worldPos.z);
-    body.collisionFilterGroup = 1;
-    body.collisionFilterMask = 1;
-    physWorld.addBody(body);
-    staticBodies.push(body);
-    collidersMeta.push({ kind: 'cyl', body: body, wx: worldPos.x, wz: worldPos.z, r: r, minY: bY, maxY: bY + h });
-    return body;
-  }
-
-  function addStaticBox(x, z, w, h, d, ry, baseY) {
-    if (!physWorld) return null;
-    var bw = Math.max(0.16, w || 1), bh = Math.max(0.4, h || 3), bd = Math.max(0.16, d || 1);
-    var worldPos = garden.localToWorld(new THREE.Vector3(x, 0, z));
-    var bY = (typeof baseY === 'number') ? baseY : (window.__hillY ? window.__hillY(x, z) - 0.1 : -2.0);
-    var ang = (ry || 0) + gYaw();
-    var body = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC });
-    body.addShape(new CANNON.Box(new CANNON.Vec3(bw * 0.5, 2.0, bd * 0.5)));
-    body.position.set(worldPos.x, 0.42, worldPos.z);
-    body.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), ang);
-    body.collisionFilterGroup = 1;
-    body.collisionFilterMask = 1;
-    physWorld.addBody(body);
-    staticBodies.push(body);
-    collidersMeta.push({
-      kind: 'box', body: body, wx: worldPos.x, wz: worldPos.z,
-      hw: bw * 0.5, hd: bd * 0.5, cosA: Math.cos(-ang), sinA: Math.sin(-ang),
-      cosW: Math.cos(ang), sinW: Math.sin(ang), minY: bY, maxY: bY + bh
-    });
-    return body;
-  }
-
-  function removeStatic(body) {
-    if (!body || !physWorld) return;
-    physWorld.removeBody(body);
-    var index = staticBodies.indexOf(body);
-    if (index >= 0) staticBodies.splice(index, 1);
-    for (var i = collidersMeta.length - 1; i >= 0; i--) {
-      if (collidersMeta[i].body === body) { collidersMeta.splice(i, 1); break; }
-    }
-  }
-
-  function pushOut2D(pos, playerY) {
-    var py = typeof playerY === 'number' ? playerY : 0;
-    for (var pass = 0; pass < 2; pass++) {
-      for (var i = 0; i < collidersMeta.length; i++) {
-        var c = collidersMeta[i];
-        var active = (py + 1.55) > c.minY && (py + 0.16) < c.maxY;
-        if (!active) continue;
-        if (Math.abs(pos.x - c.wx) > 32 || Math.abs(pos.z - c.wz) > 32) continue;
-        if (c.kind === 'cyl') {
-          var dx = pos.x - c.wx, dz = pos.z - c.wz;
-          var dist = Math.hypot(dx, dz), minD = c.r + PR;
-          if (dist < minD) {
-            if (dist < 0.0001) { pos.z += minD; }
-            else { var k = minD / dist; pos.x = c.wx + dx * k; pos.z = c.wz + dz * k; }
-          }
-        } else {
-          var rx = pos.x - c.wx, rz = pos.z - c.wz;
-          var lx = rx * c.cosA - rz * c.sinA;
-          var lz = rx * c.sinA + rz * c.cosA;
-          var clX = Math.max(-c.hw, Math.min(c.hw, lx));
-          var clZ = Math.max(-c.hd, Math.min(c.hd, lz));
-          var ox = lx - clX, oz = lz - clZ;
-          var d2 = ox * ox + oz * oz;
-          if (d2 < PR * PR) {
-            var pushLX = 0, pushLZ = 0;
-            if (d2 > 1e-6) {
-              var d = Math.sqrt(d2), pen = PR - d;
-              pushLX = (ox / d) * pen; pushLZ = (oz / d) * pen;
-            } else {
-              var ex = c.hw - Math.abs(lx), ez = c.hd - Math.abs(lz);
-              if (ex < ez) pushLX = (lx >= 0 ? 1 : -1) * (ex + PR);
-              else pushLZ = (lz >= 0 ? 1 : -1) * (ez + PR);
-            }
-            var wxP = pushLX * c.cosW - pushLZ * c.sinW;
-            var wzP = pushLX * c.sinW + pushLZ * c.cosW;
-            pos.x += wxP; pos.z += wzP;
-          }
-        }
-      }
-    }
-  }
-
-  function init() {
-    if (typeof CANNON === 'undefined' || physWorld) return;
-    physWorld = new CANNON.World({ gravity: new CANNON.Vec3(0, 0, 0) });
-    physWorld.solver.iterations = 10;
-    playerBody = new CANNON.Body({
-      mass: 1,
-      type: CANNON.Body.DYNAMIC,
-      shape: new CANNON.Sphere(PR),
-      fixedRotation: true,
-      allowSleep: false,
-      linearDamping: 0
-    });
-    playerBody.collisionFilterGroup = 1;
-    playerBody.collisionFilterMask = 1;
-    playerBody.updateMassProperties();
-    physWorld.addBody(playerBody);
-
-    if (landmarks.tomb) addStatic(landmarks.tomb.x, landmarks.tomb.z, 1.2, 2.6);
-    if (landmarks.bigTree) addStatic(landmarks.bigTree.x, landmarks.bigTree.z, 0.75, 5.5);
-    if (landmarks.well) addStatic(landmarks.well.x, landmarks.well.z, 0.75, 1.5);
-    if (landmarks.cabin) addStatic(landmarks.cabin.x, landmarks.cabin.z, 2.2, 3.6);
-
-    var pending = window.__PENDING_COLLIDERS || [];
-    for (var pi = 0; pi < pending.length; pi++) {
-      var it = pending[pi];
-      if (it.kind === 'box') addStaticBox(it.x, it.z, it.w, it.h, it.d, it.ry, it.baseY);
-      else addStatic(it.x, it.z, it.r, it.h, it.baseY);
-    }
-    window.__PENDING_COLLIDERS = [];
-    window.__physics = { world: physWorld, player: playerBody, statics: staticBodies, meta: collidersMeta, steps: 0 };
-  }
-
-  function resolve(pos, dt, vx, vz, enabled, playerY) {
-    if (!physWorld || !playerBody) return;
-    if (enabled === false) { pos.x += (vx || 0) * dt; pos.z += (vz || 0) * dt; return; }
-    var py = typeof playerY === 'number' ? playerY : (pos.y || 0);
-    for (var i = 0; i < collidersMeta.length; i++) {
-      var c = collidersMeta[i];
-      var nearY = (py + 1.55) > c.minY && (py + 0.16) < c.maxY;
-      var nearXZ = nearY && Math.abs(pos.x - c.wx) < 34 && Math.abs(pos.z - c.wz) < 34;
-      c.body.collisionFilterGroup = nearXZ ? 1 : 0;
-      c.body.collisionFilterMask = nearXZ ? 1 : 0;
-    }
-    var stepDt = Math.max(1 / 240, Math.min(dt || 1 / 60, 0.05));
-    var subSteps = (vx || vz) && Math.hypot(vx || 0, vz || 0) * stepDt > 0.18 ? 3 : 1;
-    var subDt = stepDt / subSteps;
-    for (var s = 0; s < subSteps; s++) {
-      playerBody.position.set(pos.x, 0.42, pos.z);
-      playerBody.velocity.set(vx || 0, 0, vz || 0);
-      playerBody.force.set(0, 0, 0);
-      playerBody.angularVelocity.set(0, 0, 0);
-      physWorld.step(subDt);
-      pos.x = playerBody.position.x;
-      pos.z = playerBody.position.z;
-      pushOut2D(pos, py);
-    }
-    window.__physics.steps++;
-    window.__physics.contacts = physWorld.contacts.length;
-  }
-
-  function resetBody(x, z) {
-    if (!playerBody) return;
-    playerBody.position.set(x, 0.42, z);
-    playerBody.velocity.set(0, 0, 0);
-    playerBody.force.set(0, 0, 0);
-    playerBody.angularVelocity.set(0, 0, 0);
-  }
-
-  init();
-  window.__physicsAddStatic = addStatic;
-  window.__physicsAddBox = addStaticBox;
-  window.__physicsRemoveStatic = removeStatic;
-  window.__physicsReset = resetBody;
-  window.__addColliderCyl = addStatic;
-  window.__addColliderBox = addStaticBox;
-  return { resolve: resolve, addStatic: addStatic, addStaticBox: addStaticBox, removeStatic: removeStatic, reset: resetBody };
 };
 
 /* Lạc Nữ Heroine: VRM anime thật + Ngọc Thương gắn đúng lòng bàn tay phải + Anime Cel/Rim Shader + Contact Shadow + Bơi/Chiến đấu mượt. */
