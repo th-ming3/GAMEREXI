@@ -21987,6 +21987,8 @@ window.__REAL_ASSETS = window.__createRealAssets();
     return g;
   }
   DV.MAT = MAT;
+  DV.texBambooSail = texBambooSail;
+  DV.texDarkWood = texDarkWood;
   DV.addShadow = addShadow;
   DV.makeLantern = makeLantern;
   DV.makeWindBell = makeWindBell;
@@ -22707,6 +22709,7 @@ window.__REAL_ASSETS = window.__createRealAssets();
   if (typeof THREE === "undefined") return;
   var DV = window.__DV;
   var MAT = DV.MAT, addShadow = DV.addShadow, makeLantern = DV.makeLantern;
+  var texBambooSail = DV.texBambooSail, texDarkWood = DV.texDarkWood;
   var makeCurvedHipRoof = DV.makeCurvedHipRoof, makeCurvedOctRoof = DV.makeCurvedOctRoof;
   var makeArchedWallExtrude = DV.makeArchedWallExtrude, wrapWithRealGlb = DV.wrapWithRealGlb;
   var REAL_GLB_ASSETS = DV.REAL_GLB_ASSETS;
@@ -26640,8 +26643,7 @@ window.__createCombatHud = function (C) {
         var tk = tb.getAttribute('data-talis');
         if (rpg.essence < 25) { floatText('Thiếu Linh Thạch!', '#ffb37a', false); return; }
         rpg.essence -= 25; rpg.talismans[tk] = true;
-        maxHp = getRpgStats().maxHp;
-        if (tk === 'hoMenh') playerHp = Math.min(maxHp, playerHp + 35);
+        if (C.syncTalismanHp) C.syncTalismanHp(tk);
         saveRpg();
         if (window.__sfx && window.__sfx.parry) window.__sfx.parry();
         renderBagModal(); refreshHud();
@@ -26953,9 +26955,9 @@ window.__createCombatVfx = function (C) {
     trailMesh.visible = false;
 
     /* Vòng Lock-on phát sáng xoay quanh mục tiêu đang khóa */
-    var lockPos = getTargetWorldPos(lockedTarget);
+    var lockPos = getTargetWorldPos(C.getLockedTarget());
     if (lockPos && p) {
-      if (dist2d(p, lockPos) > 25) C.clearLockedTarget();
+      if (Math.hypot(p.x - lockPos.x, p.z - lockPos.z) > 25) C.clearLockedTarget();
       else {
         lockReticle.visible = true;
         lockReticle.position.set(lockPos.x, (window.__hillY ? window.__hillY(lockPos.x, lockPos.z) : 0) + 0.14, lockPos.z);
@@ -27288,6 +27290,7 @@ window.__initCombat = function (gardenRoot) {
     hasSanctuary: function (now) { return sanctuaryUntil > now; },
     getLockedTarget: function () { return lockedTarget; },
     clearLockedTarget: function () { lockedTarget = null; },
+    syncTalismanHp: function (tk) { maxHp = getRpgStats().maxHp; if (tk === 'hoMenh') playerHp = Math.min(maxHp, playerHp + 35); },
     isTrailActive: function (now) { return (now - lastAttackAt) < 280; },
     tickFlashes: function (dt) { if (hurtFlash > 0) hurtFlash = Math.max(0, hurtFlash - dt * 1.4); if (parryFlash > 0) parryFlash = Math.max(0, parryFlash - dt * 1.6); vfx.setFlashOpacity(hurtFlash, parryFlash); }
   };
@@ -28644,7 +28647,7 @@ window.__populateUnderwaterLife = function () {
   var C = window.__UW_CTX;
   var underwaterRoot = C.underwaterRoot, underwaterCrystals = C.underwaterCrystals, animItems = C.animItems;
   var MAT = C.MAT, CX = C.CX, CZ = C.CZ, RX = C.RX, RZ = C.RZ;
-  var floorY = C.floorY, waterY = C.waterY, LOW = C.LOW;
+  var floorY = C.floorY, waterY = C.waterY, deepY = C.deepY, LOW = C.LOW;
   var rng = C.rng, lakeFloor = C.lakeFloor, inLake = C.inLake, randInLake = C.randInLake;
   /* ========== 7. TREASURE CHESTS (2) ========== */
   function makeChest(x, z) {
@@ -31800,6 +31803,7 @@ if (!window.__GAME && consented) {
       bt7.scale.x = u7.fw * (1 + Math.sin(W.elapsed * 10 + u7.ph) * 0.3);
     }
     /* ếch đêm ngồi lá súng, croak phồng cổ */
+    var lilies = W.lilies || [];
     if (frogPack) {
       frogPack.visible = nightNow && lilies.length > 1;
       if (frogPack.visible) {
@@ -32144,6 +32148,7 @@ if (!window.__GAME && consented) {
     /* hoa chính đâm sát lens (khi xoay garden cụm hoa quét qua camera) thì ẩn — nhìn xuyên chứ không bị cành chặn màn */
   }
   W.clouds = clouds; W.egrets = egrets; W.butterflies = butterflies; W.bees = bees; W.cottons = cottons;
+  W.cottonGeoC = cottonGeoC; W.cottonMatC = cottonMatC; W.cottonStemGeoC = cottonStemGeoC; W.cottonStemMatC = cottonStemMatC;
   W.updateClouds = updateClouds; W.updateEgrets = updateEgrets; W.updateButterflies = updateButterflies;
   W.updateBees = updateBees; W.cullAirWildlife = cullAirWildlife;
   W.updateDragonflies = updateDragonflies; W.updateCotton = updateCotton;
@@ -32842,8 +32847,9 @@ if (!window.__GAME && consented) {
     }
   })();
 
+  W.lilies = lilies;
   W.lakeDepth = lakeDepth; W.lakeGroundLocalY = lakeGroundLocalY; W.makeWaterShaderMat = makeWaterShaderMat;
-  W.lakeBaseY = lakeBaseY; W.lakeWaterY = waterY;
+  W.lakeBaseY = lakeBaseY; W.lakeWaterY = window.__lakeWaterY;
   W.updateLakeDress = updateLakeDress; W.updateKoi = updateKoi; W.updateLakeFx = updateLakeFx;
   W.updateUnderwater = updateUnderwater;
 })();
@@ -33201,6 +33207,7 @@ if (!window.__GAME && consented) {
   if (!window.THREE || !window.__W || !window.__GAME) return;
   var W = window.__W;
   var gardenRoot = W.gardenRoot, hillY = W.hillY, ppL = W.ppL;
+  var DEN_X = W.DEN_X !== undefined ? W.DEN_X : -18, DEN_Z = W.DEN_Z !== undefined ? W.DEN_Z : 6;
   function nearDen(x, z, r) { return W.nearDen ? W.nearDen(x, z, r) : false; }
   function onPathW(x, z, w2) { return W.onPathW ? W.onPathW(x, z, w2) : false; }
     /* ---- THỎ: rig động vật CC0, texture fur + bộ xương/animation thật ---- */
@@ -33747,7 +33754,8 @@ if (!window.__GAME && consented) {
     var flowerPalC = [0xd98f6a, 0xe0b087, 0xdba27c, 0xead9be, 0xc97759, 0xe6c79a];
     var headMatC = flowerPalC.map(function (c) { return new THREE.MeshStandardMaterial({ color: c, roughness: 0.7 }); });
     var stemMatC = new THREE.MeshStandardMaterial({ color: 0x6d7c46, roughness: 0.8 });
-  W.pathZ = pathZ; W.onPathW = onPathW; W.nearDen = nearDen; W.dummyC = dummyC; W.shadowMatC = shadowMatC;
+  W.pathZ = pathZ; W.onPathW = onPathW; W.nearDen = nearDen; W.DEN_X = DEN_X; W.DEN_Z = DEN_Z; W.dummyC = dummyC; W.shadowMatC = shadowMatC;
+  W.stoneMatC = stoneMatC;
   W.stemGeoC = stemGeoC; W.headGeoC = headGeoC; W.stoneGeoC = stoneGeoC; W.regionStone = regionStone;
   W.barkTexC = barkTexC; W.leafTexC = leafTexC; W.trunkMatC = trunkMatC; W.leafMatC = leafMatC;
   W.tree3DTrunkGeo = tree3DTrunkGeo; W.tree3DLeafGeo = tree3DLeafGeo; W.canopyGeoC = canopyGeoC;
@@ -33764,8 +33772,9 @@ if (!window.__GAME && consented) {
   if (!window.THREE || !window.__W || !window.__GAME) return;
   var W = window.__W, gardenRoot = W.gardenRoot, camera = W.camera, LOW = W.LOW, hillY = W.hillY, lakeDepth = W.lakeDepth, groundMat = W.groundMat, ppL = W.ppL, terrainColor = W.terrainColor;
   var cottons = W.cottons;
-  var pathZ = W.pathZ, onPathW = W.onPathW, nearDen = W.nearDen, dummyC = W.dummyC, shadowMatC = W.shadowMatC;
-  var stemGeoC = W.stemGeoC, headGeoC = W.headGeoC, stoneGeoC = W.stoneGeoC, regionStone = W.regionStone;
+  var pathZ = W.pathZ, onPathW = W.onPathW, nearDen = W.nearDen, DEN_X = W.DEN_X, DEN_Z = W.DEN_Z, dummyC = W.dummyC, shadowMatC = W.shadowMatC;
+  var cottonGeoC = W.cottonGeoC, cottonMatC = W.cottonMatC, cottonStemGeoC = W.cottonStemGeoC, cottonStemMatC = W.cottonStemMatC;
+  var stemGeoC = W.stemGeoC, headGeoC = W.headGeoC, stoneGeoC = W.stoneGeoC, stoneMatC = W.stoneMatC, regionStone = W.regionStone;
   var barkTexC = W.barkTexC, leafTexC = W.leafTexC, trunkMatC = W.trunkMatC, leafMatC = W.leafMatC;
   var tree3DTrunkGeo = W.tree3DTrunkGeo, tree3DLeafGeo = W.tree3DLeafGeo, canopyGeoC = W.canopyGeoC;
   var pineGeoC = W.pineGeoC, pineMatC = W.pineMatC, springMatC = W.springMatC, bloomMatC = W.bloomMatC;
@@ -35686,6 +35695,8 @@ window.__createPlayerInterior = function (charG) {
 /* Nhiem Vu Kham Pha 5 Vung, Hai Hoa Dong, Nhat Tinh The Hang & Day Ho */
 window.__createQuestGather = function (Q) {
   var pPos = Q.pPos, showToast = Q.showToast, playerLocal = Q.playerLocal;
+  var hillY2 = Q.hillY2 || function (x, z) { return window.__hillY ? window.__hillY(x, z) : 0; };
+  var pv = new THREE.Vector3();
   var score = 0, questIdx = 0, questN = 0, waypointN = 0, caveN = 0, underwaterN = 0;
   try {
     var sv = JSON.parse(localStorage.getItem("worldSave") || "null");
@@ -35784,7 +35795,7 @@ window.__createQuestGather = function (Q) {
 
   /* Nhặt tinh thể dưới đáy hồ; mỗi vật chỉ tính một lần */
   setInterval(function () {
-    if (!diving || !inLakeNow() || !window.__underwaterCrystals) return;
+    if (!Q.isDiving() || (Q.inLakeNow && !Q.inLakeNow()) || !window.__underwaterCrystals) return;
     var pl = playerLocal();
     window.__underwaterCrystals.forEach(function (crystal) {
       if (!crystal.visible) return;
@@ -36129,6 +36140,7 @@ window.__createQuestGather = function (Q) {
     isFlying: function () { return flyMode; }, isDiving: function () { return diving; },
     isSwimming: function () { return isSwimming; }, isOnGround: function () { return onGround; },
     getPY: function () { return pY; }, isIndoor: function () { return indoorMode; }, isCave: function () { return caveMode; },
+    hillY2: hillY2, inLakeNow: inLakeNow,
     spawnHomeWorld: function () { return new THREE.Vector3(pPos.x, hillY2(pPos.x, pPos.z) + 0.6, pPos.z); }
   });
   var doorHint = qSys.doorHint;
