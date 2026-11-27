@@ -24906,38 +24906,8 @@ window.__initCombat = function (gardenRoot) {
         spk.mesh.material.opacity = 1 - sk2;
       }
     }
-    /* Vệt chém 3D Slash Ribbon theo đầu Ngọc Thương */
-    var seg = window.__getSpearSegment ? window.__getSpearSegment() : null;
-    if (seg && seg.active) {
-      trailPts.unshift({ base: seg.base.clone(), tip: seg.tip.clone(), age: 0 });
-      if (trailPts.length > TRAIL_N) trailPts.pop();
-    } else {
-      for (var ti = trailPts.length - 1; ti >= 0; ti--) {
-        trailPts[ti].age += d * 4.5;
-        if (trailPts[ti].age >= 1) trailPts.splice(ti, 1);
-      }
-    }
-    if (trailPts.length >= 2) {
-      trailMesh.visible = true;
-      var vi = 0, ci = 0;
-      for (var k2 = 0; k2 < trailPts.length - 1; k2++) {
-        var a = trailPts[k2], b = trailPts[k2 + 1];
-        var f0 = Math.max(0, (1 - k2 / TRAIL_N) * (1 - a.age));
-        var f1 = Math.max(0, (1 - (k2 + 1) / TRAIL_N) * (1 - b.age));
-        var tris = [a.base, a.tip, b.tip, a.base, b.tip, b.base];
-        var fs = [f0 * 0.4, f0, f1, f0 * 0.4, f1, f1 * 0.4];
-        for (var m2 = 0; m2 < 6; m2++) {
-          var vtx = tris[m2], fl = fs[m2];
-          trailPos[vi++] = vtx.x; trailPos[vi++] = vtx.y; trailPos[vi++] = vtx.z;
-          trailCol[ci++] = 0.35 * fl; trailCol[ci++] = 0.98 * fl; trailCol[ci++] = 0.82 * fl;
-        }
-      }
-      trailGeo.setDrawRange(0, (trailPts.length - 1) * 6);
-      trailGeo.attributes.position.needsUpdate = true;
-      trailGeo.attributes.color.needsUpdate = true;
-    } else {
-      trailMesh.visible = false;
-    }
+    /* Dùng vệt chém Vầng Trăng Anime (slashArcs) làm VFX chém chính, ẩn dải đa giác thô */
+    trailMesh.visible = false;
 
     /* Vòng Lock-on phát sáng xoay quanh mục tiêu đang khóa */
     var lockPos = getTargetWorldPos(lockedTarget);
