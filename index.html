@@ -25383,7 +25383,7 @@ window.__LM_INIT_R01_R02 = function (C) {
         cw.position.set(wx, 2.2, 0); g.add(cw);
         var fl = fx.makeBannerFlag(5.2, M.silkRed); fl.position.set(wx, 4.4, 0.6); g.add(fl);
       });
-      g.add(fx.makeStairFlight(12, 6.2, 5.0, 17, M.stone, M.marble)).position.set(0, 0, -22.5);
+      var st12 = fx.makeStairFlight(12, 6.2, 5.0, 17, M.stone, M.marble); st12.position.set(0, 0, -22.5); g.add(st12);
       [-3.8, 3.8].forEach(function (lx) {
         var lion = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.8, 1.6), M.stone);
         lion.position.set(lx, 0.9, 5.5); g.add(lion);
@@ -25436,7 +25436,7 @@ window.__LM_INIT_R01_R02 = function (C) {
         cry.position.set(0, 1.4, 2.0); g.add(cry);
       }
       var stele = fx.makeStelePillar(2.8, M.mossStone, false); stele.position.set(7.5, 0, 4.5); g.add(stele);
-      g.add(fx.makeStairFlight(6, 3.8, -1.6, 5.5, M.mossStone, M.stone)).position.set(0, 0, 3.5);
+      var st16 = fx.makeStairFlight(6, 3.8, -1.6, 5.5, M.mossStone, M.stone); st16.position.set(0, 0, 3.5); g.add(st16);
       [-3.5, 3.5].forEach(function (lx) { var ln = fx.makeStoneLanternPost(2.0, M.mossStone); ln.position.set(lx, 0, 8.5); g.add(ln); });
       g.add(makeBambooClump(24, 12.5, 11));
     } else if (id === 'r01_07') {
@@ -25479,7 +25479,7 @@ window.__LM_INIT_R01_R02 = function (C) {
       var craneB = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.3, 0.3), M.wood); craneB.position.set(-18, 19.2, 4); g.add(craneB);
       var hangingCrate = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.3, 1.4), M.wood); hangingCrate.position.set(-19.5, 14.5, 4); g.add(hangingCrate);
       var rb2 = makeRopeBridge(24, 2.2, M.silkRed); rb2.rotation.y = 1.4; rb2.position.set(18, 18, 0); g.add(rb2);
-      g.add(fx.makeStairFlight(8, 3.5, 4.2, 7.5, M.mossStone, M.stone)).position.set(-5, 0, 8);
+      var st21 = fx.makeStairFlight(8, 3.5, 4.2, 7.5, M.mossStone, M.stone); st21.position.set(-5, 0, 8); g.add(st21);
     } else if (id === 'r02_02') {
       [[-8.5, 6, 6.2], [8.5, 6, 6.4], [-5, 13.5, 5.8], [5, 13.5, 5.8], [0, 15.5, 6.5]].forEach(function (rk) {
         var cr = new THREE.Mesh(new THREE.DodecahedronGeometry(rk[2], 1), M.karstRock);
@@ -25494,7 +25494,7 @@ window.__LM_INIT_R01_R02 = function (C) {
         stc.rotation.x = Math.PI; stc.position.set(vr * 1.4, 8.6, 0.2); g.add(stc);
       }
       if (RA) { var bt22 = RA.makeModel('broadleaf', { height: 15 }); bt22.position.set(0, 15, -3); g.add(bt22); }
-      g.add(fx.makeStairFlight(6, 4.2, 2.2, 5.5, M.mossStone, M.stone)).position.set(8.5, 0, 6.5);
+      var st22 = fx.makeStairFlight(6, 4.2, 2.2, 5.5, M.mossStone, M.stone); st22.position.set(8.5, 0, 6.5); g.add(st22);
       var sh2a = makePavilion(3.6, 3.2, 2.4, 1, M.roofRed, M.stone); sh2a.position.set(10, 2.1, 5.5); g.add(sh2a);
       var sm2 = makeSampan(1.15, true); sm2.position.set(-1.5, 0.2, 8.5); g.add(sm2);
     } else if (id === 'r02_03') {
@@ -25504,7 +25504,7 @@ window.__LM_INIT_R01_R02 = function (C) {
       });
       var sh2 = makePavilion(5.2, 4.8, 3.0, 1, M.mossStone, M.stone); sh2.position.set(0, 2.8, 3.2); g.add(sh2);
       [-2.8, 2.8].forEach(function (lx) { var ln = fx.makeStoneLanternPost(2.1, M.mossStone); ln.position.set(lx, 2.8, 6.2); g.add(ln); });
-      g.add(fx.makeStairFlight(7, 3.6, 2.8, 6.2, M.mossStone, M.stone)).position.set(0, 0, 6.2);
+      var st23 = fx.makeStairFlight(7, 3.6, 2.8, 6.2, M.mossStone, M.stone); st23.position.set(0, 0, 6.2); g.add(st23);
       var b23a = makeSampan(1.0, false); b23a.position.set(-5, 0.1, 13.5); g.add(b23a);
       var b23b = makeSampan(0.95, true); b23b.position.set(3.5, 0.1, 14.0); g.add(b23b);
     } else if (id === 'r02_04') {
@@ -25579,7 +25579,7 @@ window.__LM_INIT_R03_R04 = function (C) {
         var w3 = new THREE.Mesh(new THREE.BoxGeometry(ew[2], 1.5, ew[3]), M.redSandstone);
         w3.position.set(ew[0], 3.4, ew[1]); g.add(w3);
       });
-      g.add(fx.makeStairFlight(8, 6.8, 2.7, 9.6, M.redSandstone, M.sand)).position.set(0, 0, 8.8);
+      var st31 = fx.makeStairFlight(8, 6.8, 2.7, 9.6, M.redSandstone, M.sand); st31.position.set(0, 0, 8.8); g.add(st31);
       var tMain = makeChampaTower(1.35); tMain.position.set(0, 2.8, 0); g.add(tMain);
       var tL = makeChampaTower(0.95); tL.position.set(-9, 2.8, 1.5); g.add(tL);
       var tR = makeChampaTower(0.95); tR.position.set(9, 2.8, 1.5); g.add(tR);
@@ -25597,7 +25597,7 @@ window.__LM_INIT_R03_R04 = function (C) {
       stream3.rotation.x = -Math.PI / 2; stream3.position.y = 0.25; g.add(stream3);
       var sandBar = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.4, 0.35, 10), M.sand);
       sandBar.scale.set(0.9, 1, 2.2); sandBar.position.set(0.5, 0.3, 4); g.add(sandBar);
-      g.add(fx.makeStairFlight(8, 3.2, 4.8, 10, M.redSandstone, M.sand)).position.set(6.5, 0, -5);
+      var st32 = fx.makeStairFlight(8, 3.2, 4.8, 10, M.redSandstone, M.sand); st32.position.set(6.5, 0, -5); g.add(st32);
       [-6.5, 6.5].forEach(function (fxX) {
         var fl = fx.makeBannerFlag(4.2, new THREE.MeshStandardMaterial({ color: 0xe87b25, roughness: 0.8, side: THREE.DoubleSide }));
         fl.position.set(fxX, 1.5, 4); g.add(fl);
@@ -25627,7 +25627,7 @@ window.__LM_INIT_R03_R04 = function (C) {
         stl.rotation.y = ti3 % 2 ? 0.15 : -0.15; g.add(stl);
       }
       var cliffWall = new THREE.Mesh(new THREE.BoxGeometry(26, 9, 4), M.redSandstone); cliffWall.position.set(0, 4.5, -10.5); g.add(cliffWall);
-      g.add(fx.makeStairFlight(8, 3.2, 7.5, 7.0, M.redSandstone, M.sand)).position.set(-7.5, 0, -9.5);
+      var st34 = fx.makeStairFlight(8, 3.2, 7.5, 7.0, M.redSandstone, M.sand); st34.position.set(-7.5, 0, -9.5); g.add(st34);
       var cr34 = fx.makeCrateBarrels(2); cr34.position.set(7.5, 0, 7.2); g.add(cr34);
     } else if (id === 'r03_05') {
       [-8, 6].forEach(function (px) {
@@ -25679,7 +25679,7 @@ window.__LM_INIT_R03_R04 = function (C) {
       [-7.2, 7.2].forEach(function (sx) {
         var stupa = makeOctagonalTower(2.1, 2.2, 2, M.mossStone); stupa.position.set(sx, 0, -2); g.add(stupa);
       });
-      g.add(fx.makeStairFlight(6, 7.0, -2.0, 7.2, M.mossStone, M.stone)).position.set(0, -1.8, 3.5);
+      var st41 = fx.makeStairFlight(6, 7.0, -2.0, 7.2, M.mossStone, M.stone); st41.position.set(0, -1.8, 3.5); g.add(st41);
       for (var ti4 = -2; ti4 <= 2; ti4++) {
         var tile = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.2, 2.6), ti4 % 2 ? M.crystal : M.mossStone);
         tile.position.set(ti4 * 3.1, -1.8, 12.5); g.add(tile);
@@ -25703,7 +25703,7 @@ window.__LM_INIT_R03_R04 = function (C) {
         var rl = new THREE.Mesh(new THREE.BoxGeometry(bal4 < 2 ? 7.6 : 0.45, 0.85, bal4 < 2 ? 0.45 : 7.6), M.mossStone);
         rl.position.set(bal4 === 2 ? -3.8 : (bal4 === 3 ? 3.8 : 0), 1.45, bal4 === 0 ? -3.8 : (bal4 === 1 ? 3.8 : 0)); g.add(rl);
       }
-      g.add(fx.makeStairFlight(5, 3.8, 1.6, 4.5, M.mossStone, M.stone)).position.set(0, -0.4, 4.2);
+      var st43 = fx.makeStairFlight(5, 3.8, 1.6, 4.5, M.mossStone, M.stone); st43.position.set(0, -0.4, 4.2); g.add(st43);
       var sp43 = makeSampan(1.05, true); sp43.position.set(6.5, 0.1, 9); g.add(sp43);
       g.add(makeLotusCluster(22, 14));
     } else if (id === 'r04_04') {
@@ -25723,8 +25723,8 @@ window.__LM_INIT_R03_R04 = function (C) {
       var ln45 = fx.makeStoneLanternPost(2.5, M.mossStone); ln45.position.set(-7.5, 1.1, 2.4); g.add(ln45);
     } else if (id === 'r04_06') {
       var seal = new THREE.Mesh(new THREE.CylinderGeometry(8.5, 8.5, 0.5, 16), M.crystal); seal.position.y = -0.35; g.add(seal);
-      g.add(fx.makeStairFlight(6, 5.2, 2.2, 6.5, M.mossStone, M.mossStone)).position.set(-8.5, -0.6, 0);
-      g.add(fx.makeStairFlight(6, 5.2, 2.2, 6.5, M.mossStone, M.mossStone)).position.set(8.5, -0.6, 0);
+      var st46a = fx.makeStairFlight(6, 5.2, 2.2, 6.5, M.mossStone, M.mossStone); st46a.position.set(-8.5, -0.6, 0); g.add(st46a);
+      var st46b = fx.makeStairFlight(6, 5.2, 2.2, 6.5, M.mossStone, M.mossStone); st46b.position.set(8.5, -0.6, 0); g.add(st46b);
       [[-7, -7], [7, -7], [-7, 7], [7, 7]].forEach(function (lp) {
         var ln = fx.makeStoneLanternPost(4.4, M.mossStone); ln.position.set(lp[0], -0.4, lp[1]); g.add(ln);
       });
@@ -25889,7 +25889,7 @@ window.__LM_INIT_R05_R06 = function (C) {
     } else if (id === 'r06_04') {
       g.add(makePavilion(10.5, 8, 3.8, 2, M.roofGold, M.lacquerRed));
       var tor6 = makeArchGate(6.8, 4.6, null, M.darkRock); tor6.position.set(0, -2, 11); g.add(tor6);
-      g.add(fx.makeStairFlight(10, 5.2, 3.6, 11.5, M.stone, M.darkRock)).position.set(0, -3.4, 9.5);
+      var st64 = fx.makeStairFlight(10, 5.2, 3.6, 11.5, M.stone, M.darkRock); st64.position.set(0, -3.4, 9.5); g.add(st64);
     } else if (id === 'r06_05') {
       g.add(makeStoneBridge(28, 4.8, null, M.darkRock));
       var lavaRiv = new THREE.Mesh(new THREE.PlaneGeometry(14, 42), M.lava);
@@ -25959,7 +25959,7 @@ window.__LM_INIT_R07_R08 = function (C) {
       var br72 = makeStoneBridge(14, 3.2, null, M.mossStone); br72.position.set(-9, 0.4, 8); g.add(br72);
     } else if (id === 'r07_03') {
       var mouth = new THREE.Mesh(new THREE.BoxGeometry(22, 18, 14), M.darkRock); mouth.position.set(5, 8, 0); g.add(mouth);
-      g.add(fx.makeStairFlight(10, 5.8, 4.5, 11, M.stone, M.mossStone)).position.set(-5.5, 0, 4.5);
+      var st73 = fx.makeStairFlight(10, 5.8, 4.5, 11, M.stone, M.mossStone); st73.position.set(-5.5, 0, 4.5); g.add(st73);
       for (var ci7 = -4; ci7 <= 4; ci7++) {
         var c7 = new THREE.Mesh(new THREE.OctahedronGeometry(1.4 + Math.abs(ci7) * 0.22, 0), M.crystal);
         c7.scale.set(0.8, 3.8, 0.8); c7.position.set(-2 + Math.abs(ci7) * 0.8, 2.2, ci7 * 2.4); g.add(c7);
@@ -25997,7 +25997,7 @@ window.__LM_INIT_R07_R08 = function (C) {
       var gRoot = makeArchGate(5.5, 4.0, null, M.mossStone); gRoot.position.set(6, 0, 2); g.add(gRoot);
       var banTree = fx.makeBonsaiPine(1.8, false); banTree.position.set(6, 0.2, 0.8); g.add(banTree);
       var bz77 = makeBrazier(0.8); bz77.position.set(3, 0, 5.2); g.add(bz77);
-      g.add(fx.makeStairFlight(6, 4.2, -3.5, 6.2, M.mossStone, M.stone)).position.set(6, -3.5, 6.5);
+      var st77 = fx.makeStairFlight(6, 4.2, -3.5, 6.2, M.mossStone, M.stone); st77.position.set(6, -3.5, 6.5); g.add(st77);
     } else if (id === 'r07_08') {
       g.add(makePavilion(7.5, 6.2, 3.2, 2, M.mossStone, M.stone));
       var br78 = makeStoneBridge(18, 3.2, null, M.mossStone); br78.position.set(-10, -2, -10); br78.rotation.y = 0.7; g.add(br78);
@@ -27904,9 +27904,9 @@ window.__initBoss = function (gardenRoot) {
 /* Du Lieu 28 Nhiem Vu Chinh Tuyen & Toa Do NPC Dai Viet */
 (function () {
   var NP = {
-    tam: [0.4, 8.8], ba_man: [-15.8, 10.0], hoa: [6.8, -11.5], lam: [-4.5, -13.5]
+    tam: [0.4, 8.8], ba_man: [-15.8, 10.0], baMan: [-15.8, 10.0], hoa: [6.8, -11.5], lam: [-4.5, -13.5]
   };
-  function npcMk(id) { return { x: NP[id][0], z: NP[id][1], npc: id }; }
+  function npcMk(id) { var pt = NP[id] || NP.tam; return { x: pt[0], z: pt[1], npc: id === 'baMan' ? 'ba_man' : id }; }
   function mk(x, z) { return { x: x, z: z }; }
   var COLOR = {
     HOME: 0xd9b36c, MARSH: 0x5fbf9a, ROOT: 0x8fbf5f,
