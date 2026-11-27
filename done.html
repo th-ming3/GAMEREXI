@@ -25787,8 +25787,17 @@ window.__initDaiVietLandmarks = function (gardenRoot) {
   };
 
   var banner = document.createElement('div');
+  banner.id = 'landmarkBannerHud';
   banner.style.cssText = 'position:fixed;left:50%;bottom:106px;transform:translateX(-50%);z-index:54;padding:8px 16px;border-radius:12px;background:rgba(24,20,14,.86);color:#ffe7b0;font:600 13px/1.4 Georgia,serif;border:1px solid rgba(245,195,91,.45);box-shadow:0 8px 24px rgba(0,0,0,.35);pointer-events:none;opacity:0;transition:opacity .25s;text-align:center;max-width:min(88vw,460px)';
   document.body.appendChild(banner);
+  function layoutBanner() {
+    var mob = window.innerWidth < 768;
+    banner.style.bottom = mob ? '284px' : '106px';
+    banner.style.padding = mob ? '5px 10px' : '8px 16px';
+    banner.style.fontSize = mob ? '11px' : '13px';
+    banner.style.maxWidth = mob ? '90vw' : 'min(88vw,460px)';
+  }
+  layoutBanner(); window.addEventListener('resize', layoutBanner);
   var lastLocId = '';
 
   setInterval(function () {
@@ -26020,8 +26029,17 @@ window.__initWaterState = function (gardenRoot) {
   window.__waterToggles = function () { return toggles; };
 
   var hud = document.createElement('div');
+  hud.id = 'waterStateHud';
   hud.style.cssText = 'position:fixed;left:16px;top:126px;z-index:55;padding:7px 12px;border-radius:10px;background:rgba(20,18,15,.74);border:1px solid rgba(226,192,122,.34);color:#f6efe0;font:600 12.5px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans",sans-serif;pointer-events:none;backdrop-filter:blur(8px)';
   document.body.appendChild(hud);
+  function layoutWaterHud() {
+    var mob = window.innerWidth < 768;
+    hud.style.left = mob ? '8px' : '16px';
+    hud.style.top = mob ? '104px' : '126px';
+    hud.style.padding = mob ? '4px 8px' : '7px 12px';
+    hud.style.fontSize = mob ? '10.5px' : '12.5px';
+  }
+  layoutWaterHud(); window.addEventListener('resize', layoutWaterHud);
   function refreshHud() {
     hud.innerHTML = 'Mực nước <b>' + (state === 'HIGH' ? 'CAO' : 'THẤP') + '</b><br>Van bến Hồ Gương — <b>E</b> để đổi';
   }
@@ -27832,8 +27850,8 @@ window.__initCampaign = function (gardenRoot) {
   document.body.appendChild(hud);
   function layoutCampaignHud() {
     if (window.innerWidth < 768) {
-      hud.style.right = 'auto'; hud.style.left = '10px'; hud.style.top = '106px';
-      hud.style.width = 'auto'; hud.style.maxWidth = 'calc(100vw - 172px)';
+      hud.style.right = 'auto'; hud.style.left = '8px'; hud.style.top = '158px';
+      hud.style.width = 'auto'; hud.style.maxWidth = 'calc(100vw - 160px)';
       hud.style.padding = '5px 8px'; hud.style.fontSize = '10.5px';
     } else {
       hud.style.left = 'auto'; hud.style.right = '16px'; hud.style.top = '246px';
