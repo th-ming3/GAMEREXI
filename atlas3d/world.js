@@ -399,6 +399,31 @@ function simpleTileRoof(group, w, d, h) {
   m.castShadow = true; group.add(m);
 }
 
+
+function regionTint(group) {
+  const zones = [
+    [-120, -90, '#4e9440'], [-70, -30, '#a9bb68'], [0, -10, '#8d8775'], [30, 60, '#a4513f'],
+    [130, -40, '#eef3f4'], [-50, 95, '#3f7e46'], [-10, 130, '#7a4a30'], [60, 110, '#caa46a'],
+  ];
+  for (const [x, z, c] of zones) {
+    const m = new THREE.Mesh(new THREE.CircleGeometry(26, 24), new THREE.MeshStandardMaterial({ color: c, transparent: true, opacity: .32, roughness: 1 }));
+    m.rotation.x = -Math.PI / 2; m.position.set(x, terrainHeight(x, z) + .3, z); group.add(m);
+  }
+}
+function lanterns(group) {
+  const kit = new Kit()
+    .def('body', new THREE.SphereGeometry(.22, 10, 8), new THREE.MeshStandardMaterial({ color: '#d94f38', emissive: '#ff7a3c', emissiveIntensity: .6 }))
+    .def('frame', new THREE.CylinderGeometry(.3, .3, .5, 6), M.wood);
+  const r = rng(77);
+  for (let i = 0; i < 60; i++) {
+    const a = r() * 6.28, d = 20 + r() * 150;
+    const x = Math.sin(a) * d, z = Math.cos(a) * d, y = terrainHeight(x, z);
+    if (y < SEA + 1) continue;
+    kit.add('frame', place(x, y + .5, z)); kit.add('body', place(x, y + .28, z));
+  }
+  kit.build(group);
+}
+
 function detailBoards(group) {                   // 64 detail points as floating preview boards
   const loader = new THREE.TextureLoader();
   for (const d of DETAILS) {
@@ -485,6 +510,8 @@ export function buildWorld() {
   waterfalls(group);
   bigWaterfalls(group);
   boatsAndMarket(group);
+  regionTint(group);
+  lanterns(group);
   detailBoards(group);
   clouds(group);
   return {
